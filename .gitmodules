@@ -1,0 +1,3 @@
+[submodule "submodules/pymobility"]
+	path = submodules/pymobility
+	url = https://github.com/panisson/pymobility.git
