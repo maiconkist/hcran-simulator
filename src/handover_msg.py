@@ -1,44 +1,62 @@
 from antenna import *
 from user import *
 from grid import *
+import grid as G
 
-def basic_moving_strategy( pos ):
-	# moves only to the left
-	if pos[0] < 1000:
-		return [ pos[0]+1, pos[1] ]
-	else:
-		return pos
+from pymobility.models.mobility import random_waypoint
+
+
+rw = None
+positions = []
+
+
+def random_waypoint_strategy( id ):
+    global positions
+    if id == 0:
+        positions = next(rw)
+
+    return positions[id]
 
 
 def build_simulation(n_user, n_rrh):
-	grid = Grid(size = (0, 1000) )
+    global rw
+    global positions
 
-	for u in range(n_user):
-		grid.add_user(
-			User(
-				pos= grid.random_pos(),
-				moving_strategy= basic_moving_strategy,
-				grid = grid
-			)
-		)
-	for r in range(n_rrh):
-		grid.add_antenna(
-			Antenna(
-				pos= grid.random_pos(),
-				radius = 100,
-				grid = grid,
-			)
-		)
+    grid = Grid(size = (1000, 1000) )
 
-	return grid
+    rw = random_waypoint(n_user, dimensions=grid.size, velocity=(0.1, 1.0), wt_max=1.0)
+    positions = next(rw)
+
+    for u in range(n_user):
+        grid.add_user(
+            User(
+                id = u ,
+                pos = positions[u],
+                moving_strategy = random_waypoint_strategy,
+                grid = grid
+            )
+        )
+    for r in range(n_rrh):
+        grid.add_antenna(
+            Antenna(
+                pos= grid.random_pos(),
+                radius = 100,
+                grid = grid,
+            )
+        )
+
+    return grid
 
 if __name__ == '__main__':
+    for n_ue in (1, 100, 1000):
+        for n_rrh in (100, 500):
+            grid = build_simulation(n_ue, n_rrh)
 
 
-	grid = build_simulation(10, 500)
+            # simulate for 600 seconds, 1 second step
+            for step in range(600):
+                print("-- Simulating step %d/%d" % (step, 600) )
+                grid.step( 1 )
 
-
-	# simulate for 600 seconds, 1 second step
-	for step in range(600):
-		print("-- Simulating step %d/%d" % (step, 600) )
-		grid.step( 1 )
+            with open("ue_" + str(n_ue) + "_rrh_" + str(n_rrh) + ".txt", "w+" ) as fd:
+                fd.write("\n".join( G.Log.logs) )
