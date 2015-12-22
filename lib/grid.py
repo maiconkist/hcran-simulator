@@ -3,6 +3,7 @@ from sorted_collection import *
 import random
 import scipy.spatial
 
+
 class Log():
     logs = []
 
@@ -24,12 +25,11 @@ class Grid(object):
         self._initialized = 0
 
 
-    def add_user(self, user ):
-        self._user.append( user )
-
+    def add_user(self, user):
+        self._user.append(user)
 
     def add_antenna(self, antenna):
-        self._antenna.append( antenna )
+        self._antenna.append(antenna)
 
     @property
     def size(self):
@@ -51,17 +51,18 @@ class Grid(object):
     def antenna_tree(self):
         return self._antenna_tree
 
-
     def init(self):
-        self._antenna_tree  = scipy.spatial.KDTree( [ a.pos for a in  self._antenna ] )
-
+        if self._antenna_tree is None:
+            self._antenna_tree = scipy.spatial.KDTree(
+                [a.pos for a in self._antenna]
+            )
 
     def step(self, time):
         self.init()
 
         # move for 1 second (ue must perform operations)
         for ue in self._user:
-            ue.move( time )
+            ue.move(time)
         # update ue (after performing movements )
         for ue in self._user:
             ue.update()

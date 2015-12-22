@@ -40,7 +40,7 @@ def build_simulation(n_user, n_rrh):
         grid.add_antenna(
             Antenna(
                 pos= grid.random_pos(),
-                radius = 100,
+                radius = 30,
                 grid = grid,
             )
         )
@@ -52,11 +52,10 @@ if __name__ == '__main__':
         for n_rrh in (100, 500):
             grid = build_simulation(n_ue, n_rrh)
 
-
-            # simulate for 600 seconds, 1 second step
+            # simulate for 600 steps
             for step in range(600):
                 print("-- Simulating step %d/%d" % (step, 600) )
                 grid.step( 1 )
 
-            with open("ue_" + str(n_ue) + "_rrh_" + str(n_rrh) + ".txt", "w+" ) as fd:
+            with open("results/ue_" + str(n_ue) + "_rrh_" + str(n_rrh) + ".txt", "w+" ) as fd:
                 fd.write("\n".join( G.Log.logs) )

@@ -44,6 +44,3 @@ class Antenna(object):
 
             return True
         return False
-
-if __name__ == '__main__':
-    pass
