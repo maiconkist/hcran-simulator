@@ -1,4 +1,6 @@
 import math
+import util
+
 
 class Antenna(object):
     def __init__(self, pos, radius, grid):
@@ -9,6 +11,8 @@ class Antenna(object):
 
         self._users = []
 
+        self._bbu = util.nearest(self, grid.bbus)
+        self._bbu.register(self)
 
     @property
     def pos(self):
@@ -16,31 +20,28 @@ class Antenna(object):
 
     @pos.setter
     def pos(self, pos):
-        print("Cannot set pos for Antenna object" )
+        print("Cannot set pos for Antenna object")
 
     @property
     def radius(self):
         return self._radius
 
     def connect(self, user):
-        def dist(p1, p2):
-            return math.sqrt(abs(p1[0] - p2[0]) ** 2 + abs(p1[1] - p2[1]) ** 2)
-
-        if user not in self._users and dist(user.pos, self.pos) < self.radius:
-            self._users.append( user )
-            self._grid.logger.log("op:connection, antenna:" + str(self.pos) + ", user:" + str(user._id) + ", pos:" + str(user.pos))
+        if user not in self._users and util.dist(user, self) < self.radius:
+            self._users.append(user)
+            self._bbu.notify("op:connection", self, user)
             return True
+
         elif user in self._users:
             # already connected, nothing to do
-            pass
+            return True
+
         else:
             return False
 
-
     def disconnect(self, user):
         if user in self._users:
-            self._users.remove( user )
-            self._grid.logger.log("op:disconnection, antenna:" + str(self.pos) + ", user:" + str(user._id)+ ", pos:" + str(user.pos))
-
+            self._users.remove(user)
+            self._bbu.notify("op:disconnection", self, user)
             return True
         return False

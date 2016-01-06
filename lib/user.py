@@ -1,6 +1,3 @@
-import scipy
-
-
 def connectability(ue, cur_antenna, next_antenna):
     import math
 
@@ -62,6 +59,7 @@ class User(object):
         dist_list, idx_list = antenna.query([self._pos, ], min(10, len(antenna.data)))
 
         # for each antenna, from the closest to the farthest
+        #for d, idx in zip(dist_list[0], idx_list[0]):
         for d, idx in zip(dist_list[0], idx_list[0]):
             # if antenna in question if better than the current one (and its NOT the current one)
             if connectability(self, self._connected_antenna, self._grid._antenna[idx]):
