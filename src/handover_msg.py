@@ -21,10 +21,8 @@ def random_waypoint_strategy( id ):
     if id == 0:
         positions = next(rw)
 
-    # simulate for 600 steps
-    for xy in positions:
-        line.set_data(xy[:,0],xy[:,1])
-        plt.draw()
+    line.set_data(positions[:,0],positions[:,1])
+    plt.draw()
 
     return positions[id]
 
@@ -67,7 +65,7 @@ if __name__ == '__main__':
         for n_rrh in (5, 10, 15, 20, 25, 30):
             grid = build_simulation(n_ue, n_rrh, 2)
 
-            for step in range(1):
+            for step in range(600):
                 print("-- Simulating step %d/%d" % (step, 600))
                 grid.step(1)
 
