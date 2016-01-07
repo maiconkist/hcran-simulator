@@ -1,8 +1,8 @@
-
 class BBU(object):
-    def __init__(self, pos, grid):
+    def __init__(self, pos, controller, grid):
         self._pos = pos
         self._grid = grid
+        self._controller = controller
 
         self._antennas = []
 
@@ -11,7 +11,21 @@ class BBU(object):
         return self._pos
 
     def register(self, antenna):
+        """
+        @param antenna
+        """
         self._antennas.append(antenna)
 
-    def notify(self, op_str, antenna, user):
-        self._grid.logger.log(op_str + ", antenna:" + str(antenna.pos) + ", user:" + str(user._id) + ", pos:" + str(user.pos))
+    def event(self, op, antenna, ue):
+        """ Entry point for events in antennas.
+
+        @param op_str Events from controller class
+        @param antennas Antenna obj
+        @param ue User obj
+        """
+        self._controller.event(op, antenna, ue)
+
+    def __str__(self):
+        """
+        """
+        return str(self._pos)

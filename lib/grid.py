@@ -9,7 +9,6 @@ class Log():
     def log(m):
         Log.logs.append(m)
 
-
 class Grid(object):
 
     def __init__(self, size=(1000, 1000)):
@@ -17,7 +16,7 @@ class Grid(object):
 
         self._user = []
         self._antenna = []
-        self._bbus = []
+        self._bbu = []
 
         self._antenna_tree = None
 
@@ -30,11 +29,11 @@ class Grid(object):
         self._antenna.append(antenna)
 
     def add_bbu(self, bbu):
-        self._bbus.append(bbu)
+        self._bbu.append(bbu)
 
     @property
     def bbus(self):
-        return self._bbus
+        return self._bbu
 
     @property
     def size(self):
