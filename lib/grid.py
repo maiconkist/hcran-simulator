@@ -9,14 +9,16 @@ class Log():
     def log(m):
         Log.logs.append(m)
 
+
 class Grid(object):
 
     def __init__(self, size=(1000, 1000)):
         self._size = size
 
         self._user = []
-        self._antenna = []
-        self._bbu = []
+        self._antennas = []
+        self._bbus = []
+        self._controllers = []
 
         self._antenna_tree = None
 
@@ -26,14 +28,17 @@ class Grid(object):
         self._user.append(user)
 
     def add_antenna(self, antenna):
-        self._antenna.append(antenna)
+        self._antennas.append(antenna)
 
     def add_bbu(self, bbu):
-        self._bbu.append(bbu)
+        self._bbus.append(bbu)
+
+    def add_controller(self, cntrl):
+        self._controllers.append(cntrl)
 
     @property
     def bbus(self):
-        return self._bbu
+        return self._bbus
 
     @property
     def size(self):
@@ -55,7 +60,7 @@ class Grid(object):
     def init(self):
         if self._antenna_tree is None:
             self._antenna_tree = scipy.spatial.KDTree(
-                [a.pos for a in self._antenna]
+                [a.pos for a in self._antennas]
             )
 
     def step(self, time):
@@ -64,6 +69,19 @@ class Grid(object):
         # move for 1 second (ue must perform operations)
         for ue in self._user:
             ue.move(time)
+
         # update ue (after performing movements )
         for ue in self._user:
             ue.update()
+
+        # update antennas
+        for antenna in self._antennas:
+            antenna.update()
+
+        # update bbus
+        for bbu in self._bbus:
+            bbu.update()
+
+        # update controllers
+        for cntrl in self._controllers:
+            cntrl.update()

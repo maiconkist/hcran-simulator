@@ -19,3 +19,17 @@ def dist(p1, p2):
     @param p2 Object. Must have 'obj.pos' property
     """
     return math.sqrt((p1.pos[0] - p2.pos[0]) ** 2 + (p1.pos[1] - p2.pos[1]) ** 2)
+
+
+def snr(ue, antenna, channel=0):
+    """
+    """
+    TX_POWER = 23.0
+    NOISE_FLOOR = -90.0
+    CENTER_FREQ = 700  # in MHz
+
+    # 23 is the antenna tx power in dbm
+    received_power = TX_POWER - (20 * math.log(10, dist(ue, antenna)) + 20*math.log(10, CENTER_FREQ) - 27.55)
+    snr = received_power - (NOISE_FLOOR)
+
+    return snr

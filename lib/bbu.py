@@ -6,9 +6,19 @@ class BBU(object):
 
         self._antennas = []
 
+        self._controller.register(self)
+
     @property
     def pos(self):
+        """
+        """
         return self._pos
+
+    @property
+    def antennas(self):
+        """
+        """
+        return self._antennas
 
     def register(self, antenna):
         """
@@ -16,7 +26,7 @@ class BBU(object):
         """
         self._antennas.append(antenna)
 
-    def event(self, op, antenna, ue):
+    def event(self, op, antenna, ue=None):
         """ Entry point for events in antennas.
 
         @param op_str Events from controller class
@@ -24,6 +34,11 @@ class BBU(object):
         @param ue User obj
         """
         self._controller.event(op, antenna, ue)
+
+    def update(self):
+        """ Operations performed after UEs movement
+        """
+        pass
 
     def __str__(self):
         """

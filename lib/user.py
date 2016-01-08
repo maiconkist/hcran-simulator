@@ -36,14 +36,27 @@ class User(object):
 
     @property
     def pos(self):
+        """
+        """
         return self._pos
 
     def move(self, step):
+        """
+        """
         # move User instance according to moving_strategy
         self._pos = self._moving_strategy(self._id)
 
 
+    @property
+    def demand(self):
+        """
+        """
+        # 5 Mb/s
+        return 5 * 10 ** 6
+
     def stablish_connection(self, new_antenna):
+        """
+        """
         # if connection to new antenna is ok
         if new_antenna.connect(self):
             # disconnect from actual antenna and update
@@ -55,6 +68,8 @@ class User(object):
             return False
 
     def update(self):
+        """
+        """
         antenna = self._grid.antenna_tree
         dist_list, idx_list = antenna.query([self._pos, ], min(10, len(antenna.data)))
 
@@ -62,10 +77,17 @@ class User(object):
         #for d, idx in zip(dist_list[0], idx_list[0]):
         for d, idx in zip(dist_list[0], idx_list[0]):
             # if antenna in question if better than the current one (and its NOT the current one)
-            if connectability(self, self._connected_antenna, self._grid._antenna[idx]):
+            if connectability(self,
+                              self._connected_antenna,
+                              self._grid._antennas[idx]):
                 # if could stablish connection to antenna in question, break
                 # repeat for the next closer antenna otherwise
-                if self.stablish_connection(self._grid._antenna[idx]):
+                if self.stablish_connection(self._grid._antennas[idx]):
                     return True
 
         return False
+
+    def __str__(self):
+        """
+        """
+        return str(self._id)
