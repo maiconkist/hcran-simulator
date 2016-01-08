@@ -111,12 +111,19 @@ class Antenna(object):
             rb_map[ue] = ue.demand / (snr_to_bit(util.snr(ue, self, 0)) * 84.0)
         return sum(rb_map.values())
 
-    @staticmethod
-    def rb_demand_to_ch_bw(rb_demand):
+    def rb_demand_to_ch_bw(self, rb_demand):
         """ Minimum channel BW based on RB demand
 
         @param rb_demand Total RB demand
         """
+
+        # 1.4  channel has 6  RBs in frequency domain
+        # 3.0  channel has 15 RBs in frequency domain
+        # 5.0  channel has 25 RBs in frequency domain
+        # 10.0 channel has 50 RBs in frequency domain
+        # 15.0 channel has 75 RBs in frequency domain
+        # 20.0 channel has 100 RBs in frequency domain
+        # * 2000 for time domain
         if rb_demand <= (6 * 2000):
             return 1.4
         elif rb_demand <= (15 * 2000):
@@ -130,7 +137,10 @@ class Antenna(object):
         elif rb_demand <= (100 * 2000):
             return 20.0
         else:
-            return None
+            self._grid.logger.log("op:antenna_impossible_cap, antenna:" +
+                                  str(self) +
+                                  ", rb_demand:" + str(rb_demand))
+            return 20.00
 
     def update(self):
         """

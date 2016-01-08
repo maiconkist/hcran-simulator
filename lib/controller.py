@@ -76,9 +76,9 @@ class Controller(object):
     def antenna_update(self):
         """
         """
-	antennas = []
-	for bbu in self._bbus:
-        	antennas = antennas + bbu.antennas
+        antennas = []
+        for bbu in self._bbus:
+            antennas = antennas + bbu.antennas
 
         for antenna in antennas:
             if antenna.ch_bw != antenna.ch_bw_demand:
