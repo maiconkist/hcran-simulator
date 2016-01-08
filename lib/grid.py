@@ -9,7 +9,6 @@ class Log():
     def log(m):
         Log.logs.append(m)
 
-
 class Grid(object):
 
     def __init__(self, size=(1000, 1000)):

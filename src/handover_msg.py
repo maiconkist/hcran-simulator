@@ -12,9 +12,9 @@ from pymobility.models.mobility import random_waypoint
 rw = None
 positions = []
 
-plt.ion()
-ax = plt.subplot(111)
-line, = ax.plot(range(1000), range(1000), linestyle='', marker='.')
+#plt.ion()
+#ax = plt.subplot(111)
+#line, = ax.plot(range(1000), range(1000), linestyle='', marker='.')
 
 
 def random_waypoint_strategy(id):
@@ -22,8 +22,8 @@ def random_waypoint_strategy(id):
     if id == 0:
         positions = next(rw)
 
-    line.set_data(positions[:,0],positions[:,1])
-    plt.draw()
+#    line.set_data(positions[:,0],positions[:,1])
+#    plt.draw()
 
     return positions[id]
 
@@ -42,6 +42,7 @@ def build_simulation(n_user, n_rrh, n_bbu):
     grid = Grid(size=(1000, 1000))
 
     cntrl = Controller(grid)
+    grid.add_controller(cntrl)
 
     for b in range(n_bbu):
         grid.add_bbu(

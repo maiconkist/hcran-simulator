@@ -55,6 +55,10 @@ class Antenna(object):
     def ch_bw(self):
         return self._cur_ch_bw
 
+    @property
+    def ch_bw_demand(self):
+	return self._ch_bw_required
+
     @ch_bw.setter
     def ch_bw(self, new_bw):
         self._cur_ch_bw = new_bw

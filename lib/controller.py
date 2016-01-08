@@ -32,7 +32,7 @@ class Controller(object):
     def update(self):
         """
         """
-        for op, antenna, up in self._pending:
+        for op, antenna, ue in self._pending:
             if op == UE_CONNECT:
                 self.ue_connected(antenna, ue)
             elif op == UE_DISCONNECT:
@@ -76,14 +76,14 @@ class Controller(object):
     def antenna_update(self):
         """
         """
-        antennas = [a for a in [bbu.antennas for bbu in self._bbus]]
-
-        print(len(antennas))
+	antennas = []
+	for bbu in self._bbus:
+        	antennas = antennas + bbu.antennas
 
         for antenna in antennas:
-            if antenna.ch_bw != antenna.bw_demand:
+            if antenna.ch_bw != antenna.ch_bw_demand:
                 self._grid.logger.log("op:antenna_bw_update, antenna:" +
                                       str(antenna) +
-                                      ", from:" + str(antenna.bw) +
-                                      ", to:" + str(antenna.bw_demand))
-                antenna.ch_bw = antenna.bw_demand
+                                      ", from:" + str(antenna.ch_bw) +
+                                      ", to:" + str(antenna.ch_bw_demand))
+                antenna.ch_bw = antenna.ch_bw_demand
