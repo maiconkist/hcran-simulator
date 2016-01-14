@@ -31,6 +31,8 @@ class User(object):
         self._moving_strategy = moving_strategy
         self._grid = grid
 
+        self._tx_rate = 0.0
+        self._total_tx = 0.0
         self._connected_antenna = None
 
 
@@ -49,10 +51,28 @@ class User(object):
 
     @property
     def demand(self):
-        """
+        """ Demand of the UE. Fixed in 5mbps
         """
         # 5 Mb/s
         return 5 * 10 ** 6
+
+    @property
+    def tx_rate(self):
+        """
+        """
+        return self._tx_rate
+
+    @tx_rate.setter
+    def tx_rate(self, tx_rate):
+        """
+        """
+        self._tx_rate =  tx_rate
+
+    @property
+    def total_tx(self):
+        """
+        """
+        return self._total_tx
 
     def stablish_connection(self, new_antenna):
         """
@@ -67,14 +87,14 @@ class User(object):
         else:
             return False
 
-    def update(self):
+    def _update_connection(self):
         """
         """
         antenna = self._grid.antenna_tree
         dist_list, idx_list = antenna.query([self._pos, ], min(10, len(antenna.data)))
 
         # for each antenna, from the closest to the farthest
-        #for d, idx in zip(dist_list[0], idx_list[0]):
+        # for d, idx in zip(dist_list[0], idx_list[0]):
         for d, idx in zip(dist_list[0], idx_list[0]):
             # if antenna in question if better than the current one (and its NOT the current one)
             if connectability(self,
@@ -86,6 +106,18 @@ class User(object):
                     return True
 
         return False
+
+    def _transmit(self):
+        """
+        """
+        self._total_tx += self.tx_rate
+
+    def update(self):
+        """
+        """
+        self._transmit()
+        self._update_connection()
+
 
     def __str__(self):
         """

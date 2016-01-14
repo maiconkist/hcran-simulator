@@ -1,8 +1,25 @@
+import math
+
 import util
 import controller
 
 
 class Antenna(object):
+
+    # 1.4  channel has 6  RBs in frequency domain
+    # 3.0  channel has 15 RBs in frequency domain
+    # 5.0  channel has 25 RBs in frequency domain
+    # 10.0 channel has 50 RBs in frequency domain
+    # 15.0 channel has 75 RBs in frequency domain
+    # 20.0 channel has 100 RBs in frequency domain
+    # * 2000 for time domain
+    BW_RB_MAP = {1.4: 6  * 2000,
+                 3  : 15 * 2000,
+                 5  : 25 * 2000,
+                 10 : 50 * 2000,
+                 15 : 75 * 2000,
+                 20 : 100* 2000
+    }
 
     def __init__(self, pos, radius, grid):
 
@@ -13,11 +30,13 @@ class Antenna(object):
         # Grid object
         self._grid = grid
         # Channel bw (none in the start)
-        self._cur_ch_bw = None
+        self._cur_ch_bw = 1.4
+        self._cur_rb_cap = Antenna.BW_RB_MAP[1.4]
         # Channel BW required
         self._ch_bw_required = None
         # List of connected UEs
         self._ues = []
+        self._rb_map = {}
 
         # Register to the closest BBU
         self._bbu = util.nearest(self, grid.bbus)
@@ -62,6 +81,7 @@ class Antenna(object):
     @ch_bw.setter
     def ch_bw(self, new_bw):
         self._cur_ch_bw = new_bw
+        self._cur_rb_cap = Antenna.BW_RB_MAP[new_bw]
 
     def connect(self, ue):
         """ Called by ue when user connects
@@ -91,25 +111,17 @@ class Antenna(object):
             return True
         return False
 
-    def total_rb_demand(self):
+
+
+    def _update_ue_rb(self):
         """ Check the total RBs required to satisfy UEs demands
         """
-        def snr_to_bit(snr):
-            if snr <= 6.0:
-                return 1
-            elif snr <= 9.4:
-                return 2
-            elif snr <= 16.24:
-                return 4
-            else:
-                return 6
 
-        rb_map = {}
+        self._rb_map = {}
         for ue in self._ues:
             # calculate the total RBs for each UE
             # mult per 84 because: 84 ofdm symbons in a RB
-            rb_map[ue] = ue.demand / (snr_to_bit(util.snr(ue, self, 0)) * 84.0)
-        return sum(rb_map.values())
+            self._rb_map[ue] = ue.demand / (util.snr_to_bit(util.snr(ue, self, 0)) * 84.0)
 
     def rb_demand_to_ch_bw(self, rb_demand):
         """ Minimum channel BW based on RB demand
@@ -117,13 +129,7 @@ class Antenna(object):
         @param rb_demand Total RB demand
         """
 
-        # 1.4  channel has 6  RBs in frequency domain
-        # 3.0  channel has 15 RBs in frequency domain
-        # 5.0  channel has 25 RBs in frequency domain
-        # 10.0 channel has 50 RBs in frequency domain
-        # 15.0 channel has 75 RBs in frequency domain
-        # 20.0 channel has 100 RBs in frequency domain
-        # * 2000 for time domain
+        # TODO: Inverse the BW_RB_MAP map instead of if..else block
         if rb_demand <= (6 * 2000):
             return 1.4
         elif rb_demand <= (15 * 2000):
@@ -145,11 +151,55 @@ class Antenna(object):
     def update(self):
         """
         """
-        # we assume a 20MHz channel,
-        self._ch_bw_required = self.rb_demand_to_ch_bw(self.total_rb_demand())
 
+        # update the RBs used by each ue
+        self._update_ue_rb()
+
+        # ---
+        total_rb_demand = sum(self._rb_map.values())
+
+        # IDEAL CASE: we have more RBs than the UEs demand
+        #             == all UEs are satified with their demand
+        if total_rb_demand < Antenna.BW_RB_MAP[self._cur_ch_bw]:
+            self._grid.logger.log("op:antenna_good_cap, antenna:" +
+                              str(self) +
+                              ", rb_demand:" + str(total_rb_demand) +
+                              ", avail_rb:" + str(Antenna.BW_RB_MAP[self._cur_ch_bw]) +
+                              ", per_used:" +
+                               str(total_rb_demand/Antenna.BW_RB_MAP[self._cur_ch_bw]) +
+                              ", n_ues:" + str(len(self._ues))
+            )
+
+            # --
+            for ue in self._ues:
+                ue.tx_rate = ue.demand
+        # NOT IDEAL CASE: we have less RBs than the UEs demand
+        #             == available RBs split evenly among UEs
+        else:
+            self._grid.logger.log("op:antenna_bad_cap, antenna:" +
+                              str(self) +
+                              ", rb_demand:" + str(total_rb_demand) +
+                              ", avail_rb:" + str(Antenna.BW_RB_MAP[self._cur_ch_bw]) +
+                              ", per_used:" +
+                               str(total_rb_demand/Antenna.BW_RB_MAP[self._cur_ch_bw]) +
+                              ", n_ues:" + str(len(self._ues))
+            )
+
+
+            # quantity of RBs available
+            avail_rb = Antenna.BW_RB_MAP[self._cur_ch_bw]
+            # bivide equaly among all UEs
+            rb_per_ue = math.floor(avail_rb/len(self._ues))
+
+            # set UE tx_rate based
+            for ue in self._ues:
+                ue.tx_rate = rb_per_ue * util.snr_to_bit(util.snr(ue, self) )
+
+        # Notify BBU that this antenna requires more bandwidth
+        self._ch_bw_required = self.rb_demand_to_ch_bw(total_rb_demand)
         if self._ch_bw_required != self._cur_ch_bw:
             self._bbu.event(controller.ANTENNA_BW_UPDATE, self)
+
 
     def __str__(self):
         """

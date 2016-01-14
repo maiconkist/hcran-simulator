@@ -33,3 +33,13 @@ def snr(ue, antenna, channel=0):
     snr = received_power - (NOISE_FLOOR)
 
     return snr
+
+def snr_to_bit(snr):
+    if snr <= 6.0:
+        return 1
+    elif snr <= 9.4:
+        return 2
+    elif snr <= 16.24:
+        return 4
+    else:
+        return 6
