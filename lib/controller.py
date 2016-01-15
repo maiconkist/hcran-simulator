@@ -5,7 +5,7 @@ ANTENNA_BW_UPDATE = 2
 
 class Controller(object):
 
-    def __init__(self, grid):
+    def __init__(self, grid, control_network=True):
         self._grid = grid
 
         self._bbus = []
@@ -14,6 +14,8 @@ class Controller(object):
         self._ue_connected_map = {}
         self._ue_disconnected_map = {}
         self._antenna_bw_update = {}
+
+        self._control = control_network
 
     def register(self, bbu):
         """ Called by BBUs
@@ -76,6 +78,9 @@ class Controller(object):
     def antenna_update(self):
         """
         """
+        if not self._control:
+            return
+
         antennas = []
         for bbu in self._bbus:
             antennas = antennas + bbu.antennas

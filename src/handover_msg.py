@@ -42,7 +42,7 @@ def build_simulation(n_user, n_rrh, n_bbu):
 
     grid = Grid(size=(1000, 1000))
 
-    cntrl = Controller(grid)
+    cntrl = Controller(grid, control_network=False)
     grid.add_controller(cntrl)
 
     for b in range(n_bbu):
@@ -67,6 +67,7 @@ def build_simulation(n_user, n_rrh, n_bbu):
                 pos=grid.random_pos(),
                 radius=30,
                 grid=grid,
+                bw=random.choice([1.4, 3, 5, 10, 15, 20])
             )
         )
 
@@ -137,7 +138,7 @@ if __name__ == '__main__':
 
     try:
         for it in range(5):
-            for n_ue in (100, 500, 1000, 10000):
+            for n_ue in (100, 500, 1000):
                 for n_rrh in (5, 15, 30):
                     grid = build_simulation(n_ue, n_rrh, 2)
 
@@ -149,8 +150,8 @@ if __name__ == '__main__':
     except Exception as e:
         import traceback
         traceback.print_exc()
-        with open("results.txt", "w+") as fd:
+        with open("nosdwn_results.txt", "w+") as fd:
             fd.write(res_str)
 
-    with open("results.txt", "w+") as fd:
+    with open("nosdwn_results.txt", "w+") as fd:
         fd.write(res_str)

@@ -21,7 +21,7 @@ class Antenna(object):
                  20 : 100* 2000.0
     }
 
-    def __init__(self, pos, radius, grid):
+    def __init__(self, pos, radius, grid, bw = 1.4):
 
         # position tupe
         self._pos = pos
@@ -30,8 +30,8 @@ class Antenna(object):
         # Grid object
         self._grid = grid
         # Channel bw (none in the start)
-        self._cur_ch_bw = 1.4
-        self._cur_rb_cap = Antenna.BW_RB_MAP[1.4]
+        self._cur_ch_bw =bw
+        self._cur_rb_cap = Antenna.BW_RB_MAP[bw]
         # Channel BW required
         self._ch_bw_required = None
         # List of connected UEs
