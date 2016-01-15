@@ -13,12 +13,12 @@ class Antenna(object):
     # 15.0 channel has 75 RBs in frequency domain
     # 20.0 channel has 100 RBs in frequency domain
     # * 2000 for time domain
-    BW_RB_MAP = {1.4: 6  * 2000,
-                 3  : 15 * 2000,
-                 5  : 25 * 2000,
-                 10 : 50 * 2000,
-                 15 : 75 * 2000,
-                 20 : 100* 2000
+    BW_RB_MAP = {1.4: 6  * 2000.0,
+                 3  : 15 * 2000.0,
+                 5  : 25 * 2000.0,
+                 10 : 50 * 2000.0,
+                 15 : 75 * 2000.0,
+                 20 : 100* 2000.0
     }
 
     def __init__(self, pos, radius, grid):
@@ -176,16 +176,6 @@ class Antenna(object):
         # NOT IDEAL CASE: we have less RBs than the UEs demand
         #             == available RBs split evenly among UEs
         else:
-            self._grid.logger.log("op:antenna_bad_cap, antenna:" +
-                              str(self) +
-                              ", rb_demand:" + str(total_rb_demand) +
-                              ", avail_rb:" + str(Antenna.BW_RB_MAP[self._cur_ch_bw]) +
-                              ", per_used:" +
-                               str(total_rb_demand/Antenna.BW_RB_MAP[self._cur_ch_bw]) +
-                              ", n_ues:" + str(len(self._ues))
-            )
-
-
             # quantity of RBs available
             avail_rb = Antenna.BW_RB_MAP[self._cur_ch_bw]
             # bivide equaly among all UEs
@@ -194,6 +184,16 @@ class Antenna(object):
             # set UE tx_rate based
             for ue in self._ues:
                 ue.tx_rate = rb_per_ue * util.snr_to_bit(util.snr(ue, self) )
+
+            self._grid.logger.log("op:antenna_bad_cap, antenna:" +
+                              str(self) +
+                              ", rb_demand:" + str(total_rb_demand) +
+                              ", avail_rb:" + str(Antenna.BW_RB_MAP[self._cur_ch_bw]) +
+                              ", per_used:" + str(1.0) +
+                              ", n_ues:" + str(len(self._ues))
+            )
+
+
 
         # Notify BBU that this antenna requires more bandwidth
         self._ch_bw_required = self.rb_demand_to_ch_bw(total_rb_demand)
