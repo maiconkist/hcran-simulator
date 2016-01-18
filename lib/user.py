@@ -25,6 +25,8 @@ def connectability(ue, cur_antenna, next_antenna):
 class User(object):
 
     def __init__(self, id, pos, moving_strategy, grid):
+        """
+        """
 
         self._id = id
         self._pos = pos
@@ -32,7 +34,8 @@ class User(object):
         self._grid = grid
 
         self._tx_rate = 0.0
-        self._total_tx = 0.0
+        self._txs = []
+        self._bad_connection = 0.0
         self._connected_antenna = None
 
 
@@ -72,7 +75,7 @@ class User(object):
     def total_tx(self):
         """
         """
-        return self._total_tx
+        return sum(self._txs)
 
     def stablish_connection(self, new_antenna):
         """
@@ -110,7 +113,20 @@ class User(object):
     def _transmit(self):
         """
         """
-        self._total_tx += self.tx_rate
+        self._txs.append(self.tx_rate)
+
+
+        # Check if user is experiencing a bad connections
+        if self._tx_rate < self.demand:
+            # 1 second
+            self._bad_connection += 1
+        else:
+            # insert log if UE had a bad connection for more than 10 seconds
+            if self._bad_connection > 10:
+                self._grid.logger.log("op:bad_connection, user:" + str(self) +
+                                      ", duration: " + str(self._bad_connection) +
+                                      ", avg_rate_:" + str(sum(self._txs[-10:])/10.0))
+            self._bad_connection = 0
 
     def update(self):
         """

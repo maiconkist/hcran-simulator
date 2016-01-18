@@ -18,8 +18,23 @@ class Log():
               "good_cap_sum":0,
               "bad_cap":0,
               "bad_cap_sum":0,
+              "bad_connection":0,
               }
 
+    @staticmethod
+    def clear():
+        Log.mapper = {"op:connection": 0,
+              "op:disconnection": 0,
+              "op:bbu_change": 0,
+              "op:antenna_bw_update": 0,
+              "op:antenna_impossible_cap":0,
+              "good_cap":0,
+              "good_cap_sum":0,
+              "bad_cap":0,
+              "bad_cap_sum":0,
+              "bad_connection":0,
+        }
+        Log.logs = []
 
     @staticmethod
     def log(m):
@@ -44,7 +59,8 @@ class Log():
 
             regex = re.compile("per_used:([0-9]*\.[0-9]*)")
             Log.mapper['bad_cap_sum'] += float( regex.findall(m)[0] )
-
+        elif 'op:bad_connection' in m:
+            Log.mapper['bad_connection'] += 1
 
         Log.logs.append(m)
 

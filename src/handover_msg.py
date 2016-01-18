@@ -17,7 +17,6 @@ positions = []
 #ax = plt.subplot(111)
 #line, = ax.plot(range(1000), range(1000), linestyle='', marker='.')
 
-
 def random_waypoint_strategy(id):
     global positions
     if id == 0:
@@ -123,22 +122,23 @@ def dump_res():
     tmp_str += str(G.Log.mapper['bad_cap_sum']) + " "
     tmp_str += str((G.Log.mapper['good_cap_sum'] + G.Log.mapper['bad_cap_sum']) /
                    (G.Log.mapper['good_cap']     + G.Log.mapper['bad_cap'])) + " "
-    tmp_str += str(sum([ue.total_tx for ue in grid.users])/(len(grid.users)*TEST_DURATION)) + "\n"
+    tmp_str += str(sum([ue.total_tx for ue in grid.users])/(len(grid.users)*TEST_DURATION)) + " "
+    tmp_str += str(G.Log.mapper['bad_connection']) + "\n"
     # clear all logs
-    G.Log.logs = []
+    G.Log.clear()
 
     return tmp_str
 
 if __name__ == '__main__':
 
-    res_str = "ue rrh it conn dis bbu_ch bw_update bw_max good_cap bad_cap avg_rbs_used avg_throughput\n"
+    res_str = "ue rrh it conn dis bbu_ch bw_update bw_max good_cap bad_cap avg_rbs_used avg_throughput bad_connection\n"
     n_ue = 0
     n_ue = 0
     grid = None
 
     try:
         for it in range(5):
-            for n_ue in (100, 500, 1000):
+            for n_ue in (100, 500, 1000 ):
                 for n_rrh in (5, 15, 30):
                     grid = build_simulation(n_ue, n_rrh, 2)
 
