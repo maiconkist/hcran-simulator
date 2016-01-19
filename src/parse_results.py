@@ -21,6 +21,7 @@ BAD_CONN=12
 LEN=13
 
 
+
 def mean_confidence_interval(data, confidence=0.95):
     a = np.array(data) #pylint: disable=E1101
     n = len(a)
@@ -35,33 +36,36 @@ GNUPLOT_SCRIPT_HISTOGRAM= """
 set term pdf enhanced dashed size 4,3
 set output '{outfile}'
 
-set style line 10 lt 1 lw 1 pt 6 lc rgb '#777777' ps 1.0
-set style line 11 lt 1 lw 1 pt 6 lc rgb '#777777' ps 1.2
-
 set style line 20 lt 1 lw 1 pt 9 lc rgb '#000000' ps 1.0
 set style line 21 lt 1 lw 1 pt 9 lc rgb '#000000' ps 1.2
+
+set style line 10 lt 1 lw 1 pt 6 lc rgb '#666666' ps 1.0
+set style line 11 lt 1 lw 1 pt 6 lc rgb '#666666' ps 1.2
 
 set style line 30 lt 1 lw 1 pt 20 lc rgb '#AAAAAA' ps 1.0
 set style line 31 lt 1 lw 1 pt 20 lc rgb '#AAAAAA' ps 1.2
 
+set style line 40 lt 1 lw 1 pt 20 lc rgb '#FFFFFF' ps 1.0
+set style line 41 lt 1 lw 1 pt 20 lc rgb '#FFFFFF' ps 1.2
+
 set grid ytics lt 0 lw 1 lc rgb "#bbbbbb"
 set grid xtics lt 0 lw 1 lc rgb "#bbbbbb"
 
-set boxwidth 0.9
 set style fill solid 1.0 border 0
-set style histogram errorbars lw 1 gap 0
 set style data histogram
+set style histogram errorbars lw 1 gap 1
+set boxwidth 0.20
 
-
+set tics scale 0
 set xlabel '{label_x}'
 set ylabel '{label_y}'
 
-set xtics ("Scenario 1" 1.5,  "Scenario 2" 2.5, "Scenario 3" 3.5, "Scenario 4" 4.5, "Scenario 5" 5.5, "Scenario 6" 6.5, "Scenario 7" 7.5, "Scenario 8" 8.5, "Scenario 9" 9.5) rotate by -45 font "LiberationSansNarrow-regular,10"
+set xtics ("Scenario 1" 1.0,  "Scenario 2" 2, "Scenario 3" 3, "Scenario 4" 4, "Scenario 5" 5, "Scenario 6" 6, "Scenario 7" 7, "Scenario 8" 8, "Scenario 9" 9) rotate by -45 font "LiberationSansNarrow-regular,10"
 
 {range_y}
 {range_x}
 
-set xrange [1:10.5]
+set xrange [0.375:10]
 
 {extra_opts}
 
@@ -105,12 +109,16 @@ def summarize(filename):
 
             cur_key = (arr[UE], arr[RRH])
 
-            # it == 0 means new set of results
+            # cur_key not appeared
             if cur_key not in the_sum:
                 the_sum[cur_key] = [[] for i in range(LEN)]
 
             for it in range(LEN):
                 the_sum[cur_key][it].append(arr[it])
+
+            #scaling
+            the_sum[cur_key][AVG_RBS_USED][-1] *= 100.0
+
 
 
     with open("parsed_" + filename, "w+") as fd:
@@ -123,7 +131,6 @@ def summarize(filename):
         for ue in (100, 500, 1000, ):
             for rrh in (5, 15, 30, ):
                 fd.write(str(count) + " " + str(ue) + " " + str(rrh))
-                #fd.write(str(ue) + " " + str(rrh))
                 for it in range(3, LEN):
                          avg, var = mean_confidence_interval(the_sum[ue, rrh][it])
                          fd.write(" " + str(avg) + " " + str(var))
@@ -135,42 +142,142 @@ if __name__ == '__main__':
     summarize("nosdwn_results.txt")
 
 
-    ###########################################################################
+
+
+
+    # SDWN
     configs = {
-        "sdwn": {
-            "title": "SDWN",
+        'message_bars':{
+            'columns': [4, 6, 8, 10],
+            'files': ['parsed_sdwn_results.txt', ],
+            'col_title': {
+                'parsed_sdwn_results.txt': {
+                    4: "Connections",
+                    6: "Disconnections",
+                    8: "BBU Change",
+                    10:"BW Update",
+                }
+            },
             "outfile": "sdwn_histo.pdf",
             "configs": { 'label_x': "",
                 'label_x': "",
                 'label_y': "",
-                'range_y': "",
+                'range_y': "set yrange [0:*]",
                 'range_x': "",
-                'key_pos': "top right Right",
-                'extra_opts': "",
+                'key_pos': "top left Left",
+                'extra_opts': 'set format y "%.0s %c";',
                 },
           },
-        "nosdwn": {
-            "title": "W/out SDWN",
-            "outfile": "nosdwn_histo.pdf",
-            "configs": {
-                'label_x': "hannels Interfering",
+        'comparison_throughput':{
+            'columns': [20, ],
+            'files': ['parsed_sdwn_results.txt', 'parsed_nosdwn_results.txt'],
+            'col_title': {
+                'parsed_sdwn_results.txt': {
+                    20: 'With SDWN'
+                },
+                'parsed_nosdwn_results.txt': {
+                    20: 'Without SDWN'
+                },
+            },
+            "outfile": "comparison_throughput.pdf",
+            "configs": { 'label_x': "",
                 'label_x': "",
-                'label_y': "",
-                'range_y': "",
+                'label_y': "Throughput [Mbps]",
+                'range_y': "set yrange [0:*]",
                 'range_x': "",
                 'key_pos': "top right Right",
-                'extra_opts': "",
+                'extra_opts': 'set format y "%.0s %c"; set ytics 1000000;',
                 },
-        },
+          },
+        'comparison_rb_used_per':{
+            'columns': [18, ],
+            'files': ['parsed_sdwn_results.txt', 'parsed_nosdwn_results.txt'],
+            'col_title': {
+                'parsed_sdwn_results.txt': {
+                    18: 'With SDWN'
+                },
+                'parsed_nosdwn_results.txt': {
+                    18: 'Without SDWN'
+                },
+            },
+            "outfile": "comparison_rb_used_per.pdf",
+            "configs": { 'label_x': "",
+                'label_x': "",
+                'label_y': "RBs allocated [%]",
+                'range_y': "set yrange [0:*]",
+                'range_x': "",
+                'key_pos': "top left Left",
+                'extra_opts': 'set format y "%.0s %c"; set ytics 10;',
+                },
+          },
+        'thoughput_comparison':{
+            'columns': [20, ],
+            'files': ['parsed_sdwn_results.txt', 'parsed_nosdwn_results.txt'],
+            'col_title': {
+                'parsed_sdwn_results.txt': {
+                    20: 'With SDWN'
+                },
+                'parsed_nosdwn_results.txt': {
+                    20: 'Without SDWN'
+                },
+            },
+            "outfile": "thoughput_comparison.pdf",
+            "configs": { 'label_x': "",
+                'label_x': "",
+                'label_y': "Avg. Throughput [Mbps]",
+                'range_y': "set yrange [0:*]",
+                'range_x': "",
+                'key_pos': "top right Right",
+                'extra_opts': 'set format y "%.0s %c"; set ytics 1000000;',
+                },
+          },
+        'bad_connections':{
+            'columns': [22, ],
+            'files': ['parsed_sdwn_results.txt', 'parsed_nosdwn_results.txt'],
+            'col_title': {
+                'parsed_sdwn_results.txt': {
+                    22: 'With SDWN'
+                },
+                'parsed_nosdwn_results.txt': {
+                    22: 'Without SDWN'
+                },
+            },
+            "outfile": "bad_connections_comparison.pdf",
+            "configs": { 'label_x': "",
+                'label_x': "",
+                'label_y': "Bad connections",
+                'range_y': "set yrange [0:5000]",
+                'range_x': "",
+                'key_pos': "top left Left",
+                'extra_opts': 'set format y "%.0s %c"; set ytics 1000;',
+                },
+          },
     }
 
-    ls = 10
-    plot_line = 'plot '
-    for col in [4, 6, 8, 12]:
-        plot_line += '"parsed_sdwn_results.txt" using ' + str(col) + ":" + str(col+1)
-        plot_line += ' ls ' + str(ls) + ' title "' + configs['sdwn']['title'] + '"'
-        if col < 10:
-            plot_line += ', '
-        ls += 10
 
-    plot_charts(configs['sdwn']['outfile'], plot_line, configs['sdwn']["configs"], GNUPLOT_SCRIPT_HISTOGRAM)
+    for chart in ['message_bars', 'comparison_throughput', 'comparison_rb_used_per', 'bad_connections', 'thoughput_comparison' ]:
+        ls = 10
+        plot_line = 'plot '
+
+        shift = 0.2 + (0.20 * len(configs[chart]['files']) * len(configs[chart]['columns']))/-2
+        #
+        #if col == 4:
+        #    shift=-0.30
+        #elif col == 6:
+        #    shift=-0.10
+        #elif col == 8:
+        #    shift=0.10
+        #elif col == 12:
+        #    shift=0.30
+
+        for col in configs[chart]['columns']:
+
+            for f in configs[chart]['files']:
+                plot_line += '"' + f + '" using ($0+' + str(shift) + '):' + str(col) + ":" + str(col+1)
+                plot_line += ' w boxerrorbars ls ' + str(ls) + ' title "' + configs[chart]['col_title'][f][col] + '"'
+                plot_line += ', '
+
+                ls += 10
+                shift += 0.2
+
+        plot_charts(configs[chart]['outfile'], plot_line, configs[chart]["configs"], GNUPLOT_SCRIPT_HISTOGRAM)
