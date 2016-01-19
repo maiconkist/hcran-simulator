@@ -122,10 +122,10 @@ class User(object):
             self._bad_connection += 1
         else:
             # insert log if UE had a bad connection for more than 10 seconds
-            if self._bad_connection > 10:
+            if self._bad_connection > 9:
                 self._grid.logger.log("op:bad_connection, user:" + str(self) +
                                       ", duration: " + str(self._bad_connection) +
-                                      ", avg_rate_:" + str(sum(self._txs[-10:])/10.0))
+                                      ", avg_rate:" + str(sum(self._txs[-10:])/10.0))
             self._bad_connection = 0
 
     def update(self):

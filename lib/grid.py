@@ -19,6 +19,7 @@ class Log():
               "bad_cap":0,
               "bad_cap_sum":0,
               "bad_connection":0,
+              "bad_connection_sum":0,
               }
 
     @staticmethod
@@ -33,6 +34,7 @@ class Log():
               "bad_cap":0,
               "bad_cap_sum":0,
               "bad_connection":0,
+              "bad_connection_sum":0,
         }
         Log.logs = []
 
@@ -61,6 +63,9 @@ class Log():
             Log.mapper['bad_cap_sum'] += float( regex.findall(m)[0] )
         elif 'op:bad_connection' in m:
             Log.mapper['bad_connection'] += 1
+
+            regex = re.compile("avg_rate:([0-9]*\.[0-9]*)")
+            Log.mapper['bad_connection_sum'] += float( regex.findall(m)[0] )
 
         Log.logs.append(m)
 

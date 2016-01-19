@@ -41,7 +41,7 @@ def build_simulation(n_user, n_rrh, n_bbu):
 
     grid = Grid(size=(1000, 1000))
 
-    cntrl = Controller(grid, control_network=True)
+    cntrl = Controller(grid, control_network=False)
     grid.add_controller(cntrl)
 
     for b in range(n_bbu):
@@ -123,7 +123,9 @@ def dump_res():
     tmp_str += str((G.Log.mapper['good_cap_sum'] + G.Log.mapper['bad_cap_sum']) /
                    (G.Log.mapper['good_cap']     + G.Log.mapper['bad_cap'])) + " "
     tmp_str += str(sum([ue.total_tx for ue in grid.users])/(len(grid.users)*TEST_DURATION)) + " "
-    tmp_str += str(G.Log.mapper['bad_connection']) + "\n"
+    tmp_str += str(G.Log.mapper['bad_connection']) + " "
+    tmp_str += str(G.Log.mapper['bad_connection_sum']) + " "
+    tmp_str += str((G.Log.mapper['bad_connection_sum'] / G.Log.mapper['bad_connection']) if G.Log.mapper['bad_connection'] > 0 else 0 ) + "\n"
     # clear all logs
     G.Log.clear()
 
@@ -131,27 +133,27 @@ def dump_res():
 
 if __name__ == '__main__':
 
-    res_str = "ue rrh it conn dis bbu_ch bw_update bw_max good_cap bad_cap avg_rbs_used avg_throughput bad_connection\n"
+    res_str = "ue rrh it conn dis bbu_ch bw_update bw_max good_cap bad_cap avg_rbs_used avg_throughput bad_connection bad_connection_sum bad_connection_avg\n"
     n_ue = 0
     n_ue = 0
     grid = None
 
     try:
-        for it in range(30):
+        for it in range(5):
             for n_ue in (100, 500, 1000 ):
                 for n_rrh in (5, 15, 30):
                     grid = build_simulation(n_ue, n_rrh, 2)
 
                     for step in range(TEST_DURATION):
-                        print("-- Simulating step %d/%d" % (step, 600))
+                        print("-- Simulating UE:%d, RRH:%d, IT:%d step %d/%d" % (n_ue, n_rrh, it, step, TEST_DURATION))
                         grid.step(1)
 
                     res_str += dump_res()
     except Exception as e:
         import traceback
         traceback.print_exc()
-        with open("sdwn_results.txt", "w+") as fd:
+        with open("nosdwn_results.txt", "w+") as fd:
             fd.write(res_str)
 
-    with open("sdwn_results.txt", "w+") as fd:
+    with open("nosdwn_results.txt", "w+") as fd:
         fd.write(res_str)

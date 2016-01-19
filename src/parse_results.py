@@ -17,8 +17,10 @@ BAD_CAP=9
 AVG_RBS_USED=10
 AVG_THROUGHPUT=11
 BAD_CONN=12
+BAD_CONN_SUM=13
+BAD_CONN_AVG=14
 # always in the end
-LEN=13
+LEN=15
 
 
 
@@ -75,6 +77,21 @@ set key inside {key_pos} font "LiberationSansNarrow-regular,10" samplen 2  spaci
 """
 
 
+
+R_SCRIPT_PIE= """
+pct <- round(slices/sum(slices)*100)
+title <- paste(title, pct) # add percents to labels
+title <- paste(title,"%",sep="") # ad % to labels
+
+pdf("{outfile}")
+
+{plot_line}
+
+dev.off()
+"""
+
+
+
 def plot_charts(outfile, plot_line, configs, script = GNUPLOT_SCRIPT_HISTOGRAM):
     #Grays
     tmp = script.format(
@@ -119,8 +136,6 @@ def summarize(filename):
             #scaling
             the_sum[cur_key][AVG_RBS_USED][-1] *= 100.0
 
-
-
     with open("parsed_" + filename, "w+") as fd:
         fd.write("ue rrh conn conn_var dis dis_var bbu_ch bbu_ch_var")
         fd.write(" bw_update bw_update_var bw_max bw_max_var good_cap bood_cap_var")
@@ -137,13 +152,20 @@ def summarize(filename):
                 fd.write("\n")
                 count += 1
 
+    with open("R_parsed_" + filename, "w+") as fd:
+        count = 0
+        for ue in (100, 500, 1000, ):
+            for rrh in (5, 15, 30, ):
+                fd.write(str(count) + " " + str(ue) + " " + str(rrh))
+                for it in range(3, LEN):
+                         avg, var = mean_confidence_interval(the_sum[ue, rrh][it])
+                         fd.write(" " + str(avg) + " " + str(var))
+                fd.write("\n")
+                count += 1
+
 if __name__ == '__main__':
     summarize("sdwn_results.txt")
     summarize("nosdwn_results.txt")
-
-
-
-
 
     # SDWN
     configs = {
@@ -281,3 +303,23 @@ if __name__ == '__main__':
                 shift += 0.2
 
         plot_charts(configs[chart]['outfile'], plot_line, configs[chart]["configs"], GNUPLOT_SCRIPT_HISTOGRAM)
+
+
+    ### R plot
+    data = 'title <- c("Connections", "Disconnections", "BBU Change", "BW Update")\n'
+    for scenario in range(1, 10):
+
+        data += 'slices <- c('
+        for col in [3, 5, 7, 9]:
+            data += "data[%d,%d]" % (scenario, col)
+            if col < 9:
+                data += ","
+        data += ')\n'
+
+        print "----- Plotting ",
+        proc = subprocess.Popen(['R --no-save'], shell = True, stdin = subprocess.PIPE)
+        proc.communicate(data + R_SCRIPT_PIE.format(
+            plot_line = 'pie(slices, title, main="Scenario ' + str(scenario) + '", col=gray.colors(4))',
+            outfile = "pie_scenario_" + str(scenario) + ".pdf"
+            )
+        )
