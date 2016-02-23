@@ -29,8 +29,8 @@ def snr(ue, antenna, channel=0):
     CENTER_FREQ = 700  # in MHz
 
     # 23 is the antenna tx power in dbm
-    received_power = TX_POWER - (20 * math.log(10, dist(ue, antenna)) + 20*math.log(10, CENTER_FREQ) - 27.55)
-    snr = received_power - (NOISE_FLOOR)
+    received_power = TX_POWER - (20 * math.log(dist(ue, antenna), 10) + 20*math.log(CENTER_FREQ, 10) - 27.55)
+    snr = received_power - NOISE_FLOOR
 
     return snr
 

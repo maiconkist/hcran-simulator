@@ -41,7 +41,7 @@ def build_simulation(n_user, n_rrh, n_bbu):
 
     grid = Grid(size=(1000, 1000))
 
-    cntrl = Controller(grid, control_network=False)
+    cntrl = Controller(grid, control_network=True)
     grid.add_controller(cntrl)
 
     for b in range(n_bbu):
@@ -49,7 +49,7 @@ def build_simulation(n_user, n_rrh, n_bbu):
             BBU(pos=grid.random_pos(), controller=cntrl, grid=grid)
         )
 
-    rw = random_waypoint(n_user, dimensions=grid.size, velocity=(10.0, 100.0), wt_max=1.0)
+    rw = random_waypoint(n_user, dimensions=grid.size, velocity=(1.0, 40.0), wt_max=10.0)
     positions = next(rw)
     for u in range(n_user):
         grid.add_user(
@@ -152,8 +152,8 @@ if __name__ == '__main__':
     except Exception as e:
         import traceback
         traceback.print_exc()
-        with open("nosdwn_results.txt", "w+") as fd:
+        with open("sdwn_results.txt", "w+") as fd:
             fd.write(res_str)
 
-    with open("nosdwn_results.txt", "w+") as fd:
+    with open("sdwn_results.txt", "w+") as fd:
         fd.write(res_str)
