@@ -37,7 +37,25 @@ class User(object):
         self._txs = []
         self._bad_connection = 0.0
         self._connected_antenna = None
+        self.antenna_in_range = []  #range of antennas available to serve UE
+        self.power_connected_antenna = 0
+        #self.antenna = None
 
+
+    @property   
+    def x( self ):
+        return self.pos[0]
+    
+    @property
+    def y( self ):
+        return self.pos[1]
+    
+    def add_antenna_in_range( self, antenna ):
+        if not antenna in self.antenna_in_range:
+            self.antenna_in_range.append( antenna )
+            
+    def get_near_antennas( self ):
+        return self.antenna_in_range
 
     @property
     def pos(self):
@@ -49,7 +67,8 @@ class User(object):
         """
         """
         # move User instance according to moving_strategy
-        self._pos = self._moving_strategy(self._id)
+        if self._moving_strategy != None:
+            self._pos = self._moving_strategy(self._id)
 
 
     @property
