@@ -1,6 +1,6 @@
 import random
 import scipy.spatial
-
+from util import *
 import re
 
 
@@ -70,20 +70,44 @@ class Log():
         Log.logs.append(m)
 
 class Grid(object):
-
+    
     def __init__(self, size=(1000, 1000)):
         """
         """
         self._size = size
-
         self._user = []
         self._antennas = []
+        self.bs_list = []
+        self.rrh_list = []
         self._bbus = []
         self._controllers = []
-
         self._antenna_tree = None
-
         self._initialized = 0
+        self._matrix_resources = None #Matrix [Antenna, RB] = id user
+        self._bandwidth = 20
+        self.TOTAL_RBS = 100            
+        self.TOTAL_RBS_RRH = 20
+        self.TOTAL_RBS_BS = 80
+
+
+    def set_bandwidth(self, band):
+        """
+        """
+        self._bandwidth = band
+        self.TOTAL_RBS = bandwidth_to_rb(band)            
+        self.TOTAL_RBS_RRH = int(self.TOTAL_RBS * 0.2)
+        self.TOTAL_RBS_BS = int(self.TOTAL_RBS * 0.8)
+        if self.TOTAL_RBS_RRH + self.TOTAL_RBS_BS < self.TOTAL_RBS:
+            self.TOTAL_RBS_RRH +=1
+
+    @property
+    def matrix_resources(self):
+        """
+        """
+        if self._matrix_resources == None:
+            self._matrix_resources = [ [ None for i in range( self.TOTAL_RBS ) ] for j in range( len( self._antennas ) ) ]
+
+        return self._matrix_resources
 
     def add_user(self, user):
         """
@@ -93,6 +117,10 @@ class Grid(object):
     def add_antenna(self, antenna):
         """
         """
+        if antenna.type == antenna.BS_ID:
+            self.bs_list.append( antenna )
+        elif antenna.type == antenna.RRH_ID:
+            self.rrh_list.append( antenna )
         self._antennas.append(antenna)
 
     def add_bbu(self, bbu):

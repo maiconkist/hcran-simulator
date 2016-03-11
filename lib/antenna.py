@@ -5,7 +5,12 @@ import controller
 
 
 class Antenna(object):
-
+    BS_ID       = 1
+    RRH_ID      = 2
+    RRH_RADIUS  = 50
+    BS_RADIUS   = 710
+    POWER_BS    = 46
+    POWER_RRH   = 23
     # 1.4  channel has 6  RBs in frequency domain
     # 3.0  channel has 15 RBs in frequency domain
     # 5.0  channel has 25 RBs in frequency domain
@@ -21,8 +26,19 @@ class Antenna(object):
                  20 : 100* 2000.0
     }
 
-    def __init__(self, pos, radius, grid, bw = 1.4):
-
+    def __init__(self, id, type, pos, radius, grid, bw = 1.4):
+        self._id = id
+        self.type = type
+        #BS or RRH
+        if type == self.BS_ID:
+            self.power = self.POWER_BS
+            self._radius = self.BS_RADIUS
+        else:
+            self.power = self.POWER_RRH
+            self._radius = self.RRH_RADIUS
+        self.antenna_in_range = []
+        self.user_in_range = []
+        self.resources = []
         # position tupe
         self._pos = pos
         # antenna coverage radius
@@ -41,6 +57,14 @@ class Antenna(object):
         # Register to the closest BBU
         self._bbu = util.nearest(self, grid.bbus)
         self._bbu.register(self)
+
+    @property
+    def x( self ):
+        return self.pos[ 0 ]
+    
+    @property
+    def y( self ):
+        return self.pos[ 1 ]
 
     @property
     def pos(self):
@@ -205,3 +229,17 @@ class Antenna(object):
         """
         """
         return str(self.pos)
+
+    def add_antenna_in_range( self, antenna ):
+        if not antenna in self.antenna_in_range:
+            self.antenna_in_range.append( antenna )
+            
+    def get_neighbor_antenna( self ):
+        return self.antenna_in_range
+            
+    def add_user_in_range( self, user ):
+        if not user in self.user_in_range:
+            self.user_in_range.append( user )
+            
+    def get_users_in_coverage( self ):
+        return self.user_in_range
