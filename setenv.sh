@@ -1,9 +1,13 @@
 #!/bin/sh
 
-export THONPATH=~/git-reps/simulations/lib/:~/git-reps/simulations/submodules/pymobility/src/
+#We assume that the simulations folder are in your home
+export PYTHONPATH=~/simulations/lib/:~/simulations/submodules/pymobility/src/
 
-# To set the cscope to python
-find . -name '*.py' > cscope.files
-cscope -pkR
+#For those who want to use cscope with VIM
+#Infortunently you have to do a 'ctrl+d' after use 'source setenv.sh'
+#To set the cscope to python
+#rm cscope.files cscope.out
+#find . -name '*.py' > cscope.files
+#cscope -pkR
 
 
