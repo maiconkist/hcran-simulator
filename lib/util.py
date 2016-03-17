@@ -2,6 +2,7 @@ import math
 import scipy.spatial
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 def nearest(p1, p_list, idx=0):
     """ Return the closest point to p1 in p_list
@@ -244,8 +245,6 @@ def calculate_worst_energy_efficient( antenna_list, vazao_total ):
 
     return vazao_total/ 20000000 / pm + pl
 
-#def calculate_energy_efficient( self ):
-
 def plot_grid( grid ):
 
     fig = plt.figure()
@@ -255,12 +254,14 @@ def plot_grid( grid ):
     y = []
     colors = []
     area = []
+
     for i, ue in enumerate( grid._user ):
         x.append(ue.x)
         y.append(ue.y)
         ax.text(ue.x-25, ue.y-35, 'UE'+str(ue._id))
         colors.append('#1214a9')
         area.append(np.pi * 3**2)
+
         if ue._connected_antenna != None:
             ax.arrow(ue.x, ue.y, ue._connected_antenna.x-ue.x, ue._connected_antenna.y-ue.y, head_width=10, head_length=10, fc='k', ec='k')
 
@@ -270,13 +271,21 @@ def plot_grid( grid ):
         if rrh.type == rrh.BS_ID:
             colors.append('#ee1313')
             area.append(np.pi * 10**2)
+
+            #Add Hexagon
+            ax.add_patch(patches.RegularPolygon(
+                    (rrh.x,rrh.y),
+                    6,
+                    290, #Chutei e funcinou! :D
+                    fill=False,
+                    orientation=math.pi/2)
+                )
+            #Add Text
             ax.text(rrh.x-25, rrh.y-60, 'BS'+str(rrh._id))
         elif rrh.type == rrh.RRH_ID:
             colors.append('#7abf57')
             area.append(np.pi * 21**2)
             ax.text(rrh.x-35, rrh.y-12, 'RRH'+str(rrh._id))
-
-
 
     plt.scatter(x, y, s=area, c=colors, alpha=0.5)
     plt.ylim([0,grid.size[0]])

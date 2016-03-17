@@ -11,6 +11,7 @@ class Antenna(object):
     BS_RADIUS   = 710
     POWER_BS    = 46
     POWER_RRH   = 23
+    
     # 1.4  channel has 6  RBs in frequency domain
     # 3.0  channel has 15 RBs in frequency domain
     # 5.0  channel has 25 RBs in frequency domain
@@ -18,6 +19,7 @@ class Antenna(object):
     # 15.0 channel has 75 RBs in frequency domain
     # 20.0 channel has 100 RBs in frequency domain
     # * 2000 for time domain
+
     BW_RB_MAP = {1.4: 6  * 2000.0,
                  3  : 15 * 2000.0,
                  5  : 25 * 2000.0,
@@ -100,7 +102,7 @@ class Antenna(object):
 
     @property
     def ch_bw_demand(self):
-	return self._ch_bw_required
+	    return self._ch_bw_required
 
     @ch_bw.setter
     def ch_bw(self, new_bw):
