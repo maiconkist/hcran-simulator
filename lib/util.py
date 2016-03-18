@@ -265,12 +265,22 @@ def plot_grid( grid ):
         if ue._connected_antenna != None:
             ax.arrow(ue.x, ue.y, ue._connected_antenna.x-ue.x, ue._connected_antenna.y-ue.y, head_width=10, head_length=10, fc='k', ec='k')
 
+    for i, cluster in enumerate(grid._clusters):
+        x.append(cluster.x)
+        y.append(cluster.y)
+        colors.append('#FF0000')
+        area.append(np.pi * 2**2)
+
     for i, rrh in enumerate( grid._antennas ):
-        x.append(rrh.x)
-        y.append(rrh.y)
         if rrh.type == rrh.BS_ID:
-            colors.append('#ee1313')
-            area.append(np.pi * 10**2)
+            #colors.append('#ee1313')
+            #area.append(np.pi * 7**2)
+            ax.add_patch(patches.RegularPolygon(
+                    (rrh.x,rrh.y),
+                    3,
+                    20,
+                    fill=False )
+                )
 
             #Add Hexagon
             ax.add_patch(patches.RegularPolygon(
@@ -281,11 +291,13 @@ def plot_grid( grid ):
                     orientation=math.pi/2)
                 )
             #Add Text
-            ax.text(rrh.x-25, rrh.y-60, 'BS'+str(rrh._id))
+            #ax.text(rrh.x-25, rrh.y-60, 'BS'+str(rrh._id))
         elif rrh.type == rrh.RRH_ID:
+            x.append(rrh.x)
+            y.append(rrh.y)
             colors.append('#7abf57')
-            area.append(np.pi * 21**2)
-            ax.text(rrh.x-35, rrh.y-12, 'RRH'+str(rrh._id))
+            area.append(np.pi * 4**2)
+            #ax.text(rrh.x-35, rrh.y-12, 'RRH'+str(rrh._id))
 
     plt.scatter(x, y, s=area, c=colors, alpha=0.5)
     plt.ylim([0,grid.size[0]])

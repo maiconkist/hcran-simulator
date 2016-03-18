@@ -81,6 +81,7 @@ class Grid(object):
         self.rrh_list = []
         self._bbus = []
         self._controllers = []
+        self._clusters = []
         self._antenna_tree = None
         self._initialized = 0
         self._matrix_resources = None #Matrix [Antenna, RB] = id user
@@ -133,6 +134,11 @@ class Grid(object):
         """
         self._controllers.append(cntrl)
 
+    def add_cluster(self, cluster):
+        """
+        """
+        self._clusters.append(cluster)
+
     @property
     def bbus(self):
         """
@@ -144,6 +150,12 @@ class Grid(object):
         """
         """
         return self._user
+    
+    @property
+    def clusters(self):
+        """
+        """
+        return self._clusters
 
     @property
     def size(self):
