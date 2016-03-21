@@ -258,7 +258,7 @@ def plot_grid( grid ):
     for i, ue in enumerate( grid._user ):
         x.append(ue.x)
         y.append(ue.y)
-        ax.text(ue.x-25, ue.y-35, 'UE'+str(ue._id))
+        #ax.text(ue.x-25, ue.y-35, 'UE'+str(ue._id))
         colors.append('#1214a9')
         area.append(np.pi * 3**2)
 

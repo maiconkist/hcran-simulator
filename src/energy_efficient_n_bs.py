@@ -16,14 +16,15 @@ import scipy
 ###############################
 DEBUG                   = True
 DMACROMACRO             = 500
-DMACROUE                = 35
-DMACROCLUSTER           = 105
+DMACROUE                = 10
+DMACROCLUSTER           = 70
 DSMALLUE                = 5
-DSMALLSMALL             = 20
+DSMALLSMALL             = 25
 DROPRADIUS_MC           = 250
 DROPRADIUS_SC           = 500
-DROPRADIUS_SC_CLUSTER   = 50
+DROPRADIUS_SC_CLUSTER   = 80
 DROPRADIUS_UE_CLUSTER   = 70
+DSMALLUE                = 5
 
 ###############################
 #Test Variables
@@ -53,7 +54,45 @@ def build_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
 
     clusters(grid, macrocells_center, n_clusters, n_rrh)
 
+    users(grid, macrocells_center, n_bs, n_clusters, n_ue)
+
     return grid
+
+##########################
+def users(grid, macrocells_center, n_bs, n_clusters, n_ue):
+    count_ue = 0
+    p_users = list()
+
+    for i in range(0, n_bs):
+        reset = 1001
+        count_ue = 0
+        print("for")
+        while (count_ue <= n_ue):
+            print("while")
+            if reset > 1000:
+                count_ue = 0
+                reset = 0
+                p_users = list()
+
+            cluster = grid._clusters[random.randint((i*n_clusters),
+                        ((i*n_clusters) + n_clusters)-1)]
+
+            #Define type of user
+            if random.random() < 0.666:
+                p = generate_xy(cluster._pos, DROPRADIUS_UE_CLUSTER, 0)
+            else:
+                p = generate_xy(macrocells_center[i], DMACROMACRO, DMACROUE)
+            
+            #Distribution
+            if not(is_possition_ok(p, cluster._pos, DSMALLSMALL)):
+                reset = reset + 1
+            else:
+                count_ue = count_ue + 1
+                p_users.append(p)
+
+        for j in range(0,len(p_users)):
+            u = User(j, p_users[j], None, grid)
+            grid.add_user(u)
 
 ########################################
 def clusters(grid, macrocells_center, n_clusters, n_antennas):
@@ -63,31 +102,46 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
     reset = 0;
 
     for i in range(0,len(macrocells_center)):
-        print("i = %d" % i)
         for j in range(0, n_clusters):
-            print("j = " + str(j))
             #Generate Cluster center
-            count_antennas = 1
             count_clusters = count_clusters + 1
             pos = generate_xy(macrocells_center[i],
-                    DMACROMACRO*0.425,DMACROCLUSTER)
+                    DMACROMACRO*0.425, DMACROCLUSTER)
             cluster = Cluster(count_clusters, pos, grid)
             grid.add_cluster(cluster)
 
             #Generate antennas
+            reset = 1001;
+            count_antennas = 0 
             while (count_antennas <= n_antennas):
-            #    if reset <= 1000:
-            #    count_antennas = 1
-            #    reset = 0
-            #    print("count_antennas = %d" % count_antennas)
+                if reset > 1000:
+                    count_antennas = 0
+                    reset = 0
+                    p_antennas = list()
+                
                 p = generate_xy(pos, DROPRADIUS_SC_CLUSTER*0.425, 0)
-                count_antennas = count_antennas + 1
-                p_antennas.append(p)
+       
+                if (is_possition_ok(p, p_antennas, DSMALLSMALL) and 
+                        (is_possition_ok(p, pos, DSMALLSMALL))):
+
+                    count_antennas = count_antennas + 1
+                    p_antennas.append(p)
+                else:
+                    reset = reset + 1
             
             for i in range(0, len(p_antennas)):
                 rrh = Antenna(i+1, Antenna.RRH_ID, p_antennas[i], None, grid)
                 grid.add_antenna(rrh)
 
+########################################
+def is_possition_ok(p, vector, min_distance):
+    result = True
+    if len(vector) != 0:
+        for i in range(0, len(vector)):
+            d = euclidian(p,vector[i])
+            if  (d < min_distance) or (d == 0):
+                result = False
+    return result
 
 ######################################## 
 def generate_xy(center, radius, min_distance):
@@ -142,7 +196,7 @@ if __name__ == "__main__":
     bs = 7 
     cluster = 1
     rrh = 5
-    ue = 1
+    ue = 5
 
     #Build Scenario
     grid = build_scenario(bbu, bs, cluster, rrh, ue)
