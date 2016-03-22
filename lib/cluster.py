@@ -1,3 +1,9 @@
+#########################################################
+# @file     energy_efficient_n_bs.py
+# @author   Gustavo de Araújo
+# @date     17 Mar 2016
+#########################################################
+
 import math
 import util
 

@@ -1,3 +1,9 @@
+#########################################################
+# @file     energy_efficient_n_bs.py
+# @author   Gustavo de Araújo
+# @date     17 Mar 2016
+#########################################################
+
 from ra_greedy import *
 from antenna import *
 from user import *
@@ -16,13 +22,13 @@ import scipy
 ###############################
 DEBUG                   = True
 DMACROMACRO             = 500
-DMACROUE                = 10
-DMACROCLUSTER           = 70
+DMACROUE                = 30    #35
+DMACROCLUSTER           = 90    #105
 DSMALLUE                = 5
-DSMALLSMALL             = 25
+DSMALLSMALL             = 20
 DROPRADIUS_MC           = 250
 DROPRADIUS_SC           = 500
-DROPRADIUS_SC_CLUSTER   = 80
+DROPRADIUS_SC_CLUSTER   = 50
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 
@@ -66,9 +72,7 @@ def users(grid, macrocells_center, n_bs, n_clusters, n_ue):
     for i in range(0, n_bs):
         reset = 1001
         count_ue = 0
-        print("for")
         while (count_ue <= n_ue):
-            print("while")
             if reset > 1000:
                 count_ue = 0
                 reset = 0
@@ -81,7 +85,7 @@ def users(grid, macrocells_center, n_bs, n_clusters, n_ue):
             if random.random() < 0.666:
                 p = generate_xy(cluster._pos, DROPRADIUS_UE_CLUSTER, 0)
             else:
-                p = generate_xy(macrocells_center[i], DMACROMACRO, DMACROUE)
+                p = generate_xy(macrocells_center[i], DMACROMACRO*0.425, DMACROUE)
             
             #Distribution
             if not(is_possition_ok(p, cluster._pos, DSMALLSMALL)):
@@ -99,39 +103,61 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
     count_antennas = 0
     count_clusters = 0
     p_antennas = list()
+    p_clusters = list()
+    p_local_clusters = list()
+    p_local_antennas = list()
     reset = 0;
 
     for i in range(0,len(macrocells_center)):
-        for j in range(0, n_clusters):
-            #Generate Cluster center
-            count_clusters = count_clusters + 1
+        count_clusters = 0
+        print("Create macrocells cluster and rhh: " + str(i))
+
+        while (count_clusters < n_clusters):
+            #Generate antennas
+            reset = 0;
+            count_antennas = 0
+
             pos = generate_xy(macrocells_center[i],
                     DMACROMACRO*0.425, DMACROCLUSTER)
-            cluster = Cluster(count_clusters, pos, grid)
-            grid.add_cluster(cluster)
+            p_local_clusters.append(pos)
 
-            #Generate antennas
-            reset = 1001;
-            count_antennas = 0 
             while (count_antennas <= n_antennas):
+                #If it is impossible to allocate the antennas
+                #then clean the clusters and do it again
                 if reset > 1000:
                     count_antennas = 0
+                    count_clusters = 0
+                    p_local_clusters = list()
+                    p_local_antennas = list()
+                    pos = generate_xy(macrocells_center[i],
+                        DMACROMACRO*0.425, DMACROCLUSTER)
+                    p_local_clusters.append(pos)
                     reset = 0
-                    p_antennas = list()
-                
-                p = generate_xy(pos, DROPRADIUS_SC_CLUSTER*0.425, 0)
-       
-                if (is_possition_ok(p, p_antennas, DSMALLSMALL) and 
-                        (is_possition_ok(p, pos, DSMALLSMALL))):
 
+                p = generate_xy(pos, DROPRADIUS_SC_CLUSTER*0.425, 0)
+               
+                if (is_possition_ok(p, p_local_antennas, DSMALLSMALL) and 
+                        (is_possition_ok(p, pos, DSMALLSMALL))):
                     count_antennas = count_antennas + 1
-                    p_antennas.append(p)
+                    p_local_antennas.append(p)
                 else:
                     reset = reset + 1
             
-            for i in range(0, len(p_antennas)):
-                rrh = Antenna(i+1, Antenna.RRH_ID, p_antennas[i], None, grid)
-                grid.add_antenna(rrh)
+            count_clusters = count_clusters + 1
+
+        for j in range(0,len(p_local_antennas)):
+            p_antennas.append(p_local_antennas[j])
+        
+        for k in range(0,len(p_local_clusters)):
+            p_clusters.append(p_local_clusters[k])
+            
+    for l in range(0, len(p_clusters)):
+        cluster = Cluster(l+1, p_clusters[l], grid)
+        grid.add_cluster(cluster)
+
+    for t in range(0, len(p_antennas)):
+        rrh = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        grid.add_antenna(rrh)
 
 ########################################
 def is_possition_ok(p, vector, min_distance):
@@ -162,7 +188,6 @@ def euclidian(a,b):
 def macrocells(grid, radius, n_bs, macrocells_center):
     center = numpy.array([grid.size[0]/2, grid.size[1]/2])
     index = 0
-    radius = 500
 
     #Center Antenna
     macrocells_center.append((grid.size[0]/2, grid.size[1]/2))
@@ -194,9 +219,9 @@ if __name__ == "__main__":
 
     bbu = 2 
     bs = 7 
-    cluster = 1
+    cluster = 3
     rrh = 5
-    ue = 5
+    ue = 60
 
     #Build Scenario
     grid = build_scenario(bbu, bs, cluster, rrh, ue)

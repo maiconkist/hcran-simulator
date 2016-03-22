@@ -260,7 +260,7 @@ def plot_grid( grid ):
         y.append(ue.y)
         #ax.text(ue.x-25, ue.y-35, 'UE'+str(ue._id))
         colors.append('#1214a9')
-        area.append(np.pi * 3**2)
+        area.append(np.pi * 1**2)
 
         if ue._connected_antenna != None:
             ax.arrow(ue.x, ue.y, ue._connected_antenna.x-ue.x, ue._connected_antenna.y-ue.y, head_width=10, head_length=10, fc='k', ec='k')
@@ -278,7 +278,7 @@ def plot_grid( grid ):
             ax.add_patch(patches.RegularPolygon(
                     (rrh.x,rrh.y),
                     3,
-                    20,
+                    10,
                     fill=False )
                 )
 
@@ -295,7 +295,8 @@ def plot_grid( grid ):
         elif rrh.type == rrh.RRH_ID:
             x.append(rrh.x)
             y.append(rrh.y)
-            colors.append('#7abf57')
+            #colors.append('#7abf57')
+            colors.append('#FFFFFF')
             area.append(np.pi * 4**2)
             #ax.text(rrh.x-35, rrh.y-12, 'RRH'+str(rrh._id))
 
