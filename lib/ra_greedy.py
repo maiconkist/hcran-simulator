@@ -4,7 +4,7 @@ from util import *
 import math
 import csv
 
-class Greedy( object ):
+class Greedy(object):
     
     def __init__( self ):
         self.antenna_list = []
@@ -16,57 +16,58 @@ class Greedy( object ):
         ues = grid._user
         rrhs_used = []
 
-        
-
         for ue in ues:
-        #print 'UE' + str(ue.id)
             distance = 10000
             users_no_met = 0
             near = rrhs[0]
+
+            # pega a antena mais proxima que tenha RBs disponiveis
             for rrh in rrhs:
-                d = dist( ue, rrh ) # pega a antena mais proxima que tenha RBs disponiveis
-                #print ue._id, rrh._id, d
+                d = dist(ue, rrh)
                 if rrh.type == Antenna.BS_ID:
-                    if d < distance and ( grid.TOTAL_RBS -1 - len( rrh.resources ) ) >= calculate_necessary_rbs(ue, rrh) and d<Antenna.BS_RADIUS:
-                        #print len( rrh.resources )                
-                        #print rrh.resources
+                    if ((d < distance) and
+                          (grid.TOTAL_RBS -1 - len(rrh.resources) >=
+                              calculate_necessary_rbs(ue, rrh))
+                          and (d<Antenna.BS_RADIUS)):
                         distance = d
                         near = rrh
                 elif rrh.type == Antenna.RRH_ID:
-                    if d < distance and ( grid.TOTAL_RBS -1 - len( rrh.resources ) ) >= calculate_necessary_rbs(ue, rrh) and d<Antenna.RRH_RADIUS:
+                    if ((d < distance) and
+                            ((grid.TOTAL_RBS -1 - len(rrh.resources)) >=
+                                calculate_necessary_rbs(ue, rrh)) and 
+                            (d<Antenna.RRH_RADIUS)):
                         distance = d
                         near = rrh
 
             if near.type == Antenna.BS_ID:
-                from_rb = len( near.resources ) #inicio da proxima faixa de RBs
-
-                #if from_rb < Grid.TOTAL_RBS_RRH:
+                #inicio da proxima faixa de RBs
+                from_rb = len(near.resources) 
                 from_rb += grid.TOTAL_RBS_RRH        
                 to_rb = from_rb + calculate_necessary_rbs(ue, rrh) - 1
                 if (to_rb<grid.TOTAL_RBS):
                     ue.from_rb = from_rb
                     ue.to_rb = to_rb
                     ue._connected_antenna = near
-                    ue.power_connected_antenna = friis( ue, near )
+                    ue.power_connected_antenna = friis(ue, near)
 
-                    for rb in range( from_rb, to_rb + 1): # aloca RBs 
+                    #aloca RBs
+                    for rb in range( from_rb, to_rb + 1):  
                         near.resources.append( rb )
-                        grid.matrix_resources[ near._id ][ rb ] = ue._id
-
-
+                        grid.matrix_resources[near._id][rb] = ue._id
+            
+            #inicio da proxima faixa de RBs
             elif near.type == Antenna.RRH_ID:
-                from_rb = len( near.resources ) #inicio da proxima faixa de RBs                
+                from_rb = len(near.resources)
                 to_rb = from_rb + calculate_necessary_rbs(ue, rrh) - 1
                 if (to_rb<grid.TOTAL_RBS_RRH):
                     ue.from_rb = from_rb
                     ue.to_rb = to_rb
                     ue._connected_antenna = near
-                    ue.power_connected_antenna = friis( ue, near )
+                    ue.power_connected_antenna = friis(ue, near)
 
-                    for rb in range( from_rb, to_rb + 1): # aloca RBs 
-                        near.resources.append( rb )
-                        grid.matrix_resources[ near._id ][ rb ] = ue._id
-
+                    for rb in range(from_rb, to_rb + 1): # aloca RBs
+                        near.resources.append(rb)
+                        grid.matrix_resources[near._id][rb] = ue._id
 
         rbs_reutilized = []
         rbs_interf = []
@@ -130,3 +131,5 @@ class Greedy( object ):
 
         #plot_grid( grid )
         #power_consume += ( len( rrhs_used ) * Antenna.ON ) + ( ( len( rrhs ) - len( rrhs_used ) ) * Antenna.OFF )
+
+

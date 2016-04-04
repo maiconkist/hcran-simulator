@@ -1,10 +1,10 @@
 #########################################################
 # @file     energy_efficient_n_bs.py
-# @author   Gustavo de Araújo
+# @author   Gustavo de Araujo
 # @date     17 Mar 2016
 #########################################################
 
-from ra_greedy import *
+from ee_greedy import *
 from antenna import *
 from user import *
 from bbu import *
@@ -210,7 +210,7 @@ def macrocells(grid, radius, n_bs, macrocells_center):
 # Main
 ########################################
 if __name__ == "__main__":
-    guloso = Greedy()
+    greedy = Greedy()
 
     # Trying to create a new file or open one
     f = open('resumo.csv','w')
@@ -219,12 +219,14 @@ if __name__ == "__main__":
 
     bbu = 2 
     bs = 7 
-    cluster = 3
+    cluster = 2
     rrh = 5
-    ue = 60
+    ue = 15
 
     #Build Scenario
     grid = build_scenario(bbu, bs, cluster, rrh, ue)
-
+    
+    greedy.run(grid)
+    
     util.plot_grid(grid)
 
