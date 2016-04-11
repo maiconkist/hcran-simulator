@@ -217,6 +217,22 @@ def calculate_energy_efficient( antenna_list, vazao_total ):
 
     return vazao_total/ 20000000 / pm + pl
 
+###################
+# \brief Calculate de total power consumition
+#
+#
+def p_peng(antennas):
+    result = 0
+    PcR = 0.1
+    Pbh = 0.2
+    eff = 2
+    p = 0
+
+    for i, rrh in enumerate (antennas):
+        power_consumition += rrh.power + PcR + Pbh
+
+    result = eff * p
+
 
 def calculate_worst_energy_efficient( antenna_list, vazao_total ):
     cl = 0
