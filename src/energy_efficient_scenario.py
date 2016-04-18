@@ -4,7 +4,7 @@
 # @date     17 Mar 2016
 #########################################################
 
-from ee_greedy import *
+from peng import *
 from antenna import *
 from user import *
 from bbu import *
@@ -58,7 +58,8 @@ def build_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
 
     macrocells(grid, DMACROMACRO, n_bs,  macrocells_center)
 
-    clusters(grid, macrocells_center, n_clusters, n_rrh)
+    if not(n_rrh < 1):
+        clusters(grid, macrocells_center, n_clusters, n_rrh)
 
     users(grid, macrocells_center, n_bs, n_clusters, n_ue)
 
@@ -73,23 +74,26 @@ def users(grid, macrocells_center, n_bs, n_clusters, n_ue):
         reset = 1001
         count_ue = 0
         while (count_ue <= n_ue):
+            p_is_ok = True
             if reset > 1000:
                 count_ue = 0
                 reset = 0
                 p_users = list()
 
-            cluster = grid._clusters[random.randint((i*n_clusters),
-                        ((i*n_clusters) + n_clusters)-1)]
+            if n_clusters > 0:
+                cluster = grid._clusters[random.randint((i*n_clusters),
+                            ((i*n_clusters) + n_clusters)-1)]
 
             #Define type of user
-            if random.random() < 0.666:
+            if random.random() < 0.666 and n_clusters > 0:
                 p = generate_xy(cluster._pos, DROPRADIUS_UE_CLUSTER, 0)
+                p_is_ok = is_possition_ok(p, cluster._pos, DSMALLSMALL)
             else:
                 p = generate_xy(macrocells_center[i], DMACROMACRO*0.425, DMACROUE)
             
             #Distribution
-            if not(is_possition_ok(p, cluster._pos, DSMALLSMALL)):
-                reset = reset + 1
+            if not(p_is_ok):
+                    reset = reset + 1
             else:
                 count_ue = count_ue + 1
                 p_users.append(p)
@@ -108,7 +112,7 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
     p_local_antennas = list()
     reset = 0;
 
-    for i in range(0,len(macrocells_center)):
+    for i in range(0, len(macrocells_center)):
         count_clusters = 0
         print("Create macrocells cluster and rhh: " + str(i))
 
@@ -210,7 +214,7 @@ def macrocells(grid, radius, n_bs, macrocells_center):
 # Main
 ########################################
 if __name__ == "__main__":
-    greedy = Greedy()
+    peng = Peng()
 
     # Trying to create a new file or open one
     f = open('resumo.csv','w')
@@ -218,15 +222,15 @@ if __name__ == "__main__":
     f.close()
 
     bbu = 2 
-    bs = 7 
-    cluster = 2
-    rrh = 5
-    ue = 15
+    bs = 1 
+    cluster = 0
+    rrh = 0
+    ue = 3
 
     #Build Scenario
     grid = build_scenario(bbu, bs, cluster, rrh, ue)
     
-    greedy.run(grid)
-    
+    peng.run(grid)
+
     util.plot_grid(grid)
 
