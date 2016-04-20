@@ -23,35 +23,36 @@ class PengProperties(object):
 
         ## Attributes
         self.a                     = []
+        self.h                     = []
         self.p                     = []
-        self.beta                  = []
-        self.betan                 = []
-        self.lambdak               = []
-        self.upsilonl              = []
-        self.epsilon               = []
-        self.subgradient_beta_n    = []
-        self.subgradient_lambda_k  = []
-        self.subgradient_upsilon_l = []
+        self.betan                 = [2]
+        self.lambdak               = [2]
+        self.upsilonl              = [2]
 
         self.b0         = 0
         self.n0         = 0
         self.drn        = 0
         self.hrn        = 0
-        self.dmn        = 0
+        self.dmn        = 450
         self.hmn        = 0
         self.p_max      = 0
         self.M          = 0
         self.N          = 0
-        self.prc        = 0
-        self.pbh        = 0
-        self.eff        = 0
+        self.K          = 0
+        self.prc        = 0.1
+        self.pbh        = 0.2
+        self.eff        = 4
         self.lambd      = 0
-        self.upsilon    = 0
-        self.dr2m       = 0
-        self.hdr2m      = 0
-    
+        self.dr2m       = 125
+        self.hr2m       = 0
+        self.tolerancia = 0.001
+
+        self.epsilon_beta       = 0.1
+        self.epsilon_lambda     = 0.1
+        self.epsilon_upsilon    = 0.1
+
         ## Calculate by some equation
-        self.cnir                    = []   #(1)
+        self.cinr                    = []   #(1)
         self.p                       = []   #
         self.w                       = []   #(24)
 
@@ -64,8 +65,56 @@ class PengProperties(object):
         self.lambda_k                = 0    #(33)
         self.ipsilon                 = 0    #(34)
 
-        #self.b0 = self.rrh._cur_ch_bw
-        #self.n0 = 0 #TODO
+        #Initialize variables
+        self.betan[0]       = 1
+        self.lambdak[0]     = 1
+        self.upsilonl[0]    = 1
+
+        #Initialize matrix
+        for n in range(0, self.N):
+            for k in range (0, self.K):
+                self.cinr[n][k] = self.calculate_cirn(rrh._reu_type)
+                self.w[n][k] = self.calculate_waterfilling_optimal(n, k)
+                hp1 = ((1 + self.betan) * math.log(self.cinr[n][k] * self.w[n][k]))
+                hp2 = math.log(2) * (1 - (self.cinr[n][k]*self.w[n][k]))
+
+                if hp1 < 0:
+                    hp1 = 0
+
+                if hp2 < 0:
+                    hp2 = 0
+
+                self.h[n][k] = hp1 -(((1 + self.betan) / math.log(2)) * hp2)
+                self.p[n][k] = self.calculate_p_matrix_element(n, k)
+
+        self.calculate_a_matrix()
+
+    def calculate_a_matrix(self):
+        n_max = 0
+        for n in range(0, self.N):
+            for k in range(0, self.K):
+                if n_max < self.h[n][k]:
+                    n_max = self.h[n][k]
+
+            for i in range(0, self.K):
+                if i == n_max:
+                    self.a[n][k] = 1
+                else:
+                    self.a[n][k] = 0
+
+    def calculate_p_matrix_element(self, n, k):
+        result = self.w[n][k] - (1 - 1 / self.cnir[n][k])
+       
+        if result < 0:
+            result = 0
+        
+        return result
+
+    def calculate_waterfilling_optimal(self, n, k):
+        p1 = (self.b0 * (1 + self.betan[0])) 
+        p2 = math.log((self.energiy_efficient * self.eff) + self.lambdak[0]
+                * self.dr2m * self.hr2m + self.upsilon[0])
+        return p1 / p2
 
     def k_for_omega1(self):
         return ((self.drn * self.hrn)/(self.b0 * self.n0))
@@ -75,7 +124,7 @@ class PengProperties(object):
             * self.hmm)+(self.b0 * self.n0))
 
     def calculate_cirn(self, reu_type):
-        if reu_type == RUE_HIGH_RATE:
+        if reu_type == Antenna.RUE_HIGH_RATE:
             return k_for_omega1()
         else:
             return k_for_omega2()
@@ -91,7 +140,7 @@ class PengProperties(object):
     def calculate_data_rate_n(self, n):
         for k in range(0, self.k):
             result += (self.a[n][k] * self.b0
-                * math.log(1+(self.cnir[n][k]* self.p[n][k])))
+                * math.log(1+(self.cinr[n][k]* self.p[n][k])))
 
         return result
 
@@ -109,7 +158,7 @@ class PengProperties(object):
         return self.calculate_data_rate()/self.calculate_power_consumition()
 
     #(28)
-    def subgradient_beta(self, n):
+    def calculate_subgradient_beta(self, n):
         result = 0
         if ((n > 0) and (n < self.N)):
             c = self.calculate_data_rate_n(n)
@@ -126,6 +175,7 @@ class PengProperties(object):
 
         return result            
 
+    #(30)
     def calculate_subgradient_lambda(self, k, type):
         result = 0
         soma = 0
@@ -136,7 +186,8 @@ class PengProperties(object):
 
         return result
 
-    def calculate_subgradient_ipsilon(self):
+    #(31)
+    def calculate_subgradient_upsilon(self):
         soma = 0
         for n in range(0, self.N):
             for k in range(0, self.K):
@@ -144,17 +195,18 @@ class PengProperties(object):
 
         return pm * soma
 
-    #(32)
-    def calculate_beta_n_l_1(self, l):
-        self.betan[l+1] = self.betan[l] - self.epsilon[l+1] * self.subgradient_beta_n[l+1]
+    #(32) TODO
+    def calculate_beta_n_l1(self):
+        return self.betan[0] - (self.epsilon_beta * self.epsilon_beta)
 
-    #(33)
-    def calculate_lambda_k(self, l):
-        self.lambdak[l+1] = self.lambdak[l] - self.epsilon[l+1] * sekf.subgradient_lambda_k[l+1]
+    #(33) TODO
+    def calculate_lamdak_l1(self):
+        return self.lambdak[0] - (self.epsilon_lambda * self.epsilon_lambda)
 
-    #(34)
-    def calculate_subgradient_ipsilon(self, l):
-        self.ipsilon[l+1] = self.
+    #(34) TODO
+    def calculate_upsilon_l1(self):
+        return self.upsilon[0] - (self.epsilon_upsilon * self.epsilon_upsilon)
+
 
 class Peng(object):
 
@@ -227,14 +279,15 @@ class Peng(object):
                     ue._connected_antenna.resources.append(rb)
                     grid.matrix_resources[ue._connected_antenna._id][rb] = ue._id
 
-        #Peng
-        for rrh in rrhs:
-            proper = PengProperties(rrh)
-            print rrh.
-                
+        peng_property = PengProperties(rrh)
 
-
-
-
-
+'''
+            for i in range(0, I):
+                #Inicializa beta, lambda e v
+                dif = 1
+                while (dif < self.tolerancia):
+                    dif = max()
+                     
+                    ##Atualizar valores de beta, lambda e v (l+1)
+'''
 
