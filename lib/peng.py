@@ -25,24 +25,27 @@ class PengProperties(object):
         self.a                     = []
         self.h                     = []
         self.p                     = []
-        self.betan                 = [2]
-        self.lambdak               = [2]
-        self.upsilonl              = [2]
+        self.betan                 = []
+        self.lambdak               = []
+        self.upsilonl              = []
+        self.v_M                   = []
+        self.v_N                   = []
 
-        self.b0         = 0
-        self.n0         = 0
-        self.drn        = 0
-        self.hrn        = 0
+        self.b0         = 0         #não tem ainda
+        self.n0         = 0         #não tem ainda
+        self.drn        = 0         #tem no base conf. Utils tem o calcula da distancia entre usuario e antena
+        self.hrn        = 0         #tem no base conf. Utils tem o calcula da distancia entre usuario e antena
         self.dmn        = 450
-        self.hmn        = 0
-        self.p_max      = 0
-        self.M          = 0
-        self.N          = 0
-        self.K          = 0
+        self.hmn        = 0         #não tem ainda
+        self.p_max      = 20        #potencia máxima 20 ou 30
+        self.pm_max     = 43
+        self.M          = 0         #n usuario de baixa demanda (30%)
+        self.N          = 0         #n usuarios de alta demanda (70%)
+                                    #provavelemnte teremos de mudar para um vetor de usuários
+        self.K          = Grid.TOTAL_RBS 
         self.prc        = 0.1
         self.pbh        = 0.2
         self.eff        = 4
-        self.lambd      = 0
         self.dr2m       = 125
         self.hr2m       = 0
         self.tolerancia = 0.001
@@ -56,7 +59,7 @@ class PengProperties(object):
         self.p                       = []   #
         self.w                       = []   #(24)
 
-        self.pm                      = 0    #()
+        self.pm                      = self.pm_max / self.M
         self.data_rate               = 0    #(2) C
         self.total_power_consumition = 0    #(5) P
         self.energy_efficient        = 0    #(7) y
@@ -85,7 +88,8 @@ class PengProperties(object):
                     hp2 = 0
 
                 self.h[n][k] = hp1 -(((1 + self.betan) / math.log(2)) * hp2)
-                self.p[n][k] = self.calculate_p_matrix_element(n, k)
+                #self.p[n][k] = self.calculate_p_matrix_element(n, k)
+                #Colocar calculo do p somente quando a[n][k] for 1
 
         self.calculate_a_matrix()
 
@@ -99,8 +103,10 @@ class PengProperties(object):
             for i in range(0, self.K):
                 if i == n_max:
                     self.a[n][k] = 1
+                    self.p[n][k] = self.calculate_p_matrix_element(n, k)
                 else:
                     self.a[n][k] = 0
+                    self.p[n][k] = 0 
 
     def calculate_p_matrix_element(self, n, k):
         result = self.w[n][k] - (1 - 1 / self.cnir[n][k])
@@ -124,6 +130,9 @@ class PengProperties(object):
             * self.hmm)+(self.b0 * self.n0))
 
     def calculate_cirn(self, reu_type):
+        #Não é a Antena é o usuario. Trocar TODO
+        #Classificar no momento da associação
+
         if reu_type == Antenna.RUE_HIGH_RATE:
             return k_for_omega1()
         else:
@@ -238,7 +247,25 @@ class Peng(object):
                         rrh)) and d < Antenna.RRH_RADIUS:
                         distance = d
                         near = rrh
+            
+                #Classicar o usuário como alta ou baixa demanda
+                #Adicionar REU a RRH e classificar como N ou M
 
+            peng_property = PengProperties(rrh)
+            for i in range(0, I):
+                for rrh in rrhs:
+                    #Inicializa beta, lambda e v
+                    dif = 1
+                    l = 0
+                    while (dif < self.tolerancia): 
+                        #verifica se os multiplicadoes são menores que a tolerancia
+
+                        #Atualizar valores de beta, lambda e v (l+1)
+                        #e recalcula as matris a, p, h, etc...
+                        l = l + 1
+                #executa só o else do algoritmo y(i) = ...
+
+'''
             #Inicio da proxima faixa de RBs
             begin_rbs = len(near.resources)
             end_rbs = begin_rbs + calculate_necessary_rbs(ue, rrh) -1
@@ -279,15 +306,8 @@ class Peng(object):
                     ue._connected_antenna.resources.append(rb)
                     grid.matrix_resources[ue._connected_antenna._id][rb] = ue._id
 
-        peng_property = PengProperties(rrh)
+'''
+'''
 
-'''
-            for i in range(0, I):
-                #Inicializa beta, lambda e v
-                dif = 1
-                while (dif < self.tolerancia):
-                    dif = max()
-                     
-                    ##Atualizar valores de beta, lambda e v (l+1)
-'''
+            '''
 
