@@ -24,7 +24,10 @@ def connectability(ue, cur_antenna, next_antenna):
 
 class User(object):
 
-    def __init__(self, id, pos, moving_strategy, grid):
+    HIGH_RATE_USER    = 0
+    LOW_RATE_USER     = 1
+
+    def __init__(self, id, pos, moving_strategy, grid, user_type=1):
         """
         """
 
@@ -37,6 +40,7 @@ class User(object):
         self._txs = []
         self._bad_connection = 0.0
         self._connected_antenna = None
+        self._type = user_type
         self.antenna_in_range = []  #range of antennas available to serve UE
         self.power_connected_antenna = 0
         #self.antenna = None

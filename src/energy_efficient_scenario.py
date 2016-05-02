@@ -99,7 +99,11 @@ def users(grid, macrocells_center, n_bs, n_clusters, n_ue):
                 p_users.append(p)
 
         for j in range(0,len(p_users)):
-            u = User(j, p_users[j], None, grid)
+            if random.random() < 0.3:
+                user_type = User.HIGH_RATE_USER
+            else:
+                user_type = User.LOW_RATE_USER
+            u = User(j, p_users[j], None, grid, user_type)
             grid.add_user(u)
 
 ########################################

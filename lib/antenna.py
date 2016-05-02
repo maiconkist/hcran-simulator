@@ -12,9 +12,6 @@ class Antenna(object):
     POWER_BS    = 46
     POWER_RRH   = 23
 
-    REU_HIGHT_RATE = 0
-    REU_LOW_RATE   = 1
-
     # 1.4  channel has 6  RBs in frequency domain
     # 3.0  channel has 15 RBs in frequency domain
     # 5.0  channel has 25 RBs in frequency domain
@@ -44,8 +41,6 @@ class Antenna(object):
         self.antenna_in_range = []
         self.user_in_range = []
         self.resources = []
-        #REU Type, by default is high rate
-        self._reu_type = self.REU_HIGHT_RATE 
         # position tupe
         self._pos = pos
         # antenna coverage radius

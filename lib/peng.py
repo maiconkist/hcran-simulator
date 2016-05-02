@@ -6,43 +6,41 @@
 
 from antenna import Antenna
 from grid import Grid
+from user import *
 from util import *
 import math
 import csv
+import numpy
 
 class PengProperties(object):
 
-    RUE_HIGH_RATE    = 0
-    RUE_LOW_RATE     = 1
     I = 10
     L = 10
 
-    def __init__(self, rrh):
+    def __init__(self, rrh, ues, total_rbs):
         self.rrh = rrh
         self.h = []
 
         ## Attributes
-        self.a                     = []
-        self.h                     = []
-        self.p                     = []
-        self.betan                 = []
-        self.lambdak               = []
-        self.upsilonl              = []
-        self.v_M                   = []
-        self.v_N                   = []
+        self.a          = []
+        self.h          = []
+        self.p          = []
+        self.betan      = []
+        self.lambdak    = []
+        self.upsilonl   = []
+        self.M          = []         #n usuario de baixa demanda (30%)
+        self.N          = []         #n usuarios de alta demanda (70%)
 
-        self.b0         = 0         #não tem ainda
-        self.n0         = 0         #não tem ainda
-        self.drn        = 0         #tem no base conf. Utils tem o calcula da distancia entre usuario e antena
-        self.hrn        = 0         #tem no base conf. Utils tem o calcula da distancia entre usuario e antena
+        self.b0         = 1         #nao tem ainda
+        self.n0         = 1         #nao tem ainda
+        self.drn        = 0         #tem no base conf Utils tem o calcula da distancia entre usuario e antena
+        self.hrn        = 0         #tem no base conf Utils tem o calcula da distancia entre usuario e antena
         self.dmn        = 450
-        self.hmn        = 0         #não tem ainda
-        self.p_max      = 20        #potencia máxima 20 ou 30
+        self.hmn        = 0         #nao tem ainda
+        self.p_max      = 20        #potencia maxima 20 ou 30
         self.pm_max     = 43
-        self.M          = 0         #n usuario de baixa demanda (30%)
-        self.N          = 0         #n usuarios de alta demanda (70%)
-                                    #provavelemnte teremos de mudar para um vetor de usuários
-        self.K          = Grid.TOTAL_RBS 
+                                    #provavelemnte teremos de mudar para um vetor de usuarios
+        self.K          = total_rbs
         self.prc        = 0.1
         self.pbh        = 0.2
         self.eff        = 4
@@ -59,7 +57,6 @@ class PengProperties(object):
         self.p                       = []   #
         self.w                       = []   #(24)
 
-        self.pm                      = self.pm_max / self.M
         self.data_rate               = 0    #(2) C
         self.total_power_consumition = 0    #(5) P
         self.energy_efficient        = 0    #(7) y
@@ -69,15 +66,55 @@ class PengProperties(object):
         self.ipsilon                 = 0    #(34)
 
         #Initialize variables
-        self.betan[0]       = 1
-        self.lambdak[0]     = 1
-        self.upsilonl[0]    = 1
+        self.betan       = [1] * 2
+        self.lambdak     = [1] * 2
+        self.upsilonl    = [1] * 2
+
+        #Classificate Users in N or M
+        for ue in ues:
+            if ue._type == User.HIGH_RATE_USER:
+                self.N.append(ue)
+            else:
+                self.M.append(ue)
+
+        self.cinr = numpy.zeros((len(self.N) + len(self.M),self.K)) 
+        self.pm = self.pm_max / len(self.M)
 
         #Initialize matrix
-        for n in range(0, self.N):
+        for i in range (0, len(self.N) + len(self.M)):
             for k in range (0, self.K):
-                self.cinr[n][k] = self.calculate_cirn(rrh._reu_type)
+                if i < len(self.N):
+                    self.cinr[i][k] = self.calculate_cirn(self.N[i]._type)
+                else:
+                    self.cinr[i][k] = self.calculate_cirn(self.M[i-len(self.M)]._type)
+
+        for n in range(0, len(self.N)):
+            for k in range (0, self.K):
                 self.w[n][k] = self.calculate_waterfilling_optimal(n, k)
+
+    def k_for_omega1(self):
+        return ((self.drn * self.hrn)/(self.b0 * self.n0))
+
+    def k_for_omega2(self):
+        return (self.drn * self.hrn)/((self.pm * self.dmn
+            * self.hmn)+(self.b0 * self.n0))
+
+    def calculate_cirn(self, reu_type):
+        #Nao e a Antena e o usuario. Trocar TODO
+        #Classificar no momento da associacao
+        if reu_type == User.HIGH_RATE_USER:
+            return self.k_for_omega1()
+        else:
+            return self.k_for_omega2()
+
+
+    def calculate_waterfilling_optimal(self, n, k):
+        p1 = (self.b0 * (1 + self.betan[0])) 
+        p2 = math.log((self.energy_efficient * self.eff) + self.lambdak[0]
+                * self.dr2m * self.hr2m + self.upsilon[0])
+        return p1 / p2
+
+'''
                 hp1 = ((1 + self.betan) * math.log(self.cinr[n][k] * self.w[n][k]))
                 hp2 = math.log(2) * (1 - (self.cinr[n][k]*self.w[n][k]))
 
@@ -108,6 +145,7 @@ class PengProperties(object):
                     self.a[n][k] = 0
                     self.p[n][k] = 0 
 
+
     def calculate_p_matrix_element(self, n, k):
         result = self.w[n][k] - (1 - 1 / self.cnir[n][k])
        
@@ -116,28 +154,10 @@ class PengProperties(object):
         
         return result
 
-    def calculate_waterfilling_optimal(self, n, k):
-        p1 = (self.b0 * (1 + self.betan[0])) 
-        p2 = math.log((self.energiy_efficient * self.eff) + self.lambdak[0]
-                * self.dr2m * self.hr2m + self.upsilon[0])
-        return p1 / p2
+'''
 
-    def k_for_omega1(self):
-        return ((self.drn * self.hrn)/(self.b0 * self.n0))
 
-    def k_for_omega2(self):
-        return (self.drn * self.hrn)/((self.pm * self.dmn
-            * self.hmm)+(self.b0 * self.n0))
-
-    def calculate_cirn(self, reu_type):
-        #Não é a Antena é o usuario. Trocar TODO
-        #Classificar no momento da associação
-
-        if reu_type == Antenna.RUE_HIGH_RATE:
-            return k_for_omega1()
-        else:
-            return k_for_omega2()
-
+'''
     #C (2)
     def calculate_data_rate(self):
         result = 0
@@ -216,6 +236,7 @@ class PengProperties(object):
     def calculate_upsilon_l1(self):
         return self.upsilon[0] - (self.epsilon_upsilon * self.epsilon_upsilon)
 
+'''
 
 class Peng(object):
 
@@ -229,27 +250,15 @@ class Peng(object):
         ues = grid._user
         rrhs_used = []
 
+        rrh = rrhs[0]
         for ue in ues:
-            distance = 10000
-            near = rrhs[0]
-            for rrh in rrhs:
-                #Pega a antenas mais proxima que tenha RBs disponiveis
-                d = dist(ue,rrh)
-                r = (grid.TOTAL_RBS -1 -len(rrh.resources))
-
-                if rrh.type == Antenna.BS_ID:
-                    if (d < distance) and (r >= calculate_necessary_rbs(ue,
-                        rrh)) and d < Antenna.BS_RADIUS:
-                        distance = d
-                        near = rrh
-                elif rrh.type == Antenna.RRH_ID:
-                    if (d < distance) and (r >= calculate_necessary_rbs(ue,
-                        rrh)) and d < Antenna.RRH_RADIUS:
-                        distance = d
-                        near = rrh
+            ue._connected_antenna = rrh
             
-                #Classicar o usuário como alta ou baixa demanda
-                #Adicionar REU a RRH e classificar como N ou M
+        peng_property = PengProperties(rrh, ues, grid.TOTAL_RBS)
+
+'''                
+            #Classicar o usuario como alta ou baixa demanda
+            #Adicionar REU a RRH e classificar como N ou M
 
             peng_property = PengProperties(rrh)
             for i in range(0, I):
@@ -258,56 +267,11 @@ class Peng(object):
                     dif = 1
                     l = 0
                     while (dif < self.tolerancia): 
-                        #verifica se os multiplicadoes são menores que a tolerancia
+                        #verifica se os multiplicadoes sao menores que a tolerancia
 
                         #Atualizar valores de beta, lambda e v (l+1)
                         #e recalcula as matris a, p, h, etc...
                         l = l + 1
-                #executa só o else do algoritmo y(i) = ...
-
+                #executa so o else do algoritmo y(i) = ...
 '''
-            #Inicio da proxima faixa de RBs
-            begin_rbs = len(near.resources)
-            end_rbs = begin_rbs + calculate_necessary_rbs(ue, rrh) -1
-
-            if near.type == Antenna.BS_ID:
-                begin_rbs += grid.TOTAL_RBS_RRH
-                if (end_rbs < grid.TOTAL_RBS):
-                   ue.from_rb = begin_rbs
-                   ue.to_rb = end_rbs
-                   ue._connected_antenna = near
-                   ue.power_connected_antenna = friis(ue,near)
-               
-            else: #near.type == Antenna.RRH_ID:
-                if (end_rbs < grid.TOTAL_RBS_RRH):
-                   ue.from_rb = begin_rbs
-                   ue.to_rb = end_rbs
-                   ue._connected_antenna = near
-                   ue.power_connected_antenna = friis(ue,near)
-
-            for rb in range(begin_rbs, end_rbs + 1):
-                near.resources.append(rb)
-                grid.matrix_resources[near._id][rb] = ue._id
-
-            
-        for ue in reversed(ues):
-            if ((ue._connected_antenna != None) and 
-               (ue._connected_antenna.type == Antenna.BS_ID) and 
-               (len(ue._connected_antenna.resources) < grid.TOTAL_RBS)):
-                ue.to_rb = grid.TOTAL_RBS - 1
-                for rb in range (ue.from_rb, ue.to_rb + 1):
-                    ue._connected_antenna.resources.append(rb)
-                    grid.matrix_resources[ue._connected_antenna._id][rb] = ue._id
-
-            elif ((ue._connected_antenna != None) and
-               (ue._connected_antenna.type == Antenna.RRH_ID) and
-               (len(ue._connected_antenna.resources) < grid.TOTAL_RBS_RRH)):
-                for rb in range (ue.from_rb, ue.to_rb + 1):
-                    ue._connected_antenna.resources.append(rb)
-                    grid.matrix_resources[ue._connected_antenna._id][rb] = ue._id
-
-'''
-'''
-
-            '''
 
