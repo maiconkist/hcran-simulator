@@ -3,6 +3,7 @@ import scipy.spatial
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from antenna import * 
 
 def nearest(p1, p_list, idx=0):
     """ Return the closest point to p1 in p_list
@@ -60,11 +61,39 @@ def snr(ue, antenna, power_interfering=0):
 
     return snr
 
-def received_power(ue, antenna):
+def sum_coll(lista, x):
+    soma = 0
+    for y in range (0,len(lista)):
+        soma += lista[y][x]
+
+    return soma
+
+def received_power(ue, antenna, rb):
     CENTER_FREQ = 700  # in MHz
-#TODO: Informar frequencia do RB
-    power = antenna.power - (20 * math.log(dist(ue, antenna),10) + 20*math.log(CENTER_FREQ,10) - 27.55)
+    total_power = sum_coll(antenna._p, rb)
+    #TODO: Informar frequencia do RB
+    power = total_power - (20 * math.log(dist(ue, antenna),10) + 20*math.log(CENTER_FREQ,10) - 27.55)
     return power
+
+def peng_power_interfering(ue, rb, antennas):
+
+    interference = 0
+    for ant in antennas:
+        if (ue._connected_antenna._id != ant._id):
+            interference += received_power(ue, ant, rb)
+        else:
+            interference += path_loss(ue, ant)
+
+    return interference
+
+def path_loss(ue, antenna):
+    result = 0
+    if (antenna.type == antenna.BS_ID):
+        result = 31.5 + 40.0 * math.log(dist(ue, antenna))
+    else:
+        result = 31.5 + 35.0 * math.log(dist(ue, antenna))
+    return result
+
 #0,0000063095734448
 def power_interfering(ue, rb, grid):
     """
@@ -79,7 +108,8 @@ def power_interfering(ue, rb, grid):
             #print 'P2', power_interfering, ue.antenna_in_range[rrh]._id
 
     if power_interfering > 0:
-        return mw_to_dbm(power_interfering)
+        return mw_to_dbm(power_interfering) + path_loss(d)
+
     else:
         return 0
 
@@ -313,7 +343,7 @@ def plot_grid( grid ):
             y.append(rrh.y)
             #colors.append('#7abf57')
             colors.append('#FFFFFF')
-            area.append(np.pi * 4**2)
+            area.append(np.pi * 2**2)
             #ax.text(rrh.x-35, rrh.y-12, 'RRH'+str(rrh._id))
 
     plt.scatter(x, y, s=area, c=colors, alpha=0.5)

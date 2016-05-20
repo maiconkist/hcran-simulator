@@ -25,10 +25,10 @@ DMACROMACRO             = 500
 DMACROUE                = 30    #35
 DMACROCLUSTER           = 90    #105
 DSMALLUE                = 5
-DSMALLSMALL             = 20
+DSMALLSMALL             = 10
 DROPRADIUS_MC           = 250
 DROPRADIUS_SC           = 500
-DROPRADIUS_SC_CLUSTER   = 50
+DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 
@@ -98,7 +98,7 @@ def users(grid, macrocells_center, n_bs, n_clusters, n_ue):
                 count_ue = count_ue + 1
                 p_users.append(p)
 
-        for j in range(0,len(p_users)):
+        for j in range(0,len(p_users) -1):
             if random.random() < 0.3:
                 user_type = User.HIGH_RATE_USER
             else:
@@ -133,6 +133,7 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
                 #If it is impossible to allocate the antennas
                 #then clean the clusters and do it again
                 if reset > 1000:
+                    print "rest"
                     count_antennas = 0
                     count_clusters = 0
                     p_local_clusters = list()
@@ -153,7 +154,7 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
             
             count_clusters = count_clusters + 1
 
-        for j in range(0,len(p_local_antennas)):
+        for j in range(0,len(p_local_antennas) -1):
             p_antennas.append(p_local_antennas[j])
         
         for k in range(0,len(p_local_clusters)):
@@ -218,7 +219,6 @@ def macrocells(grid, radius, n_bs, macrocells_center):
 # Main
 ########################################
 if __name__ == "__main__":
-    peng = Peng()
 
     # Trying to create a new file or open one
     f = open('resumo.csv','w')
@@ -227,14 +227,21 @@ if __name__ == "__main__":
 
     bbu = 2 
     bs = 1 
-    cluster = 0
-    rrh = 0
-    ue = 3
+    cluster = 2
+    rrh = 10
+    ue = 30
 
     #Build Scenario
-    grid = build_scenario(bbu, bs, cluster, rrh, ue)
-    
-    peng.run(grid)
+    print "Create scenario"
+    arq = open("results.txt","w")
+    arq.write("Macros,rrhs,usuarios,scenario,iteracao,c,p,ee,temp\n")
 
+
+    for i in range (0, 3):
+        grid = build_scenario(bbu, bs, cluster, rrh, ue)
+        peng = Peng(bs, ue, i)
+        peng.run(grid, arq)
+
+    arq.close()
     util.plot_grid(grid)
 
