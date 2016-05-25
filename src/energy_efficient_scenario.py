@@ -238,10 +238,11 @@ if __name__ == "__main__":
 
 
     for i in range (0, 3):
-        grid = build_scenario(bbu, bs, cluster, rrh, ue)
+        grid = build_scenario(bbu, bs, cluster, rrh, ue) 
         peng = Peng(bs, ue, i)
-        peng.run(grid, arq)
+        peng.run_monte_carlo(grid)
+        #peng.run(grid, arq)
 
-    arq.close()
-    util.plot_grid(grid)
+    #arq.close()
+    #util.plot_grid(grid)
 
