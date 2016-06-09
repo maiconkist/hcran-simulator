@@ -12,6 +12,29 @@ class Antenna(object):
     POWER_BS    = 46
     POWER_RRH   = 23
 
+    ################
+    # Peng and MC constants
+    B0           = 180
+    N0           = -17
+    DRN          = 1         
+    HRN          = 1         
+    DMN          = 450
+    HMN          = 1
+    Pmax         = 20        
+    PMmax        = 43
+    PRmax        = 1
+    PRC          = 0.1
+    PBH          = 0.2
+    EFF          = 4
+    DR2M         = 125       
+    HR2M         = 1 
+    NR           = 600
+    NER          = 400
+    E_BETA       = 0.1
+    E_LAMBDA     = 0.1
+    E_UPSILON    = 0.1
+    D_0          = 1
+
     # 1.4  channel has 6  RBs in frequency domain
     # 3.0  channel has 15 RBs in frequency domain
     # 5.0  channel has 25 RBs in frequency domain
@@ -61,65 +84,16 @@ class Antenna(object):
         self._bbu.register(self)
         
         #################################
-        #Used by peng only
+        #Used by peng and monte carlo
         #################################
-        self._cnir  = []
-        self._a     = []
-        self._p     = []
-        self._h     = []
-        self._K     = 0 
-        
-        self._b0         = 180
-        self._n0         = -17
-        self._drn        = 1         #Calculado na funcao
-        self._hrn        = 1         #tem no base conf Utils tem o calcula da distancia entre usuario e antena
-        self._dmn        = 450
-        self._hmn        = 1
-        self._p_max      = 20        #potencia maxima 20 ou 30
-        self._pm_max     = 43
-        self.pRmax       = 1
-        self.Temp        = 0.00
-        self._prc        = 0.1
-        self._pbh        = 0.2
-        self._eff        = 4
-        self._dr2m       = 125       #calcular
-        self._hr2m       = 1 
+        self.cnir                       = []
+        self.a                          = []
+        self.p                          = []
+        self.h                          = []
+        self.energy_efficient           = [] 
+        self.total_power_consumition    = 0 
+        self.data_rate                  = 0
 
-        self._nr         = 600
-        self._ner        = 400
-
-        self._epsilon_beta       = 0.1
-        self._epsilon_lambda     = 0.1
-        self._epsilon_upsilon    = 0.1
-
-        self._delta_0 = 1
-
-        self._others_ant = list()
-        self._l = 0
-        self._total_power_consumition = 0
-        self._energy_efficient = list()
-
-        self.dkr2m = 125
-        self.pHmax = 41
-
-        self.M = 10000
-        self.N = 0
-        self.K = 10                 #RBS
-
-        self.C = numpy.zeros(shape=(self.M))
-        self.rol = numpy.zeros(shape=(self.M))
-        self.P = numpy.zeros(shape=(self.M))
-        self.Bn = numpy.zeros(shape=(self.M))
-        self.Bm = numpy.zeros(shape=(self.M))
-        self.L = numpy.zeros(shape=(self.M))
-        self.V = numpy.zeros(shape=(self.M))
-        self.EE = numpy.zeros(shape=(self.M))
-        self.a = numpy.zeros(shape=(self.M,self.N,self.K))
-        self.aAnt = numpy.zeros(shape=(self.M,self.N,self.K))
-        self.p = numpy.zeros(shape=(self.M,self.N,self.K))
-        self.i = numpy.zeros(shape=(self.M,self.N,self.K))
-
-        self.s0 = 1
 
     @property
     def x( self ):
@@ -551,194 +525,6 @@ class Antenna(object):
             r = 1
         self._energy_efficient.append(self._data_rate/r)
 
-    def roleta(EE, nJogadas):
-        nArea = len(EE)
-        area = numpy.zeros(shape=(nArea))
-        result = numpy.zeros(shape=(nJogadas))
-        total = sum(EE)
-        ant = 0;
-        for q in range(0, len(EE)):
-            area[q] = ant + EE[q]
-            ant = area[q]
-
-        print EE
-        print area
-
-        for q in range(0, nJogadas):
-            rd = random.uniform(0.0, total)
-            for t in range(0, len(area)):
-                if rd < area[t]:
-                    result[q] = t
-                    break
-
-        return result
 
 
-    ###############################################
-    # Roleta viciada
-    ##############################################
-    def init_monte_carlo(self):
-        self.N = len(self._ues)
-        self.C = numpy.zeros(shape=(self.M))
-        self.rol = numpy.zeros(shape=(self.M))
-        self.P = numpy.zeros(shape=(self.M))
-        self.Bn = numpy.zeros(shape=(self.M))
-        self.Bm = numpy.zeros(shape=(self.M))
-        self.L = numpy.zeros(shape=(self.M))
-        self.V = numpy.zeros(shape=(self.M))
-        self.EE = numpy.zeros(shape=(self.M))
-        self.a = numpy.zeros(shape=(self.M,self.N,self.K))
-        self.aAnt = numpy.zeros(shape=(self.M,self.N,self.K))
-        self.p = numpy.zeros(shape=(self.M,self.N,self.K))
-        self.i = numpy.zeros(shape=(self.M,self.N,self.K))
-        self.betan = numpy.zeros(shape=(self.M,len(self._ues)))
-        self.sub_bn = numpy.zeros(shape=(self.M,self.N))
-        self.sub_lambda_k = numpy.zeros(shape=(self.M,self.K))
-        self.lambdak = numpy.zeros(shape=(self.M, self.M))
-        self.upsilonl = numpy.zeros(shape=(self.M))
-        self.sub_upsilon = numpy.zeros(shape=(self.M))
 
-    def clean(self):
-        self.C = numpy.zeros(shape=(self.M))
-        self.P = numpy.zeros(shape=(self.M))
-        self.Bn = numpy.zeros(shape=(self.M))
-        self.Bm = numpy.zeros(shape=(self.M))
-        self.L = numpy.zeros(shape=(self.M))
-        self.V = numpy.zeros(shape=(self.M))
-        self.EE = numpy.zeros(shape=(self.M))
-        self.a = numpy.zeros(shape=(self.M,self.N,self.K))
-        self.p = numpy.zeros(shape=(self.M,self.N,self.K))
-        self.i = numpy.zeros(shape=(self.M,self.N,self.K))
-
-    def doPartialCalc(self,z,r,y):
-        #Calculos
-        self.C[z] += (self.a[z,r,y] * self._b0 * math.log(1+(self.i[z,r,y] * self.p[z,r,y])))
-        self.P[z] += (self.a[z,r,y] * self.p[z,r,y])
-       
-        #if usuario de alta demanda:
-        if self._ues[r]._type == User.HIGH_RATE_USER:
-            self.Bn[z] += (self.a[z,r,y] * self._b0 * math.log(1+(self.i[z,r,y] * self.p[z,r,y])) - self._nr)
-        else: 
-        #if usuario de baixa demanda:
-            self.Bm[z] += (self.a[z,r,y] * self._b0 * math.log(1+(self.i[z,r,y] * self.p[z,r,y])) - self._ner)
-
-        self.L[z] += (self.a[z,r,y] * self.p[z,r,y] * self.dkr2m * self.pHmax)
-        self.V[z] += self.a[z,r,y] * self.p[z,r,y]
-
-    def doFinalCalc(self,z, r):
-        self.P[z] = self._eff * self.P[z] + self._prc + self._pbh
-        self.L[z] = self.s0 - self.L[z]
-        
-        if self.type == Antenna.BS_ID:
-            self.V[z] = self.pHmax - self.V[z]
-        else:        
-            self.V[z] = self.pRmax - self.V[z]
-        #aux = (self.betan[z][r]*self.Bn[z]) + (self.betan[z][r]*self.Bm[z]) + (lambdak[z][r]*self.L[z]) + (self.upsilonl[z]*self.V[z])
-        aux = (self.betan[z][r]*self.Bn[z]) + (self.upsilonl[z]*self.V[z])
-        print 'capacidade: ', self.C[z]
-        print 'restricoes: ', aux
-        print 'custo: ', self.P[z]
-        aux = self.C[z] + aux
-        if aux < 0:
-            aux = 0.01
-        self.EE[z] = aux/self.P[z]
-        print 'EE: ', self.EE[z] 
-
-    def mt_calculate_data_rate_n(self,z,n):
-        result = 0
-        for k in range(0, self.K):
-            log = (self.i[z][n][k]* self.p[z][n][k])
-            if log <= 0:
-                log = 1
-            result += (self.a[z][n][k] * self._b0 * math.log(1+math.log(log)))
-        return result
-
-    def mt_calculate_subgradient_beta(self,n,z):
-        result = 0
-        c = self.mt_calculate_data_rate_n(z,n)
-        if ((n > 0) and (n < len(self._ues))):
-            result = c - self._nr
-        else:
-            result = c - self._ner
-        return result            
-
-    def mt_calculate_subgradient_lambda(self,z,k):
-        result = 0
-        soma = 0
-        if (len(self._ues) > 0):
-            for n in range (0, len(self._ues)):
-                soma += self.a[z][n][k] * self.p[z][n][k] * self._dr2m * self._hr2m
-            result = self._delta_0 - soma
-        return result
-
-    def mt_calculate_subgradient_upsilon(self,z):
-        soma = 0
-        for n in range(0, len(self._ues)):
-            for k in range(0, self.K):
-                soma += self.a[z][n][k] * self.p[z][n][k]
-        return self._pm - soma
-
-    def mt_calculate_beta_n_l1(self,n,z):
-        result = self.betan[z][n] - (self._epsilon_beta * self.sub_bn[z][n])
-        if result > 0:
-            return result
-        else:
-            return 1
-
-    def mt_calculate_lamdak_l1(self,k,z):
-        result = self.lambdak[z][k] - (self._epsilon_lambda * self.sub_lambda_k[z][k])
-        if result > 0:
-            return result
-        else:
-            return 1
-
-    def mt_calculate_upsilon_l1(self,z):
-        result = self.upsilonl[z] - (self._epsilon_upsilon * self.sub_upsilon[z])
-        if result > 0:
-            return result
-        else:
-            return 1
-
-    def mt_update_l(self,z):
-        for n in range(0,len(self._ues)):
-            self.sub_bn[z][n] = self.mt_calculate_subgradient_beta(n,z)
-            self.betan[z][n] = self.mt_calculate_beta_n_l1(n,z)
-        print n
-
-        for k in range(0, self._K):
-            self.sub_lambda_k[z][k] = self.mt_calculate_subgradient_lambda(z,k)
-            self.lambdak[z][k] = self.mt_calculate_lamdak_l1(k,z)
-
-        print ("z" + str(z))
-        self.sub_upsilon[z] = self.mt_calculate_subgradient_upsilon(z)
-        self.upsilonl[z] = self.mt_calculate_upsilon_l1(z)
-
-    ##########################
-    # Calculo do EE
-    #########################
-    def mt_data_rate(self, best_a, best_i, best_p):
-        result = 0
-        for n in range(0, len(self._ues)): 
-            result += self.mt_data_rate_n(n,best_a,best_i, best_p) 
-
-        return result
-
-    def mt_data_rate_n(self, n, best_a, best_i, best_p):
-        result = 0
-        for k in range(0, self.K):
-            log = 1+(best_i[n][k]* best_p[n][k])
-            if log < 0:
-                log = 1
-            result += (best_a[n][k] * self._b0 * math.log(log))
-
-        return result
-
-    #P (3)
-    def mt_power_consumition(self,best_a, best_p):
-        result = 0
-        for n in range(0, len(self._ues)):
-            for k in range(0, self._K):
-                result += (best_a[n][k] * best_p[n][k])           
-
-            return (self._eff * result) + self._prc + self._pbh
-                                

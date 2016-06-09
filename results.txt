@@ -1,1 +1,0 @@
-Macros,rrhs,usuarios,scenario,iteracao,c,p,ee,temp
