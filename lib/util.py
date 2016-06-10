@@ -73,6 +73,10 @@ def received_power(ue, antenna, rb):
     total_power = sum_coll(antenna.p, rb)
     #TODO: Informar frequencia do RB
     power = total_power - (20 * math.log(dist(ue, antenna),10) + 20*math.log(CENTER_FREQ,10) - 27.55)
+    if power < 0:
+        power = 0
+    return power
+
     return power
 
 

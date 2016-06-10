@@ -22,13 +22,13 @@ def debug_printf(string):
         print(string)
 
 def wait():
-    raw_input("Press Enter to continue.")
+    raw_input("press enter to continue.")
 
 class Peng(object):
 
     I = 10
 
-    TOTAL_RBS = 10
+    TOTAL_RBS = 100
 
     def __init__(self, m, u, c):
         self.antennas = []
@@ -68,15 +68,42 @@ class Peng(object):
         for ant in antennas:
             ant.init_peng(Peng.TOTAL_RBS, antennas)
 
-
-        dif = 1000
         tolerancia = 0.01
         for i in range(0, Peng.I):
-            print "I: " + str(i)
             init = time.time()
             for antenna in antennas:
-                #while dif > tolerancia:
-                antenna.obtain_matrix()
+                dif = 1000
+                if antenna.N > 0:
+                    while dif > tolerancia:
+                       # print ("dif: " + str(dif) + " - tol: " + str(tolerancia))
+                       # wait()
+                        antenna.obtain_matrix()
+                        antenna.update_lagrange()
+                        dif = antenna.max_dif()
+                        antenna.swap_l()
+                     
+                    antenna.obtain_energy_efficient()
+#                print numpy.matrix(antenna.p)
+#                raw_input("press enter to continue.")
+
+            end = time.time()
+            max_ee = 0
+            sum_data_rate = 0
+            sum_power_consumition = 0
+            sum_ee = 0
+            for antenna in antennas:
+                sum_data_rate += antenna.data_rate
+                sum_power_consumition += antenna.total_power_consumition
+                for ee in antenna.energy_efficient:
+                    if max_ee < ee:
+                        max_ee = ee
+                sum_ee += max_ee
 
 
+            data = str(self.macros) + "," + str(len(antennas)) + "," \
+                + str(self.users) + "," + str(i) + "," + str(sum_data_rate) \
+                + "," + str(sum_power_consumition) + "," \
+                + str(sum_ee) + "," + str(end-init)  
+
+            print data
 
