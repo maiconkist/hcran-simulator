@@ -75,14 +75,17 @@ def received_power(ue, antenna, rb):
     power = total_power - (20 * math.log(dist(ue, antenna),10) + 20*math.log(CENTER_FREQ,10) - 27.55)
     return power
 
-def peng_power_interfering(ue, rb, antennas):
 
+def peng_power_interfering(ue, rb, antennas):
     interference = 0
+    #path_loss = 0
     for ant in antennas:
         if (ue._connected_antenna._id != ant._id):
             interference += received_power(ue, ant, rb)
+            #print "Interference: ", received_power(ue, ant, rb)
         else:
             interference += path_loss(ue, ant)
+            #print "Path loss: ", path_loss(ue, ant)
 
     return interference
 
