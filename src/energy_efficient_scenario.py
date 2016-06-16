@@ -14,6 +14,7 @@ from grid import *
 from cluster import *
 from antenna_peng import *
 from antenna_mc import *
+from ra_mc import *
 import csv
 import random
 import numpy
@@ -234,9 +235,9 @@ if __name__ == "__main__":
     f.close()
 
     bbu = 2 
-    bs = 3 
-    cluster = 2
-    rrh = 10
+    bs = 1
+    cluster = 1
+    rrh = 1
     ue = 30
 
     #Build Scenario
@@ -246,5 +247,7 @@ if __name__ == "__main__":
     grid = build_scenario(bbu, bs, cluster, rrh, ue) 
 
     #arq.close()
+    #util.plot_grid(grid)
+    mc = Mc(bs, ue, 1)
+    mc.run(grid);
     util.plot_grid(grid)
-

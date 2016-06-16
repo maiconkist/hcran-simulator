@@ -17,7 +17,7 @@ import time
 import random
 
 DEBUG = True
-IMAX = 10
+IMAX = 1
 
 def debug_printf(string):
     if DEBUG:
@@ -81,7 +81,7 @@ class Mc(object):
                         antennas[nAntennas].backup_particles()
                         antennas[nAntennas].clean_mc_variables()
                         #TODO: Raises the temperature
-                        #antennas[nAntennas].raises_temperature()
+                        antennas[nAntennas].raises_temperature()
                         antennas[nAntennas].new_particles_generation()
                         
                     antennas[nAntennas].select_current_solution()    

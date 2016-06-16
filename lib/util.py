@@ -70,7 +70,7 @@ def sum_coll(lista, x):
 
 def received_power(ue, antenna, rb):
     CENTER_FREQ = 700  # in MHz
-    total_power = sum_coll(antenna.p, rb)
+    #total_power = sum_coll(antenna.p, rb)
     #TODO: Informar frequencia do RB
     power = total_power - (20 * math.log(dist(ue, antenna),10) + 20*math.log(CENTER_FREQ,10) - 27.55)
     if power < 0:

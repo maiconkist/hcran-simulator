@@ -26,10 +26,10 @@ class AntennaMc(Antenna):
         debug_printf("\n##########################\n## STARTING MONTE CARLO ##\n##########################\n")
         self._others_ant = []
         self.list_antennas_in_antennas(antennas, nAntennas)
-        self.NPARTICLES = 10
-        self.E_BETA       = 0.1
-        self.E_LAMBDA     = 0.1
-        self.E_UPSILON    = 0.1
+        self.NPARTICLES = 1
+        self.L_BETA       = 0.1
+        self.L_LAMBDA     = 0.1
+        self.L_UPSILON    = 0.1
         self.E_DEALTA     = 0.2
         self.TOTAL_RBS   = 5
         self._antenna_energy_efficient = 0
@@ -46,7 +46,7 @@ class AntennaMc(Antenna):
         self._cnir = numpy.zeros(shape=(len(self._ues), self.TOTAL_RBS))
         self._a = numpy.zeros(shape=(len(self._ues), self.TOTAL_RBS))
         self._p = numpy.zeros(shape=(len(self._ues), self.TOTAL_RBS))
-        self._w = numpy.zeros(shape=(len(self._ues), self.TOTAL_RBS))
+        #self._w = numpy.zeros(shape=(len(self._ues), self.TOTAL_RBS))
         self.mc_roulette = numpy.zeros(shape=(self.NPARTICLES))
 
 
@@ -75,17 +75,17 @@ class AntennaMc(Antenna):
         self.mc_data_rate[pt] += (self.mc_a[pt,ue,rb] * Antenna.B0 * math.log(1+(self._cnir[ue,rb] * self._p[ue,rb])))
         self.mc_power_consumption[pt] += (self.mc_a[pt,ue,rb] * self._p[ue,rb])
         if self._ues[ue]._type == User.HIGH_RATE_USER:
-            self.mc_high_rate_constraint[pt] += self.E_BETA * ((self.mc_a[pt,ue,rb] * Antenna.B0 * math.log(1+(self._cnir[ue,rb] * self._p[ue,rb])) - Antenna.NR))
+            self.mc_high_rate_constraint[pt] += self.L_BETA * ((self.mc_a[pt,ue,rb] * Antenna.B0 * math.log(1+(self._cnir[ue,rb] * self._p[ue,rb])) - Antenna.NR))
         else:
-            self.mc_low_rate_constraint[pt] += self.E_BETA * ((self.mc_a[pt,ue,rb] * Antenna.B0 * math.log(1+(self._cnir[ue,rb] * self._p[ue,rb])) - Antenna.NER))
-        self.mc_interference_reuse_constraint[pt] += self.E_LAMBDA * (self.E_DEALTA - (self.mc_a[pt,ue,rb] * self._p[ue,rb] * Antenna.DR2M * Antenna.PMmax ))
+            self.mc_low_rate_constraint[pt] += self.L_BETA * ((self.mc_a[pt,ue,rb] * Antenna.B0 * math.log(1+(self._cnir[ue,rb] * self._p[ue,rb])) - Antenna.NER))
+        self.mc_interference_reuse_constraint[pt] += self.L_LAMBDA * (self.E_DEALTA - (self.mc_a[pt,ue,rb] * self._p[ue,rb] * Antenna.DR2M * Antenna.PMmax ))
         self.mc_maximum_transmit_power_constraint[pt] += self.mc_a[pt,ue,rb] * self._p[ue,rb]
 
 
     def ee_final_calc(self,pt):
         self.mc_power_consumption[pt] = Antenna.EFF * self.mc_power_consumption[pt] + Antenna.PRC + Antenna.PBH
         self.mc_interference_reuse_constraint[pt] = self.E_DEALTA - self.mc_interference_reuse_constraint[pt]
-        self.mc_maximum_transmit_power_constraint[pt] = self.E_UPSILON * self.mc_maximum_transmit_power_constraint[pt]
+        self.mc_maximum_transmit_power_constraint[pt] = self.L_UPSILON * self.mc_maximum_transmit_power_constraint[pt]
         if self.type == self.BS_ID:
             self.mc_interference_reuse_constraint[pt] = Antenna.PMmax - self.mc_interference_reuse_constraint[pt]
         else:        
@@ -100,21 +100,38 @@ class AntennaMc(Antenna):
     def interference_calc(self, grid):
         for ue in range (0, len(self._ues)):
             for rb in range (0, self.TOTAL_RBS):
-                self._cnir[ue][rb] = peng_power_interfering(self._ues[ue], rb, grid._antennas)
+                self._cnir[ue][rb] = power_interfering(self._ues[ue], rb, grid._antennas)
                 self._p[ue][rb] = self.calculate_p(ue, rb)
-                self._w[ue][rb]= self.waterfilling_optimal(ue, rb)
+                #self._w[ue][rb]= self.waterfilling_optimal(ue, rb)
 
-    def waterfilling_optimal(self, n, k):
-        #TODO: corrigir isso        
-        #p1 = (Antenna.B0 * (1 + self.E_BETA)) 
-        #p2 = math.log(self._antenna_energy_efficient * Antenna.EFF + self.E_LAMBDA * Antenna.DR2M * Antenna.HR2M + self.E_UPSILON)
-        #return p1 / p2
-        return 1
+    def power_interfering(self, ue, rb, antennas):
+        interference = 0
+        Gt = 0.1                       #transmission antenna gain
+        Gr = 0.1                       #receiver antenna gain
+        Wl = (3/19.0)                  #Comprimento de onda considerando uma frequencia de 1.9 GHz
+        for ant in antennas:
+            if (ue._connected_antenna._id != ant._id):
+                R  =  dist(self._ues[ue], ant)
+                interference += (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))
+                #print "Interference: ", received_power(ue, ant, rb)
+            #else:
+                #interference += path_loss(ue, ant)
+                #print "Path loss: ", path_loss(ue, ant)
+
+        return interference
 
 
-    def calculate_p(self, n, k):
-        #Obtain P                                                                                
-        p = self.waterfilling_optimal(n,k) - (1 / self._cnir[n][k])                                               
+    def calculate_p(self, ue, rb):
+        #Obtain P in W                                                                                
+        #p = self.waterfilling_optimal(n,k) - (1 / self._cnir[n][k])  
+        N = 0.000000000001             #ruido
+        Pr = N * (math.pow(2,4.5234)-1)#receivedpower 
+        Gt = 0.1                       #transmission antenna gain
+        Gr = 0.1                       #receiver antenna gain
+        Wl = (3/19.0)                  #Comprimento de onda considerando uma frequencia de 1.9 GHz
+        R  = dist(self._ues[ue], self) #distance between antennas 
+        Ar =  self._cnir[ue, rb]            #interference plus pathloss
+        p = (Pr + Ar) / (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))                                            
         return p
 
     def initial_particles(self):
@@ -159,6 +176,7 @@ class AntennaMc(Antenna):
                     self.mc_a[pt,ue,rb] = 1
                     self.ee_partial_calc(pt,ue,rb)
             self.ee_final_calc(pt) 
+
             #TODO: atualizar multiplicadores de lagrange
             #self.mt_update_l(pt)
 
@@ -167,16 +185,28 @@ class AntennaMc(Antenna):
         ant = 0       
         mean = 0
         for ue in range(0, len(self._ues)):
-            roleta_ues[ue] = (self._p[ue,rb]/max(self._p[rb]))/(self._cnir[ue,rb]/max(self._cnir[rb]))
+            rsnr = 1
+            if (max(self._cnir[:,rb])!=0):
+                rsnr = (self._cnir[ue,rb]/max(self._cnir[:,rb]))
+            if (rsnr==0):
+                rsnr = 1
+            roleta_ues[ue] = (self._p[ue,rb]/max(self._p[:,rb]))/rsnr
             if particle != None:
                 roleta_ues[ue] = roleta_ues[ue] * (particle[ue,rb]+1)
             mean = mean + roleta_ues[ue]
             roleta_ues[ue] = roleta_ues[ue] + ant
             ant = roleta_ues[ue]
 
+        #print "Sum: " + str(mean)
         mean = mean/len(self._ues)
         tzero = -mean
-        rd = random.uniform(tzero, max(roleta_ues))
+        #print "Mean: " + str(mean)
+        #print "Tzero: " + str(tzero)
+        #print "Max: " + str(max(roleta_ues))
+
+        r
+        d = random.uniform(tzero, max(roleta_ues))
+        #print "Random: " + str(rd)
         if rd > 0:
             for t in range(0, len(self._ues)):
                 if rd < roleta_ues[t]:
@@ -216,3 +246,9 @@ class AntennaMc(Antenna):
 
         self.mc_roulette = result
 
+
+    def raises_temperature(self):
+        self.L_BETA += 0.1
+        self.L_LAMBDA += 0.1
+        self.L_UPSILON += 0.1
+        self.E_DEALTA += 0.2
