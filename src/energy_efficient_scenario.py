@@ -6,15 +6,14 @@
 
 from peng import *
 from antenna import *
-from antenna_peng import *
-from antenna_mc import *
-from ra_mc import *
 from user import *
 from bbu import *
 from controller import *
 from util import *
 from grid import *
 from cluster import *
+from antenna_peng import *
+from antenna_mc import *
 import csv
 import random
 import numpy
@@ -168,8 +167,9 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
         grid.add_cluster(cluster)
 
     for t in range(0, len(p_antennas)):
-        #rrh = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        rrh = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        #rrh = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        #rrh = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        rrh = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
         grid.add_antenna(rrh)
 
 ########################################
@@ -204,8 +204,9 @@ def macrocells(grid, radius, n_bs, macrocells_center):
 
     #Center Antenna
     macrocells_center.append((grid.size[0]/2, grid.size[1]/2))
-    #bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
-    bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
+    #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
+    #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
+    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
 
     #Others
@@ -217,8 +218,9 @@ def macrocells(grid, radius, n_bs, macrocells_center):
        p_antenna[0] = center[0] + radius * math.cos(v*math.pi/6)
        p_antenna[1] = center[1] + radius * math.sin(v*math.pi/6)
        macrocells_center.append(p_antenna)
-       #bs = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
+       #bs = Antenna(i+1, Antenna.BS_ID, p_antenna, None, grid)
+       #bs = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grid)
+       bs = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grid)
        grid.add_antenna(bs)
 
 ########################################
@@ -232,20 +234,17 @@ if __name__ == "__main__":
     f.close()
 
     bbu = 2 
-    bs = 1 
-    cluster = 1
-    rrh = 1
+    bs = 3 
+    cluster = 2
+    rrh = 10
     ue = 30
 
     #Build Scenario
+    print "Create scenario"
+    arq = open("results.txt","w")
+    arq.write("Macros,rrhs,usuarios,scenario,iteracao,c,p,ee,temp\n")
     grid = build_scenario(bbu, bs, cluster, rrh, ue) 
-    
-    #Peng
-    peng = Peng(bs, ue, 1)
-    peng.run(grid)
 
-    #MC
-    #mc = Mc(bs, ue, 1)
-    #mc.run(grid)
-
+    #arq.close()
     util.plot_grid(grid)
+
