@@ -231,23 +231,22 @@ if __name__ == "__main__":
 
     # Trying to create a new file or open one
     f = open('resumo.csv','w')
-    f.write('TOTAL_BS,TOTAL_RRH,TOTAL_UE,USED_RRH,USER_NOT_MEET,EE,SE\n')
+    f.write('BS,RRH,UE,I,C,P,EE\n')
     f.close()
 
     bbu = 2 
-    bs = 1
+    bs = [1, 3, 5, 7]
     cluster = 1
-    rrh = 1
+    rrh = 10
     ue = 30
+    for rep in range(0, 5):
+        for nbs in bs:
+            #Build Scenario
+            print "Create scenario"
+            grid = build_scenario(bbu, nbs, cluster, rrh, ue) 
 
-    #Build Scenario
-    print "Create scenario"
-    arq = open("results.txt","w")
-    arq.write("Macros,rrhs,usuarios,scenario,iteracao,c,p,ee,temp\n")
-    grid = build_scenario(bbu, bs, cluster, rrh, ue) 
-
-    #arq.close()
-    #util.plot_grid(grid)
-    mc = Mc(bs, ue, 1)
-    mc.run(grid);
-    util.plot_grid(grid)
+            #arq.close()
+            #util.plot_grid(grid)
+            mc = Mc(nbs, ue, 1)
+            mc.run(grid);
+            #util.plot_grid(grid)

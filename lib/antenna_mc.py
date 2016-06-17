@@ -7,7 +7,7 @@ from antenna import *
 from user import *
 from util import *
 
-DEBUG = True
+DEBUG = False
 
 def debug_printf(string):
     if DEBUG:
@@ -26,12 +26,12 @@ class AntennaMc(Antenna):
         debug_printf("\n##########################\n## STARTING MONTE CARLO ##\n##########################\n")
         self._others_ant = []
         self.list_antennas_in_antennas(antennas, nAntennas)
-        self.NPARTICLES = 1
+        self.NPARTICLES = 100
         self.L_BETA       = 0.1
         self.L_LAMBDA     = 0.1
         self.L_UPSILON    = 0.1
         self.E_DEALTA     = 0.2
-        self.TOTAL_RBS   = 5
+        self.TOTAL_RBS   = 100
         self._antenna_energy_efficient = 0
         self.mc_data_rate = np.zeros(shape=(self.NPARTICLES))
         self.mc_power_consumption = np.zeros(shape=(self.NPARTICLES))
@@ -100,7 +100,7 @@ class AntennaMc(Antenna):
     def interference_calc(self, grid):
         for ue in range (0, len(self._ues)):
             for rb in range (0, self.TOTAL_RBS):
-                self._cnir[ue][rb] = power_interfering(self._ues[ue], rb, grid._antennas)
+                self._cnir[ue][rb] = self.power_interfering(self._ues[ue], rb, grid._antennas)
                 self._p[ue][rb] = self.calculate_p(ue, rb)
                 #self._w[ue][rb]= self.waterfilling_optimal(ue, rb)
 
@@ -110,10 +110,11 @@ class AntennaMc(Antenna):
         Gr = 0.1                       #receiver antenna gain
         Wl = (3/19.0)                  #Comprimento de onda considerando uma frequencia de 1.9 GHz
         for ant in antennas:
-            if (ue._connected_antenna._id != ant._id):
-                R  =  dist(self._ues[ue], ant)
-                interference += (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))
-                #print "Interference: ", received_power(ue, ant, rb)
+            if (ue._connected_antenna._id != ant._id and hasattr(ant, '_a') and sum(ant._a[:,rb])>0):
+                index = numpy.argmax(ant._a[:,rb])
+                R  =  dist(ue, ant)
+                interference += ant._a[index,rb] * ant._p[index,rb] * (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))
+                #print "Interference: ", interference
             #else:
                 #interference += path_loss(ue, ant)
                 #print "Path loss: ", path_loss(ue, ant)
@@ -204,8 +205,8 @@ class AntennaMc(Antenna):
         #print "Tzero: " + str(tzero)
         #print "Max: " + str(max(roleta_ues))
 
-        r
-        d = random.uniform(tzero, max(roleta_ues))
+        
+        rd = random.uniform(tzero, max(roleta_ues))
         #print "Random: " + str(rd)
         if rd > 0:
             for t in range(0, len(self._ues)):
@@ -252,3 +253,27 @@ class AntennaMc(Antenna):
         self.L_LAMBDA += 0.1
         self.L_UPSILON += 0.1
         self.E_DEALTA += 0.2
+
+    ##########################
+    # Calculo do EE
+    #########################
+    def obtain_data_rate(self):
+        for n in range(0, len(self._ues)):
+            for k in range (0, self.TOTAL_RBS):
+                self.data_rate += self._a[n][k] * Antenna.B0 * math.log(1
+                        + (self._cnir[n][k]*self._p[n][k]))
+        #print self.data_rate
+        #raw_input(" ")
+
+    def obtain_power_consumition(self):
+        result = 0
+        for n in range(0, len(self._ues)):
+            for k in range(0, self.TOTAL_RBS):
+                result += (self._a[n][k] * self._p[n][k])           
+        self.total_power_consumition = (self.EFF * result) + self.PRC + self.PBH
+                                
+    def obtain_energy_efficient(self):
+        self.obtain_data_rate()
+        self.obtain_power_consumition()
+        self.energy_efficient = self.data_rate/self.total_power_consumition
+        #print numpy.matrix(self.energy_efficient)

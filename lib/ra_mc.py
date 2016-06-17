@@ -17,7 +17,7 @@ import time
 import random
 
 DEBUG = True
-IMAX = 1
+IMAX = 10
 
 def debug_printf(string):
     if DEBUG:
@@ -84,8 +84,13 @@ class Mc(object):
                         antennas[nAntennas].raises_temperature()
                         antennas[nAntennas].new_particles_generation()
                         
-                    antennas[nAntennas].select_current_solution()    
-                
+                    antennas[nAntennas].select_current_solution()
+                    antennas[nAntennas].obtain_energy_efficient()
+                    f = open('resumo.csv','a')
+                    f.write(str(self.macros)+','+str(len(antennas)-self.macros)+','+str(self.users)+','+str(i+1)+','+str(antennas[nAntennas].data_rate)+','+str(antennas[nAntennas].total_power_consumition)+','+str(antennas[nAntennas].energy_efficient)+'\n')
+                    f.close()
+
+
                 # values.index(min(values))
                 #p = antennas[nAnt].mt_power_consumition(antennas[nAnt].best_a, antennas[nAnt].best_p)
                 #c = antennas[nAnt].mt_data_rate(antennas[nAnt].best_a, antennas[nAnt].best_i,antennas[nAnt].best_p)
