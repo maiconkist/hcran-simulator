@@ -169,8 +169,8 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
 
     for t in range(0, len(p_antennas)):
         #rrh = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        #rrh = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        rrh = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        rrh = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        #rrh = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
         grid.add_antenna(rrh)
 
 ########################################
@@ -206,8 +206,8 @@ def macrocells(grid, radius, n_bs, macrocells_center):
     #Center Antenna
     macrocells_center.append((grid.size[0]/2, grid.size[1]/2))
     #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
-    #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
-    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
+    bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
+    #bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
 
     #Others
@@ -220,8 +220,8 @@ def macrocells(grid, radius, n_bs, macrocells_center):
        p_antenna[1] = center[1] + radius * math.sin(v*math.pi/6)
        macrocells_center.append(p_antenna)
        #bs = Antenna(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       #bs = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       bs = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grid)
+       bs = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grid)
+       #bs = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grid)
        grid.add_antenna(bs)
 
 ########################################
@@ -235,10 +235,19 @@ if __name__ == "__main__":
     f.close()
 
     bbu = 2 
-    bs = [1, 3, 5, 7]
+    #bs = [1, 3, 5, 7]
+    bs = 1
     cluster = 1
-    rrh = 10
-    ue = 30
+    rrh = 1
+    ue = 5
+
+    grid = build_scenario(bbu, bs, cluster, rrh, ue)
+    peng = Peng(bs, ue, 1)
+    peng.run(grid)
+
+    util.plot_grid(grid)
+
+    """
     for rep in range(0, 5):
         for nbs in bs:
             #Build Scenario
@@ -250,3 +259,5 @@ if __name__ == "__main__":
             mc = Mc(nbs, ue, 1)
             mc.run(grid);
             #util.plot_grid(grid)
+    """
+

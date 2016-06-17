@@ -28,7 +28,7 @@ class Peng(object):
 
     I = 10
 
-    TOTAL_RBS = 100
+    TOTAL_RBS = 5
 
     def __init__(self, m, u, c):
         self.antennas = []
@@ -50,6 +50,7 @@ class Peng(object):
             users_no_met = 0
             near = antennas[0]
             for antenna in antennas:
+                print "Nova Antenna"
                 d = dist( ue, antenna ) 
                 if antenna.type == Antenna.BS_ID:
                     if d < distance and d<Antenna.BS_RADIUS:

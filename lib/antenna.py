@@ -30,9 +30,9 @@ class Antenna(object):
     HR2M         = 1 
     NR           = ((((128/1000) *1024) / 2) / 8) * 180
     NER          = ((((64/1000) *1024) / 2) / 8) * 180 
-    E_BETA       = 0.1
-    E_LAMBDA     = 0.1
-    E_UPSILON    = 0.1
+    E_BETA       = 0.01
+    E_LAMBDA     = 0.01
+    E_UPSILON    = 0.01
     D_0          = 1
 
     # 1.4  channel has 6  RBs in frequency domain

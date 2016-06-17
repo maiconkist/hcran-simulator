@@ -39,15 +39,14 @@ class AntennaPeng(Antenna):
         self.betan                   = numpy.zeros((self.N, 2))
         for n in range(0, self.N):
             for l in range(0, 2):
-                self.betan[n][l] = 1
+                self.betan[n][l] = 1 
 
         self.lambdak                 = numpy.zeros((self.K, 2))
         for k in range(0, self.K):
             for l in range(0, 2):
                 self.lambdak[k][l] = 1
 
-        self.upsilonl                = [1,1]
-
+        self.upsilonl = [1,1]
         self.sub_betan = 1
         self.sub_lambdak = 1
         self.sub_upsilonl = 1
@@ -57,24 +56,30 @@ class AntennaPeng(Antenna):
 
     def obtain_matrix(self):
         # Obtain CNIR, W and H
+
+        self.interference_calc(self._grid)
+        #print "CNIR"
+        #print numpy.matrix(self.cnir)
+        #print numpy.matrix(self.p)
+        #raw_input("")
         for n in range(0, self.N):
             for k in range (0, self.K):
-                self.cnir[n][k] = util.peng_power_interfering(self._ues[n], k,
-                        self.others)
+                #self.cnir[n][k] = self.power_interfering(self._ues[n], k,
+                #        self.others)
                 self.w[n][k] = self.waterfilling_optimal(n, k)
-                h1 = self.cnir[n][k] * self.w[n][k]
-                h2 = ((1 + self.betan[n][0]) * numpy.log(h1))
-                h3 = ((1 + self.betan[n][0]) / numpy.log(2)) 
-                h4 = (1 - (1 / h1))
+                #h1 = self.cnir[n][k] * self.w[n][k]
+                #h2 = ((1 + self.betan[n][0]) * numpy.log(h1))
+                #h3 = ((1 + self.betan[n][0]) / numpy.log(2)) 
+                #h4 = (1 - (1 / h1))
 
-                if h2 < 1:
-                    h2 = 0
-                if h4 < 1:
-                    h4 = 0
+                #if h2 < 1:
+                #    h2 = 0
+                #if h4 < 1:
+                #    h4 = 0
 
-                self.h[n][k] = h2 - (h3 * h4)
+                #self.h[n][k] = h2 - (h3 * h4)
         
-        self.a = numpy.zeros((self.N, self.K))
+        #self.a = numpy.zeros((self.N, self.K))
         nn = 0
         for k in range(0, self.K):
             n_max = -9999
@@ -84,12 +89,11 @@ class AntennaPeng(Antenna):
                     n_max = self.h[n][k]
             self.a[nn][k] = 1
 
-
             #Obtain P
-            p = self.w[nn][k] - (1 / self.cnir[nn][k])
+            #p = self.w[nn][k] - (1 / self.cnir[nn][k])
 
-            if p > 0:
-                self.p[nn][k] = p
+            #if p > 0:
+            #    self.p[nn][k] = p
 
     def waterfilling_optimal(self, n, k):
         p1 = (Antenna.B0 * (1 + self.betan[n][0])) 
@@ -104,16 +108,17 @@ class AntennaPeng(Antenna):
         for n in range(0, self.N):
             for k in range(0, self.K):
                 self.c[n][k] = self.a[n][k] * self.B0 * math.log(1
-                        + (self.cnir[n][k]*self.p[n][k]))
+                        + (self.cnir[n][k] * self.p[n][k]))
 
     def obtain_sub_betan(self, n):
         soma = 0
         for k in range(0, self.K):
             soma += self.c[n][k]
+
         if ((n > 0) and n < (self.N)):
-            self.sub_betan = soma - Antenna.NR
+            self.sub_betan = soma - 1474#Antenna.NR
         else:
-            self.sub_betan = soma - Antenna.NER
+            self.sub_betan = soma - 737#((((64/1000) *1024) / 2) / 8) * 180#Antenna.NER
 
     def obtain_sub_lambdak(self, k):
         soma = 0
@@ -135,6 +140,10 @@ class AntennaPeng(Antenna):
     # Lagrange
     def obtain_lagrange_betan(self, n):
         self.obtain_sub_betan(n)
+        #print("self.betan["+ str(n) +"][0]: " + str(self.betan[n][0]))
+        #print("E_BETA: " + str(Antenna.E_BETA))
+        #print("self.sub_betan: " + str(self.sub_betan))
+        #raw_input("")
         result = self.betan[n][0] - (Antenna.E_BETA * self.sub_betan)
         if result > 0:
             self.betan[n][1] = result
@@ -143,16 +152,30 @@ class AntennaPeng(Antenna):
 
     def obtain_lagrange_lambdak(self, k):
         self.obtain_sub_lambdak(k)
-        self.lambdak[k][1] = self.lambdak[k][0] - (self.E_LAMBDA
+        result = self.lambdak[k][0] - (self.E_LAMBDA
                 * self.sub_lambdak)
+        if result > 0:
+            self.lambdak[k][1] = result
+        else:
+            self.lambdak[k][1] = 0
 
     def obtain_lagrange_upsilonl(self):
         self.obtain_sub_upsilonl()
-        self.upsilonl[1] = self.upsilonl[0] - (self.E_UPSILON
+        result = self.upsilonl[0] - (self.E_UPSILON
                 * self.sub_upsilonl)
+        if result > 0:
+            self.upsilonl[1] = result
+        else:
+            self.upsilonl[1] = 0
 
     def update_lagrange(self):
         self.sub_c()
+        #print "cnir:"
+        #print numpy.matrix(self.cnir)
+        #print "p:"
+        #print numpy.matrix(self.p)
+        #raw_input("")
+
         for n in range(0, self.N):
             self.obtain_lagrange_betan(n)
 
@@ -160,7 +183,6 @@ class AntennaPeng(Antenna):
             self.obtain_lagrange_lambdak(k)
 
         self.obtain_lagrange_upsilonl()
-        #self.a = numpy.zeros((self.N, self.K))
        
     def max_dif(self):
         max_beta = -9999
@@ -178,10 +200,14 @@ class AntennaPeng(Antenna):
             lambdak = (self.lambdak[k][1] - self.lambdak[k][0]) / self.lambdak[k][0]
             if lambdak > max_lambdak:
                 max_lambdak = lambdak
-    
-        max_upsilonl = (self.upsilonl[1] - self.upsilonl[0]) / self.upsilonl[0]
+   
+        if self.upsilonl[0] != 0:
+            max_upsilonl = (self.upsilonl[1] - self.upsilonl[0]) / self.upsilonl[0]
+        else:
+            max_upsilonl = self.upsilonl[1] - self.upsilonl[0]
 
-        #print "beta: " + str(max_beta) + ", lambdak: " + str(max_lambdak) + ", upsilonl: " + str(max_upsilonl)
+        print ("max_beta: " + str(max_beta) + " ,max_lambdak: "
+                + str(max_lambdak) + " ,max_upsilonl: " + str(max_upsilonl))
         return max(max_beta, max_lambdak, max_upsilonl)
 
     def swap_l(self):
@@ -197,16 +223,10 @@ class AntennaPeng(Antenna):
     # Calculo do EE
     #########################
     def obtain_data_rate(self):
-        #print "calcula data rate"
-        #print numpy.matrix(self.a)
-        #print numpy.matrix(self.cnir)
-        #print numpy.matrix(self.p)
         for n in range(0, self.N):
             for k in range (0, self.K):
                 self.data_rate += self.a[n][k] * Antenna.B0 * math.log(1
                         + (self.cnir[n][k]*self.p[n][k]))
-        #print self.data_rate
-        #raw_input(" ")
 
     def obtain_power_consumition(self):
         result = 0
@@ -219,4 +239,41 @@ class AntennaPeng(Antenna):
         self.obtain_data_rate()
         self.obtain_power_consumition()
         self.energy_efficient.append(self.data_rate/self.total_power_consumition)
-        #print numpy.matrix(self.energy_efficient)
+
+
+    ##############################
+    #
+    def interference_calc(self, grid):
+        for ue in range (0, self.N):
+            for rb in range (0, self.K):
+                self.cnir[ue][rb] = self.power_interfering(self._ues[ue], rb, self.others)
+                self.p[ue][rb] = self.calculate_p(ue, rb)
+        
+
+    def power_interfering(self, ue, rb, antennas):
+        interference = 0
+        Gt = 0.1                       #transmission antenna gain
+        Gr = 0.1                       #receiver antenna gain
+        Wl = (3/19.0)                  #Comprimento de onda considerando uma frequencia de 1.9 GHz
+        for ant in antennas:
+            if (ue._connected_antenna._id != ant._id and hasattr(ant, 'a') and sum(ant.a[:,[rb]])>0):
+                index = numpy.argmax(ant.a[:,[rb]])
+                R  =  util.dist(ue, ant)
+                interference += ant.a[index,rb] * ant.p[index,rb] * (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))
+
+        return interference
+
+
+    def calculate_p(self, ue, rb):
+        #Obtain P in W                                                                                
+        #p = self.waterfilling_optimal(n,k) - (1 / self._cnir[n][k])  
+        N = 0.000000000001             #ruido
+        Pr = N * (math.pow(2,4.5234)-1)#receivedpower 
+        Gt = 0.1                       #transmission antenna gain
+        Gr = 0.1                       #receiver antenna gain
+        Wl = (3/19.0)                  #Comprimento de onda considerando uma frequencia de 1.9 GHz
+        R  = util.dist(self._ues[ue], self) #distance between antennas 
+        Ar = self.cnir[ue, rb]            #interference plus pathloss
+        p = (Pr + Ar) / (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))                                            
+        return p
+
