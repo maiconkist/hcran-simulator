@@ -169,8 +169,8 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
 
     for t in range(0, len(p_antennas)):
         #rrh = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        rrh = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        #rrh = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        #rrh = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        rrh = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
         grid.add_antenna(rrh)
 
 ########################################
@@ -206,8 +206,8 @@ def macrocells(grid, radius, n_bs, macrocells_center):
     #Center Antenna
     macrocells_center.append((grid.size[0]/2, grid.size[1]/2))
     #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
-    bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
-    #bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
+    #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
+    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
 
     #Others
@@ -231,7 +231,7 @@ if __name__ == "__main__":
 
     # Trying to create a new file or open one
     f = open('resumo.csv','w')
-    f.write('BS,RRH,UE,I,C,P,EE\n')
+    f.write('CASE,REP,INT,C,P,EE,TIME\n')
     f.close()
 
     bbu = 2 

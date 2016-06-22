@@ -64,13 +64,6 @@ class AntennaMc(Antenna):
         self.mc_roulette = numpy.zeros(shape=(self.NPARTICLES))
 
 
-    def list_antennas_in_antennas(self, antennas, nAnt):
-        for ant in antennas:
-            if ant._id != antennas[nAnt]._id:
-                antennas[nAnt]._others_ant.append(antennas[nAnt])
-
-            #ant.init_ee(grid.TOTAL_RBS, antennas[nAnt]._others_ant, i)  
-
     def ee_partial_calc(self,pt,ue,rb):
         self.mc_data_rate[pt] += (self.mc_a[pt,ue,rb] * Antenna.B0 * math.log(1+(self._cnir[ue,rb] * self._p[ue,rb])))
         self.mc_power_consumption[pt] += (self.mc_a[pt,ue,rb] * self._p[ue,rb])
@@ -97,43 +90,7 @@ class AntennaMc(Antenna):
         self.mc_antenna_energy_efficient[pt] = self.mc_data_rate[pt] - (self._antenna_energy_efficient * self.mc_power_consumption[pt]) + self.mc_high_rate_constraint[pt] + self.mc_low_rate_constraint[pt] + self.mc_interference_reuse_constraint[pt] + self.mc_maximum_transmit_power_constraint[pt]
         debug_printf('EnergyEfficient: ' + str(self.mc_antenna_energy_efficient[pt]))
 
-    def interference_calc(self, grid):
-        for ue in range (0, len(self._ues)):
-            for rb in range (0, self.TOTAL_RBS):
-                self._cnir[ue][rb] = self.power_interfering(self._ues[ue], rb, grid._antennas)
-                self._p[ue][rb] = self.calculate_p(ue, rb)
-                #self._w[ue][rb]= self.waterfilling_optimal(ue, rb)
 
-    def power_interfering(self, ue, rb, antennas):
-        interference = 0
-        Gt = 0.1                       #transmission antenna gain
-        Gr = 0.1                       #receiver antenna gain
-        Wl = (3/19.0)                  #Comprimento de onda considerando uma frequencia de 1.9 GHz
-        for ant in antennas:
-            if (ue._connected_antenna._id != ant._id and hasattr(ant, '_a') and sum(ant._a[:,rb])>0):
-                index = numpy.argmax(ant._a[:,rb])
-                R  =  dist(ue, ant)
-                interference += ant._a[index,rb] * ant._p[index,rb] * (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))
-                #print "Interference: ", interference
-            #else:
-                #interference += path_loss(ue, ant)
-                #print "Path loss: ", path_loss(ue, ant)
-
-        return interference
-
-
-    def calculate_p(self, ue, rb):
-        #Obtain P in W                                                                                
-        #p = self.waterfilling_optimal(n,k) - (1 / self._cnir[n][k])  
-        N = 0.000000000001             #ruido
-        Pr = N * (math.pow(2,4.5234)-1)#receivedpower 
-        Gt = 0.1                       #transmission antenna gain
-        Gr = 0.1                       #receiver antenna gain
-        Wl = (3/19.0)                  #Comprimento de onda considerando uma frequencia de 1.9 GHz
-        R  = dist(self._ues[ue], self) #distance between antennas 
-        Ar =  self._cnir[ue, rb]            #interference plus pathloss
-        p = (Pr + Ar) / (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))                                            
-        return p
 
     def initial_particles(self):
         nUes = len(self._ues)
@@ -254,26 +211,4 @@ class AntennaMc(Antenna):
         self.L_UPSILON += 0.1
         self.E_DEALTA += 0.2
 
-    ##########################
-    # Calculo do EE
-    #########################
-    def obtain_data_rate(self):
-        for n in range(0, len(self._ues)):
-            for k in range (0, self.TOTAL_RBS):
-                self.data_rate += self._a[n][k] * Antenna.B0 * math.log(1
-                        + (self._cnir[n][k]*self._p[n][k]))
-        #print self.data_rate
-        #raw_input(" ")
 
-    def obtain_power_consumition(self):
-        result = 0
-        for n in range(0, len(self._ues)):
-            for k in range(0, self.TOTAL_RBS):
-                result += (self._a[n][k] * self._p[n][k])           
-        self.total_power_consumition = (self.EFF * result) + self.PRC + self.PBH
-                                
-    def obtain_energy_efficient(self):
-        self.obtain_data_rate()
-        self.obtain_power_consumition()
-        self.energy_efficient = self.data_rate/self.total_power_consumition
-        #print numpy.matrix(self.energy_efficient)
