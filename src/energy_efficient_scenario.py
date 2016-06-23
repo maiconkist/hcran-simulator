@@ -47,7 +47,7 @@ uessmallcell = 2/3
 #Functions
 ###################################
 
-DEBUG = True
+DEBUG = False
 
 def debug_printf(string):
     if DEBUG:
@@ -127,7 +127,7 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
 
     for i in range(0, len(macrocells_center)):
         count_clusters = 0
-        print("Create macrocells cluster and rhh: " + str(i))
+        #print("Create macrocells cluster and rhh: " + str(i))
 
         while (count_clusters < n_clusters):
             #Generate antennas
@@ -333,37 +333,34 @@ if __name__ == "__main__":
 
     # Trying to create a new file or open one
     f = open('resumo.csv','w')
-    f.write('CASE,REP,INT,C,P,EE,TIME\n')
+    f.write('CASE,R,I,C,P,EE,T\n')
     f.close()
 
     bbu = 2 
-    #bs = [1, 3, 5, 7]
-    bs = 1
+    bs = [1, 3, 5, 7]
+    #bs = 1
     cluster = 1
     rrh = 10
-    ue = 50
+    ue = 30
 
     #grid = build_scenario(bbu, bs, cluster, rrh, ue)
-    grid = build_fixed_scenario(bbu, bs, cluster, rrh, ue)
+    #grid = build_fixed_scenario(bbu, bs, cluster, rrh, ue)
     #mc = Mc(bs, ue, 1)
     #mc.run(grid)
 
     #peng = Peng(bs, ue, 1)
     #peng.run(grid)
 
-    util.plot_grid(grid)
-
-    """
-    for rep in range(0, 5):
-        for nbs in bs:
+    #util.plot_grid(grid)
+    for nbs in bs:
+        for rep in range(0, 5):
             #Build Scenario
-            print "Create scenario"
+            #print "Create scenario"
             grid = build_scenario(bbu, nbs, cluster, rrh, ue) 
-
             #arq.close()
             #util.plot_grid(grid)
-            mc = Mc(nbs, ue, 1)
+            mc = Mc(nbs, ue, rep)
             mc.run(grid);
             #util.plot_grid(grid)
-    """
+
 

@@ -7,7 +7,7 @@ from antenna import *
 from user import *
 from util import *
 
-DEBUG = True
+DEBUG = False
 
 def debug_printf(string):
     if DEBUG:
@@ -23,7 +23,7 @@ class AntennaMc(Antenna):
         if len(self.connected_ues) == 0:
             return
         debug_printf("\n##########################\n## STARTING MONTE CARLO ##\n##########################\n")
-        self.NPARTICLES = 1
+        self.NPARTICLES = 1000
         self.L_BETA       = 0.1
         self.L_LAMBDA     = 0.1
         self.L_UPSILON    = 0.1
@@ -153,7 +153,7 @@ class AntennaMc(Antenna):
         index = numpy.argmax(self.mc_antenna_energy_efficient)        
         self.energy_efficient = self.mc_antenna_energy_efficient[index]        
         debug_printf("Max value element : " + str(self.energy_efficient))
-        self._a = self.mc_a[index]
+        self.a = self.mc_a[index]
 
 
     def mc_spinning_roulette(self):

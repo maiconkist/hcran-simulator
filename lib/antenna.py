@@ -4,6 +4,13 @@ import util
 import controller
 from user import *
 
+
+DEBUG = False
+
+def debug_printf(string):
+    if DEBUG:
+        print(string)
+
 class Antenna(object):
     BS_ID       = 1
     RRH_ID      = 2
@@ -295,7 +302,7 @@ class Antenna(object):
         #Shannon Calc
         for n in range(0, len(self.connected_ues)):
             for k in range (0, self.TOTAL_RBS):
-                self.data_rate += self.shannon((self.a[n][k] * Antenna.B0), self.p[n][k], self.noise_plus_interference[n][k])
+                self.data_rate += (self.shannon((self.a[n][k] * Antenna.B0), self.p[n][k], self.noise_plus_interference[n][k])) / 10
 
     def shannon(self, B, S, N):
         #Shannon Calc
@@ -317,6 +324,9 @@ class Antenna(object):
         self.obtain_data_rate()
         self.obtain_power_consumition()
         self.energy_efficient = self.data_rate/self.power_consumition
+        debug_printf("Data Rate = \n" + str(self.data_rate))
+        debug_printf("Power Consumition = \n" + str(self.power_consumition))
+        debug_printf("Energy Efficient = \n" + str(self.energy_efficient))
         #print numpy.matrix(self.energy_efficient)
 
     ##########################
