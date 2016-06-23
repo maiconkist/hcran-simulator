@@ -47,6 +47,12 @@ uessmallcell = 2/3
 #Functions
 ###################################
 
+DEBUG = True
+
+def debug_printf(string):
+    if DEBUG:
+        print(string)
+
 ########################################
 def build_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
     grid = Grid(size=(2000,2000))
@@ -220,9 +226,105 @@ def macrocells(grid, radius, n_bs, macrocells_center):
        p_antenna[1] = center[1] + radius * math.sin(v*math.pi/6)
        macrocells_center.append(p_antenna)
        #bs = Antenna(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       bs = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       #bs = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grid)
+       #bs = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grid)
+       bs = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grid)
        grid.add_antenna(bs)
+
+########################################
+
+def associate_user_in_antennas(ues, antennas):
+    #######################
+    # Associa usuario na 
+    # antena mais proxima
+    ########################
+    for ue in ues:
+        distance = 10000
+        near = antennas[0]
+        for antenna in antennas:
+            d = dist( ue, antenna ) 
+            if antenna.type == Antenna.BS_ID:
+                if d < distance and d<Antenna.BS_RADIUS:
+                    distance = d
+                    near = antenna
+            elif antenna.type == Antenna.RRH_ID:
+                if d < distance and  d<Antenna.RRH_RADIUS:
+                    distance = d
+                    near = antenna
+
+        ue._connected_antenna = near
+        near.connected_ues.append(ue)  
+
+def build_fixed_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
+    grid = Grid(size=(2000,2000))
+    macrocells_center = list()
+
+    cntrl = Controller(grid, control_network=False)
+    grid.add_controller(cntrl)
+
+    for i in range(n_bbu):
+        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid)
+        grid.add_bbu(bbu)
+
+    #Center Antenna
+    center = numpy.array([grid.size[0]/2, grid.size[1]/2])
+    #BS
+    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
+    grid.add_antenna(bs)
+
+    #Cluster
+    cluster = Cluster(1, [1050, 1050], grid)
+    grid.add_cluster(cluster)
+
+    #RRHs
+    rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    grid.add_antenna(rrh)
+
+    #Users
+    u1 = User(1, [1045, 1045], None, grid, User.HIGH_RATE_USER)
+    grid.add_user(u1)
+
+    u2 = User(2, [880, 880], None, grid, User.LOW_RATE_USER)
+    grid.add_user(u2)
+
+    associate_user_in_antennas(grid._user, grid._antennas)
+
+
+    bs.snir = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
+    bs.noise_plus_interference = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
+    bs.a = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
+    bs.p = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
+
+    rrh.snir = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
+    rrh.noise_plus_interference = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
+    rrh.a = numpy.ones(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
+    rrh.p = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
+
+    bs.obtain_sinr(grid)
+    rrh.obtain_sinr(grid)
+    
+    debug_printf("----- BS -----")
+    debug_printf("Alloc = \n" + str(numpy.matrix(bs.a)))
+    debug_printf("Power = \n" + str(numpy.matrix(bs.p)))
+    debug_printf("Noise = \n" + str(numpy.matrix(bs.noise_plus_interference)))
+    bs.obtain_energy_efficient()
+    debug_printf("Data Rate = \n" + str(bs.data_rate))
+    debug_printf("Power Consumition = \n" + str(bs.power_consumition))
+    debug_printf("Energy Efficient = \n" + str(bs.energy_efficient))
+
+
+    debug_printf("----- RRH -----")
+    debug_printf("Alloc = \n" + str(numpy.matrix(rrh.a)))
+    debug_printf("Power = \n" + str(numpy.matrix(rrh.p)))
+    debug_printf("Noise = \n" + str(numpy.matrix(rrh.noise_plus_interference)))
+    rrh.obtain_energy_efficient()
+    debug_printf("Data Rate = \n" + str(rrh.data_rate))
+    debug_printf("Power Consumition = \n" + str(rrh.power_consumition))
+    debug_printf("Energy Efficient = \n" + str(rrh.energy_efficient))
+
+    return grid
+
+
+
 
 ########################################
 # Main
@@ -238,12 +340,16 @@ if __name__ == "__main__":
     #bs = [1, 3, 5, 7]
     bs = 1
     cluster = 1
-    rrh = 1
-    ue = 5
+    rrh = 10
+    ue = 50
 
-    grid = build_scenario(bbu, bs, cluster, rrh, ue)
-    peng = Peng(bs, ue, 1)
-    peng.run(grid)
+    #grid = build_scenario(bbu, bs, cluster, rrh, ue)
+    grid = build_fixed_scenario(bbu, bs, cluster, rrh, ue)
+    #mc = Mc(bs, ue, 1)
+    #mc.run(grid)
+
+    #peng = Peng(bs, ue, 1)
+    #peng.run(grid)
 
     util.plot_grid(grid)
 

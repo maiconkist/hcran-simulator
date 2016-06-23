@@ -17,7 +17,7 @@ import time
 import random
 
 DEBUG = True
-IMAX = 10
+IMAX = 1
 
 def debug_printf(string):
     if DEBUG:
@@ -46,7 +46,7 @@ def associate_user_in_antennas(ues, antennas):
                     near = antenna
 
         ue._connected_antenna = near
-        near._ues.append(ue)   
+        near.connected_ues.append(ue)   
 
  
 
@@ -69,25 +69,24 @@ class Mc(object):
             init = time.time()
             # Para todas as antenas
             for nAntennas in range(0, len(antennas)):
-                if len(antennas[nAntennas]._ues) > 0:   
+                if len(antennas[nAntennas].connected_ues) > 0:   
                     if(i == 0):
                         antennas[nAntennas].init_mc(antennas, nAntennas)
-                        antennas[nAntennas].interference_calc(grid)
+                        antennas[nAntennas].obtain_sinr(grid)
                         # Generating the first particles
-                        antennas[nAntennas].initial_particles()
+                        antennas[nAntennas].mc_initial_particles()
                     else:
-                        antennas[nAntennas].interference_calc(grid)
-                        antennas[nAntennas].spinning_roulette()
-                        antennas[nAntennas].backup_particles()
-                        antennas[nAntennas].clean_mc_variables()
-                        #TODO: Raises the temperature
-                        antennas[nAntennas].raises_temperature()
-                        antennas[nAntennas].new_particles_generation()
+                        antennas[nAntennas].obtain_sinr(grid)
+                        antennas[nAntennas].mc_spinning_roulette()
+                        antennas[nAntennas].mc_backup_particles()
+                        antennas[nAntennas].mc_clean_variables()
+                        antennas[nAntennas].mc_raises_temperature()
+                        antennas[nAntennas].mc_new_particles_generation()
                         
-                    antennas[nAntennas].select_current_solution()
+                    antennas[nAntennas].mc_select_current_solution()
                     antennas[nAntennas].obtain_energy_efficient()
                     f = open('resumo.csv','a')
-                    f.write(str(self.macros)+','+str(len(antennas)-self.macros)+','+str(self.users)+','+str(i+1)+','+str(antennas[nAntennas].data_rate)+','+str(antennas[nAntennas].total_power_consumition)+','+str(antennas[nAntennas].energy_efficient)+'\n')
+                    f.write(str(self.macros)+','+str(len(antennas)-self.macros)+','+str(self.users)+','+str(i+1)+','+str(antennas[nAntennas].data_rate)+','+str(antennas[nAntennas].power_consumition)+','+str(antennas[nAntennas].energy_efficient)+'\n')
                     f.close()
 
 
