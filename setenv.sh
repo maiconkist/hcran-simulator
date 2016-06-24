@@ -8,8 +8,8 @@ export PYTHONPATH=~/simulations/lib/:~/simulations/submodules/pymobility/src/
 #To set the cscope to python
 
 
-#rm cscope.files cscope.out
-#find . -name '*.py' > cscope.files
-#cscope -pkR
+rm cscope.files cscope.out
+find . -name '*.py' > cscope.files
+cscope -pkR
 
 

@@ -41,9 +41,9 @@ class Antenna(object):
     HR2M         = 1 
     NR           = 64/2000
     NER          = 128/2000
-    E_BETA       = 0.01
-    E_LAMBDA     = 0.01
-    E_UPSILON    = 0.01
+    E_BETA       = 0.1
+    E_LAMBDA     = 0.1
+    E_UPSILON    = 0.1
     D_0          = 1
 
     # 1.4  channel has 6  RBs in frequency domain
@@ -107,7 +107,7 @@ class Antenna(object):
         self.energy_efficient           = 0 
         self.power_consumition          = 0 
         self.data_rate                  = 0
-
+        self.p_energy_efficient        = []
 
     @property
     def x( self ):
