@@ -175,8 +175,8 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
 
     for t in range(0, len(p_antennas)):
         #rrh = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        rrh = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        #rrh = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        #rrh = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
+        rrh = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
         grid.add_antenna(rrh)
 
 ########################################
@@ -212,8 +212,8 @@ def macrocells(grid, radius, n_bs, macrocells_center):
     #Center Antenna
     macrocells_center.append((grid.size[0]/2, grid.size[1]/2))
     #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
-    bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
-    #bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
+    #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
+    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
 
     #Others
@@ -226,8 +226,8 @@ def macrocells(grid, radius, n_bs, macrocells_center):
        p_antenna[1] = center[1] + radius * math.sin(v*math.pi/6)
        macrocells_center.append(p_antenna)
        #bs = Antenna(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       bs = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       #bs = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grid)
+       #bs = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grid)
+       bs = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grid)
        grid.add_antenna(bs)
 
 ########################################
@@ -268,8 +268,8 @@ def build_fixed_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
     #Center Antenna
     center = numpy.array([grid.size[0]/2, grid.size[1]/2])
     #BS
-    #bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
-    bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
+    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
+    #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
 
     #Cluster
@@ -277,8 +277,8 @@ def build_fixed_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
     grid.add_cluster(cluster)
 
     #RRHs
-    #rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid)
-    rrh = AntennaPeng(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    #rrh = AntennaPeng(1, Antenna.RRH_ID, [1040, 1040], None, grid)
     grid.add_antenna(rrh)
 
     #Users
@@ -335,34 +335,34 @@ if __name__ == "__main__":
 
     # Trying to create a new file or open one
     f = open('resumo.csv','w')
-    f.write('CASE,R,I,C,P,EE,T\n')
+    f.write('CASE,U,R,I,C,P,EE,T\n')
     f.close()
 
     bbu = 2 
-    #bs = [1, 3, 5, 7]
-    bs = 1
+    bs = [1, 2, 3, 4, 5, 6, 7]
+    #bs = 1
     cluster = 1
     rrh = 10
     ue = 30
 
-    grid = build_scenario(bbu, bs, cluster, rrh, ue)
+    #grid = build_scenario(bbu, bs, cluster, rrh, ue)
     #grid = build_fixed_scenario(bbu, bs, cluster, rrh, ue)
     #mc = Mc(bs, ue, 1)
     #mc.run(grid)
 
-    peng = Peng(bs, ue, 1)
-    peng.run(grid)
+    #peng = Peng(bs, ue, 1)
+    #peng.run(grid)
 
     #util.plot_grid(grid)
-#    for nbs in bs:
-#        for rep in range(0, 5):
+    for nbs in bs:
+        for rep in range(0, 10):
             #Build Scenario
             #print "Create scenario"
-#            grid = build_scenario(bbu, nbs, cluster, rrh, ue) 
+            grid = build_scenario(bbu, nbs, cluster, rrh, ue) 
             #arq.close()
             #util.plot_grid(grid)
-#           mc = Mc(nbs, ue, rep)
-#            mc.run(grid);
+            mc = Mc(nbs, ue, rep)
+            mc.run(grid);
             #util.plot_grid(grid)
 
 

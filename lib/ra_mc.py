@@ -17,7 +17,7 @@ import time
 import random
 
 DEBUG = False
-IMAX = 10
+IMAX = 100
 
 def debug_printf(string):
     if DEBUG:
@@ -87,7 +87,7 @@ class Mc(object):
                     antennas[nAntennas].obtain_energy_efficient()
                     #f.write('CASE,R,I,C,P,EE,T\n')
                     f = open('resumo.csv','a')
-                    f.write('MC['+str(self.macros)+'-'+str(len(antennas)-self.macros)+'-'+str(self.users)+'],'+str(self.cenario+1)+','+str(i+1)+','+str(antennas[nAntennas].data_rate)+','+str(antennas[nAntennas].power_consumition)+','+str(antennas[nAntennas].energy_efficient)+','+str(time.time()-init)+'\n')
+                    f.write('MC['+str(self.macros)+'-'+str(len(antennas)-self.macros)+'-'+str(self.macros*30)+'],'+str(self.macros*30)+','+str(self.cenario+1)+','+str(i+1)+','+str(antennas[nAntennas].data_rate)+','+str(antennas[nAntennas].power_consumition)+','+str(antennas[nAntennas].energy_efficient)+','+str(time.time()-init)+'\n')
                     f.close()
 
 

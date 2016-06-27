@@ -18,7 +18,7 @@ class Antenna(object):
     BS_RADIUS   = 710
     POWER_BS    = 46
     POWER_RRH   = 23
-    TOTAL_RBS   = 5
+    TOTAL_RBS   = 100
 
     ################
     # Peng and MC constants
