@@ -15,6 +15,7 @@ import numpy
 import os
 import time
 import random
+import gc
 
 DEBUG = False
 IMAX = 100
@@ -68,6 +69,9 @@ class Mc(object):
         for i in range(0, IMAX):
             init = time.time()
             # Para todas as antenas
+            #Liberar memoria
+            gc.collect()
+            print "Memoria liberada"
             for nAntennas in range(0, len(antennas)):
                 if len(antennas[nAntennas].connected_ues) > 0:   
                     if(i == 0):
@@ -87,7 +91,7 @@ class Mc(object):
                     antennas[nAntennas].obtain_energy_efficient()
                     #f.write('CASE,R,I,C,P,EE,T\n')
                     f = open('resumo.csv','a')
-                    f.write('MC['+str(self.macros)+'-'+str(len(antennas)-self.macros)+'-'+str(self.macros*30)+'],'+str(self.macros*30)+','+str(self.cenario+1)+','+str(i+1)+','+str(antennas[nAntennas].data_rate)+','+str(antennas[nAntennas].power_consumition)+','+str(antennas[nAntennas].energy_efficient)+','+str(time.time()-init)+'\n')
+                    f.write('MC['+str(self.macros)+'-'+str(self.macros*10)+'-'+str(self.macros*30)+'],'+str(self.macros*30)+','+str(self.cenario)+','+str(i+1)+','+str(antennas[nAntennas].data_rate)+','+str(antennas[nAntennas].power_consumition)+','+str(antennas[nAntennas].energy_efficient)+','+str(time.time()-init)+'\n')
                     f.close()
 
 

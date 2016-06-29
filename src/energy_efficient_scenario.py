@@ -15,10 +15,14 @@ from cluster import *
 from antenna_peng import *
 from antenna_mc import *
 from ra_mc import *
+from multiprocessing import Process, Queue
+from joblib import Parallel, delayed
 import csv
 import random
 import numpy
 import scipy
+import multiprocessing
+import gc
 
 ###############################
 #Grid definitions
@@ -34,6 +38,8 @@ DROPRADIUS_SC           = 500
 DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
+MAX_BS                  = 7
+MAX_REP                 = 10
 
 ###############################
 #Test Variables
@@ -55,27 +61,36 @@ def debug_printf(string):
 
 ########################################
 def build_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
-    grid = Grid(size=(2000,2000))
+    grid1 = Grid(size=(2000,2000))
+    grid2 = Grid(size=(2000,2000))
     macrocells_center = list()
 
-    cntrl = Controller(grid, control_network=False)
-    grid.add_controller(cntrl)
+    cntrl1 = Controller(grid1, control_network=False)
+    grid1.add_controller(cntrl1)
+
+    cntrl2 = Controller(grid2, control_network=False)
+    grid2.add_controller(cntrl2)
 
     for i in range(n_bbu):
-        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid)
-        grid.add_bbu(bbu)
+        rpos = grid1.random_pos()
+        bbu1 = BBU(pos=rpos, controller=cntrl1, grid=grid1)
+        bbu2 = BBU(pos=rpos, controller=cntrl2, grid=grid2)
+        grid1.add_bbu(bbu1)
+        grid2.add_bbu(bbu2)
 
-    macrocells(grid, DMACROMACRO, n_bs,  macrocells_center)
+    grids = [grid1, grid2]
+
+    macrocells(grids, DMACROMACRO, n_bs,  macrocells_center)
 
     if not(n_rrh < 1):
-        clusters(grid, macrocells_center, n_clusters, n_rrh)
+        clusters(grids, macrocells_center, n_clusters, n_rrh)
 
-    users(grid, macrocells_center, n_bs, n_clusters, n_ue)
+    users(grids, macrocells_center, n_bs, n_clusters, n_ue)
 
-    return grid
+    return grids
 
 ##########################
-def users(grid, macrocells_center, n_bs, n_clusters, n_ue):
+def users(grids, macrocells_center, n_bs, n_clusters, n_ue):
     count_ue = 0
     p_users = list()
 
@@ -90,7 +105,7 @@ def users(grid, macrocells_center, n_bs, n_clusters, n_ue):
                 p_users = list()
 
             if n_clusters > 0:
-                cluster = grid._clusters[random.randint((i*n_clusters),
+                cluster = grids[0]._clusters[random.randint((i*n_clusters),
                             ((i*n_clusters) + n_clusters)-1)]
 
             #Define type of user
@@ -112,11 +127,13 @@ def users(grid, macrocells_center, n_bs, n_clusters, n_ue):
                 user_type = User.HIGH_RATE_USER
             else:
                 user_type = User.LOW_RATE_USER
-            u = User(j, p_users[j], None, grid, user_type)
-            grid.add_user(u)
+            u1 = User(j, p_users[j], None, grids[0], user_type)
+            grids[0].add_user(u1)
+            u2 = User(j, p_users[j], None, grids[1], user_type)
+            grids[1].add_user(u2)
 
 ########################################
-def clusters(grid, macrocells_center, n_clusters, n_antennas):
+def clusters(grids, macrocells_center, n_clusters, n_antennas):
     count_antennas = 0
     count_clusters = 0
     p_antennas = list()
@@ -170,14 +187,16 @@ def clusters(grid, macrocells_center, n_clusters, n_antennas):
             p_clusters.append(p_local_clusters[k])
             
     for l in range(0, len(p_clusters)):
-        cluster = Cluster(l+1, p_clusters[l], grid)
-        grid.add_cluster(cluster)
+        cluster1 = Cluster(l+1, p_clusters[l], grids[0])
+        grids[0].add_cluster(cluster1)
+        cluster2 = Cluster(l+1, p_clusters[l], grids[1])
+        grids[1].add_cluster(cluster2)
 
     for t in range(0, len(p_antennas)):
-        #rrh = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        #rrh = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        rrh = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grid)
-        grid.add_antenna(rrh)
+        rrh1 = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[0])
+        grids[0].add_antenna(rrh1)
+        rrh2 = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[1])
+        grids[1].add_antenna(rrh2)
 
 ########################################
 def is_possition_ok(p, vector, min_distance):
@@ -205,30 +224,38 @@ def euclidian(a,b):
    return scipy.spatial.distance.euclidean(a,b)
 
 ########################################
-def macrocells(grid, radius, n_bs, macrocells_center):
-    center = numpy.array([grid.size[0]/2, grid.size[1]/2])
+def macrocells(grids, radius, n_bs, macrocells_center):
+    center = numpy.array([grids[0].size[0]/2, grids[0].size[1]/2])
     index = 0
 
     #Center Antenna
-    macrocells_center.append((grid.size[0]/2, grid.size[1]/2))
+    macrocells_center.append((grids[0].size[0]/2, grids[0].size[1]/2))
     #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
     #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
-    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
-    grid.add_antenna(bs)
+    bs1 = AntennaMc(0, Antenna.BS_ID, center, None, grids[0])
+    grids[0].add_antenna(bs1)
+
+    bs2 = AntennaPeng(0, Antenna.BS_ID, center, None, grids[1])
+    grids[1].add_antenna(bs2)
 
     #Others
     for i in range (0, n_bs-1):
-       v = (2 * i) + 1
-       #It is not cool initiazile variables in loops...
-       #But it only works like this :(
-       p_antenna = [None] * 2
-       p_antenna[0] = center[0] + radius * math.cos(v*math.pi/6)
-       p_antenna[1] = center[1] + radius * math.sin(v*math.pi/6)
-       macrocells_center.append(p_antenna)
-       #bs = Antenna(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       #bs = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       bs = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grid)
-       grid.add_antenna(bs)
+        v = (2 * i) + 1
+        #It is not cool initiazile variables in loops...
+        #But it only works like this :(
+        p_antenna = [None] * 2
+        p_antenna[0] = center[0] + radius * math.cos(v*math.pi/6)
+        p_antenna[1] = center[1] + radius * math.sin(v*math.pi/6)
+        macrocells_center.append(p_antenna)
+
+        bs1 = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grids[0])
+        grids[0].add_antenna(bs1)
+
+        bs2 = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grids[1])
+        grids[1].add_antenna(bs2)
+
+
+
 
 ########################################
 
@@ -325,8 +352,35 @@ def build_fixed_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
 
     return grid
 
+def do_mc(nbs, ue, rep, grid):
+    print "Starting scenario", rep, "with", nbs, "macros for MC!"
+    mc = Mc(nbs, ue, rep)
+    mc.run(grid);
 
+def do_peng(nbs, ue, rep, grid):
+    print "Starting scenario", rep, "with", nbs, "macros for Peng!"
+    peng = Peng(nbs, ue, rep)
+    peng.run(grid);
 
+def processInput(nbs):
+    bbu = 2 
+    cluster = 1
+    rrh = 10
+    ue = 30
+
+    bs = (nbs%MAX_BS)+1
+    rep = (nbs%MAX_REP)+1
+
+    #print "Starting scenario", rep, "with", bs, "macros for MC!"
+
+    grids = build_scenario(bbu, bs, cluster, rrh, ue) 
+    do_mc(bs, ue, rep, grids[0])
+    
+    #do_peng(bs, ue, rep, grids[1])
+
+    del grids
+    gc.collect()
+    
 
 ########################################
 # Main
@@ -338,12 +392,13 @@ if __name__ == "__main__":
     f.write('CASE,U,R,I,C,P,EE,T\n')
     f.close()
 
-    bbu = 2 
-    bs = [1, 2, 3, 4, 5, 6, 7]
-    #bs = 1
-    cluster = 1
-    rrh = 10
-    ue = 30
+    #bs = [1, 2, 3, 4, 5, 6, 7]
+    
+
+    num_cores = multiprocessing.cpu_count()
+
+    #for rep in range(0, 10):
+    Parallel(n_jobs=num_cores)(delayed(processInput)(nbs) for nbs in range(0, MAX_BS*MAX_REP))
 
     #grid = build_scenario(bbu, bs, cluster, rrh, ue)
     #grid = build_fixed_scenario(bbu, bs, cluster, rrh, ue)
@@ -353,16 +408,7 @@ if __name__ == "__main__":
     #peng = Peng(bs, ue, 1)
     #peng.run(grid)
 
-    #util.plot_grid(grid)
-    for nbs in bs:
-        for rep in range(0, 10):
-            #Build Scenario
-            #print "Create scenario"
-            grid = build_scenario(bbu, nbs, cluster, rrh, ue) 
-            #arq.close()
-            #util.plot_grid(grid)
-            mc = Mc(nbs, ue, rep)
-            mc.run(grid);
-            #util.plot_grid(grid)
+            
+
 
 

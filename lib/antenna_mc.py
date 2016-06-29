@@ -45,6 +45,15 @@ class AntennaMc(Antenna):
 
 
     def mc_clean_variables(self):
+        #del self.mc_data_rate 
+        #del self.mc_power_consumption 
+        #del self.mc_high_rate_constraint 
+        #del self.mc_low_rate_constraint 
+        #del self.mc_interference_reuse_constraint 
+        #del self.mc_maximum_transmit_power_constraint 
+        #del self.mc_antenna_energy_efficient
+        #del self.mc_a 
+        #del self.mc_roulette 
         self.mc_data_rate = np.zeros(shape=(self.NPARTICLES))
         self.mc_power_consumption = np.zeros(shape=(self.NPARTICLES))
         self.mc_high_rate_constraint = np.zeros(shape=(self.NPARTICLES))
