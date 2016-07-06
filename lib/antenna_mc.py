@@ -23,7 +23,9 @@ class AntennaMc(Antenna):
         if len(self.connected_ues) == 0:
             return
         debug_printf("\n##########################\n## STARTING MONTE CARLO ##\n##########################\n")
-        self.NPARTICLES = 1000
+        self.HISTORICALRATE = 0.2
+        self.RESETRATE    = 0.9
+        self.NPARTICLES   = 5
         self.L_BETA       = 0.1
         self.L_LAMBDA     = 0.1
         self.L_UPSILON    = 0.1
@@ -45,15 +47,10 @@ class AntennaMc(Antenna):
 
 
     def mc_clean_variables(self):
-        #del self.mc_data_rate 
-        #del self.mc_power_consumption 
-        #del self.mc_high_rate_constraint 
-        #del self.mc_low_rate_constraint 
-        #del self.mc_interference_reuse_constraint 
-        #del self.mc_maximum_transmit_power_constraint 
-        #del self.mc_antenna_energy_efficient
-        #del self.mc_a 
-        #del self.mc_roulette 
+        self.NPARTICLES = int(self.NPARTICLES * self.RESETRATE)
+        #print self.NPARTICLES
+        if self.NPARTICLES < 2:
+            self.NPARTICLES = 2
         self.mc_data_rate = np.zeros(shape=(self.NPARTICLES))
         self.mc_power_consumption = np.zeros(shape=(self.NPARTICLES))
         self.mc_high_rate_constraint = np.zeros(shape=(self.NPARTICLES))
@@ -103,21 +100,38 @@ class AntennaMc(Antenna):
                     self.mc_a[pt,ue,rb] = 1
                     self.mc_ee_partial_calc(pt,ue,rb)
             self.mc_ee_final_calc(pt) 
-        debug_printf("----- PARTICULA " + str(pt+1) + " -----")
-        debug_printf("Alloc = \n" + str(numpy.matrix(self.mc_a[pt])))
-        debug_printf("Power = \n" + str(numpy.matrix(self.p)))
-        debug_printf("Noise = \n" + str(numpy.matrix(self.noise_plus_interference)))
+            debug_printf("----- PARTICULA " + str(pt+1) + " -----")
+            debug_printf("Alloc = \n" + str(numpy.matrix(self.mc_a[pt])))
+            debug_printf("Power = \n" + str(numpy.matrix(self.p)))
+            debug_printf("Noise = \n" + str(numpy.matrix(self.noise_plus_interference)))
 
 
     def mc_new_particles_generation(self):
         nUes = len(self.connected_ues)
+        hist = self.NPARTICLES * self.HISTORICALRATE
+        if (hist < 1):
+            hist = 1 
         for pt in range(0,self.NPARTICLES):
-            selected_particle = self.mc_ant_a[self.mc_roulette[pt]]
-            for rb in range(0,self.TOTAL_RBS):
-                ue = self.mc_random_by_noise_p(rb, selected_particle)
-                if ue > 0:
-                    self.mc_a[pt,ue,rb] = 1
-                    self.mc_ee_partial_calc(pt,ue,rb)
+            if pt < hist:
+                #print "Mantem historico"
+                index = numpy.argmax(self.mc_hist_ee)
+                self.mc_hist_ee[index] = -1  
+                selected_particle = self.mc_ant_a[index]
+                for rb in range(0,self.TOTAL_RBS):
+                    ue = numpy.argmax(selected_particle[:,rb])
+                    #print "UE:", ue
+                    if ue > 0:
+                        self.mc_a[pt,ue,rb] = 1
+                        self.mc_ee_partial_calc(pt,ue,rb)
+                debug_printf("Alloc = \n" + str(numpy.matrix(self.mc_a[pt])))
+                debug_printf("AllocAnt = \n" + str(selected_particle))
+            else:
+                selected_particle = self.mc_ant_a[self.mc_roulette[pt]]
+                for rb in range(0,self.TOTAL_RBS):
+                    ue = self.mc_random_by_noise_p(rb, selected_particle)
+                    if ue > 0:
+                        self.mc_a[pt,ue,rb] = 1
+                        self.mc_ee_partial_calc(pt,ue,rb)
             self.mc_ee_final_calc(pt) 
 
 
@@ -159,6 +173,7 @@ class AntennaMc(Antenna):
  
 
     def mc_select_current_solution(self):
+        self.mc_hist_ee = list(self.mc_antenna_energy_efficient)
         index = numpy.argmax(self.mc_antenna_energy_efficient)        
         self.energy_efficient = self.mc_antenna_energy_efficient[index]        
         debug_printf("Max value element : " + str(self.energy_efficient))

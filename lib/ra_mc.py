@@ -18,7 +18,7 @@ import random
 import gc
 
 DEBUG = False
-IMAX = 100
+IMAX = 2
 
 def debug_printf(string):
     if DEBUG:

@@ -18,7 +18,8 @@ class Antenna(object):
     BS_RADIUS   = 710
     POWER_BS    = 46
     POWER_RRH   = 23
-    TOTAL_RBS   = 100
+    TOTAL_RBS   = 5
+    TARGET_SINR = 14.5 #[db]
 
     ################
     # Peng and MC constants
@@ -31,10 +32,10 @@ class Antenna(object):
     Pmax         = 20        
     PMmax        = 43
     PRmax        = 1
-    PRC          = 0.1
-    PBH          = 0.2
+    PRC          = 6.8
+    PBH          = 3.85
     PMC          = 10
-    PMBH         = 0.2
+    PMBH         = 3.85
     EFF          = 2
     MEFF         = 4
     DR2M         = 125       
@@ -300,6 +301,7 @@ class Antenna(object):
     #########################
     def obtain_data_rate(self):
         #Shannon Calc
+        self.data_rate = 0
         for n in range(0, len(self.connected_ues)):
             for k in range (0, self.TOTAL_RBS):
                 self.data_rate += (self.shannon((self.a[n][k] * Antenna.B0), self.p[n][k], self.noise_plus_interference[n][k])) / 10
@@ -308,7 +310,7 @@ class Antenna(object):
         #Shannon Calc
         # B is in hertz
         # the signal and noise_plus_interference powers S and N are measured in watts or volts
-        return B * math.log(1 + (S/N))
+        return B * math.log(1 + (S/N), 2)
 
     def obtain_power_consumition(self):
         result = 0
@@ -349,8 +351,8 @@ class Antenna(object):
     def obtain_noise_plus_interference(self, ue, rb, antennas):
         interference = 0
         path_loss = 0
-        Gt = 0.001                       #transmission antenna gain
-        Gr = 0.001                       #receiver antenna gain
+        Gt = 1                       #transmission antenna gain
+        Gr = 1                       #receiver antenna gain
         Wl = (3/19.0)                  #Comprimento de onda considerando uma frequencia de 1.9 GHz
         for ant in antennas:
             if (ue._connected_antenna._id != ant._id and ant.a != None and sum(ant.a[:,rb])>0):
@@ -361,9 +363,9 @@ class Antenna(object):
             else:
                 R  =  util.dist(ue, ant)
                 if (self.type == Antenna.BS_ID):
-                    path_loss = (31.5 + 40.0 * math.log(R)) * 0.001258925 #Watts
+                    path_loss = (31.5 + 40.0 * math.log(R)) * 0.0001258925 #Watts
                 else:
-                    path_loss = (31.5 + 35.0 * math.log(R)) * 0.001258925 #Watts
+                    path_loss = (31.5 + 35.0 * math.log(R)) * 0.0001258925 #Watts
                 #path_loss = 20 * math.log((4 * math.pi * R),10)) #dB
         
         #print "Interference: ", interference
@@ -374,16 +376,17 @@ class Antenna(object):
     def obtain_power(self, ue, rb):
         #Obtain P in W                                                                                
         #p = self.waterfilling_optimal(n,k) - (1 / self.snir[n][k])  
-        N = 0.000000000001             #ruido
+        N = 0.0000000000001             #ruido
         Pr = N * (math.pow(2,4.5234)-1)#receivedpower 
-        #print Pr
-        Gt = 0.001                       #transmission antenna gain
-        Gr = 0.001                       #receiver antenna gain
+        print "Pr", Pr
+        Gt = 1                       #transmission antenna gain
+        Gr = 1                       #receiver antenna gain
         Wl = (3/19.0)                  #Comprimento de onda considerando uma frequencia de 1.9 GHz
         R  = util.dist(self.connected_ues[ue], self) #distance between antennas 
-        #print R
+        print "R", R
         Ar =  self.noise_plus_interference[ue, rb]       #interference plus pathloss
-        #print Ar
+        print "Ar", (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))
         p = (Pr + Ar) / (Gt * Gr * ( Wl / math.pow((4 * math.pi * R), 2)))
-        #print p                                            
-        return p
+        p = p * 0.0001258925 #Watts
+        print "p", p                                            
+        return p 

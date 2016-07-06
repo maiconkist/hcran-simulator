@@ -53,7 +53,7 @@ uessmallcell = 2/3
 #Functions
 ###################################
 
-DEBUG = False
+DEBUG = True
 
 def debug_printf(string):
     if DEBUG:
@@ -281,13 +281,14 @@ def associate_user_in_antennas(ues, antennas):
         ue._connected_antenna = near
         near.connected_ues.append(ue)  
 
-def build_fixed_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
+def build_fixed_scenario():
     grid = Grid(size=(2000,2000))
     macrocells_center = list()
 
     cntrl = Controller(grid, control_network=False)
     grid.add_controller(cntrl)
 
+    n_bbu = 2
     for i in range(n_bbu):
         bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid)
         grid.add_bbu(bbu)
@@ -320,12 +321,12 @@ def build_fixed_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
 
     bs.snir = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
     bs.noise_plus_interference = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
-    bs.a = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
+    bs.a = numpy.ones(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
     bs.p = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
 
     rrh.snir = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
     rrh.noise_plus_interference = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
-    rrh.a = numpy.ones(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
+    rrh.a = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
     rrh.p = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
 
     bs.obtain_sinr(grid)
@@ -398,11 +399,12 @@ if __name__ == "__main__":
     num_cores = multiprocessing.cpu_count()
 
     #for rep in range(0, 10):
-    Parallel(n_jobs=num_cores)(delayed(processInput)(nbs) for nbs in range(0, MAX_BS*MAX_REP))
+    #Parallel(n_jobs=num_cores)(delayed(processInput)(nbs) for nbs in range(0, MAX_BS*MAX_REP))
 
     #grid = build_scenario(bbu, bs, cluster, rrh, ue)
-    #grid = build_fixed_scenario(bbu, bs, cluster, rrh, ue)
-    #mc = Mc(bs, ue, 1)
+    grid = build_fixed_scenario()
+    util.plot_grid(grid)
+    #mc = Mc(1, 30, 1)
     #mc.run(grid)
 
     #peng = Peng(bs, ue, 1)
