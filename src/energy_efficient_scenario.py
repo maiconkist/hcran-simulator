@@ -97,7 +97,8 @@ def users(grids, macrocells_center, n_bs, n_clusters, n_ue):
     for i in range(0, n_bs):
         reset = 1001
         count_ue = 0
-        while (count_ue <= n_ue):
+        while (count_ue < n_ue):
+            
             p_is_ok = True
             if reset > 1000:
                 count_ue = 0
@@ -105,8 +106,11 @@ def users(grids, macrocells_center, n_bs, n_clusters, n_ue):
                 p_users = list()
 
             if n_clusters > 0:
-                cluster = grids[0]._clusters[random.randint((i*n_clusters),
-                            ((i*n_clusters) + n_clusters)-1)]
+                x = (i*n_clusters)
+                y = ((i*n_clusters) + n_clusters)-1
+                r = random.randint(x,y)
+                print("x: " + str(x) + " y: " + str(y) + " r: " + str(r))
+                cluster = grids[0]._clusters[r]
 
             #Define type of user
             if random.random() < 0.666 and n_clusters > 0:
@@ -120,9 +124,10 @@ def users(grids, macrocells_center, n_bs, n_clusters, n_ue):
                     reset = reset + 1
             else:
                 count_ue = count_ue + 1
+                print p
                 p_users.append(p)
-
-        for j in range(0,len(p_users) -1):
+            
+        for j in range(0,len(p_users)):
             if random.random() < 0.3:
                 user_type = User.HIGH_RATE_USER
             else:
@@ -155,7 +160,7 @@ def clusters(grids, macrocells_center, n_clusters, n_antennas):
                     DMACROMACRO*0.425, DMACROCLUSTER)
             p_local_clusters.append(pos)
 
-            while (count_antennas <= n_antennas):
+            while (count_antennas <= n_antennas-1):
                 #If it is impossible to allocate the antennas
                 #then clean the clusters and do it again
                 if reset > 1000:
@@ -177,15 +182,20 @@ def clusters(grids, macrocells_center, n_clusters, n_antennas):
                     p_local_antennas.append(p)
                 else:
                     reset = reset + 1
-            
+                 
             count_clusters = count_clusters + 1
 
-        for j in range(0,len(p_local_antennas) -1):
-            p_antennas.append(p_local_antennas[j])
+            for j in range(0,len(p_local_antennas)):
+                p_antennas.append(p_local_antennas[j])
         
+            p_local_antennas = list()
+
         for k in range(0,len(p_local_clusters)):
             p_clusters.append(p_local_clusters[k])
-            
+
+        #Tem que limpar as listas
+        p_local_clusters = list()
+
     for l in range(0, len(p_clusters)):
         cluster1 = Cluster(l+1, p_clusters[l], grids[0])
         grids[0].add_cluster(cluster1)
@@ -253,9 +263,6 @@ def macrocells(grids, radius, n_bs, macrocells_center):
 
         bs2 = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grids[1])
         grids[1].add_antenna(bs2)
-
-
-
 
 ########################################
 
@@ -392,9 +399,18 @@ if __name__ == "__main__":
     f = open('resumo.csv','w')
     f.write('CASE,U,R,I,C,P,EE,T\n')
     f.close()
+    
+    #Parametros do Bob
+    #bs = 2
+    #bbu = 2 
+    #cluster = 2
+    #rrh = 3
+    #ue = 10
+
+    #grids = build_scenario(bbu, bs, cluster, rrh, ue)
+    #util.plot_grid(grids[0])
 
     #bs = [1, 2, 3, 4, 5, 6, 7]
-    
 
     num_cores = multiprocessing.cpu_count()
 
