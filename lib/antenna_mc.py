@@ -24,24 +24,24 @@ class AntennaMc(Antenna):
             return
         debug_printf("\n##########################\n## STARTING MONTE CARLO ##\n##########################\n")
         self.HISTORICALRATE = 0.2
-        self.RESETRATE    = 0.9
-        self.NPARTICLES   = 5
+        self.RESETRATE    = 0.01
+        self.NPARTICLES   = 1000
         self.L_BETA       = 0.1
         self.L_LAMBDA     = 0.1
         self.L_UPSILON    = 0.1
         self.E_DEALTA     = 0.2
+        self.mc_user_data_rate = np.zeros(shape=(self.NPARTICLES, len(self.connected_ues)))
         self.mc_data_rate = np.zeros(shape=(self.NPARTICLES))
         self.mc_power_consumption = np.zeros(shape=(self.NPARTICLES))
         self.mc_high_rate_constraint = np.zeros(shape=(self.NPARTICLES))
         self.mc_low_rate_constraint = np.zeros(shape=(self.NPARTICLES))
-        self.mc_interference_reuse_constraint = np.zeros(shape=(self.NPARTICLES))
+        self.mc_interference_reuse_constraint = np.zeros(shape=(self.NPARTICLES, self.TOTAL_RBS))
         self.mc_maximum_transmit_power_constraint = np.zeros(shape=(self.NPARTICLES))
         self.mc_antenna_energy_efficient = np.zeros(shape=(self.NPARTICLES))
         self.mc_a = numpy.zeros(shape=(self.NPARTICLES,len(self.connected_ues), self.TOTAL_RBS))
         self.mc_roulette = numpy.zeros(shape=(self.NPARTICLES))
         #Re style variables
-        self.snir = numpy.zeros(shape=(len(self.connected_ues), self.TOTAL_RBS))
-        self.noise_plus_interference = numpy.zeros(shape=(len(self.connected_ues), self.TOTAL_RBS))
+        self.i = numpy.zeros(shape=(len(self.connected_ues), self.TOTAL_RBS))
         self.a = numpy.zeros(shape=(len(self.connected_ues), self.TOTAL_RBS))
         self.p = numpy.zeros(shape=(len(self.connected_ues), self.TOTAL_RBS))
 
@@ -51,11 +51,12 @@ class AntennaMc(Antenna):
         #print self.NPARTICLES
         if self.NPARTICLES < 2:
             self.NPARTICLES = 2
+        self.mc_user_data_rate = np.zeros(shape=(self.NPARTICLES, len(self.connected_ues)))
         self.mc_data_rate = np.zeros(shape=(self.NPARTICLES))
         self.mc_power_consumption = np.zeros(shape=(self.NPARTICLES))
         self.mc_high_rate_constraint = np.zeros(shape=(self.NPARTICLES))
         self.mc_low_rate_constraint = np.zeros(shape=(self.NPARTICLES))
-        self.mc_interference_reuse_constraint = np.zeros(shape=(self.NPARTICLES))
+        self.mc_interference_reuse_constraint = np.zeros(shape=(self.NPARTICLES, self.TOTAL_RBS))
         self.mc_maximum_transmit_power_constraint = np.zeros(shape=(self.NPARTICLES))
         self.mc_antenna_energy_efficient = np.zeros(shape=(self.NPARTICLES))
         self.mc_a = numpy.zeros(shape=(self.NPARTICLES,len(self.connected_ues), self.TOTAL_RBS))
@@ -63,19 +64,25 @@ class AntennaMc(Antenna):
 
 
     def mc_ee_partial_calc(self,pt,ue,rb):
-        self.mc_data_rate[pt] += (self.mc_a[pt,ue,rb] * Antenna.B0 * math.log(1+(self.noise_plus_interference[ue,rb] * self.p[ue,rb])))
-        self.mc_power_consumption[pt] += (self.mc_a[pt,ue,rb] * self.p[ue,rb])
-        if self.connected_ues[ue]._type == User.HIGH_RATE_USER:
-            self.mc_high_rate_constraint[pt] += self.L_BETA * self.shannon((self.mc_a[pt,ue,rb] * Antenna.B0), self.p[ue,rb], self.noise_plus_interference[ue,rb]) - Antenna.NR
-        else:
-            self.mc_low_rate_constraint[pt] += self.L_BETA *  self.shannon((self.mc_a[pt,ue,rb] * Antenna.B0), self.p[ue,rb], self.noise_plus_interference[ue,rb]) - Antenna.NER
-        self.mc_interference_reuse_constraint[pt] += self.L_LAMBDA * (self.E_DEALTA - (self.mc_a[pt,ue,rb] * self.p[ue,rb] * Antenna.DR2M * Antenna.PMmax ))
+        k_data_rate = self.shannon((self.mc_a[pt,ue,rb] * Antenna.B0), self.sinr(self.p[ue][rb], self.i[ue][rb], self.noise()))
+        self.mc_data_rate[pt] += k_data_rate
+        self.mc_user_data_rate[pt][ue] += k_data_rate
+        self.mc_power_consumption[pt] += (self.mc_a[pt,ue,rb] * self.dBm_to_watts(self.p[ue,rb]))
+        #self.mc_interference_reuse_constraint[pt, rb] += self.mc_a[pt,ue,rb] * self.p[ue,rb] * Antenna.DR2M * Antenna.PMmax
         self.mc_maximum_transmit_power_constraint[pt] += self.mc_a[pt,ue,rb] * self.p[ue,rb]
 
 
     def mc_ee_final_calc(self,pt):
+        interference_reuse_constraint = 0
         self.mc_power_consumption[pt] = Antenna.EFF * self.mc_power_consumption[pt] + Antenna.PRC + Antenna.PBH
-        self.mc_interference_reuse_constraint[pt] = self.E_DEALTA - self.mc_interference_reuse_constraint[pt]
+        for ue in range(0, len(self.connected_ues)):
+            if self.connected_ues[ue]._type == User.HIGH_RATE_USER:
+                self.mc_high_rate_constraint[pt] += self.L_BETA * self.mc_user_data_rate[pt][ue] - Antenna.NR
+            else:
+                self.mc_low_rate_constraint[pt] += self.L_BETA *  self.mc_user_data_rate[pt][ue] - Antenna.NER
+        #for rb in range(0,self.TOTAL_RBS): #RB
+        #    interference_reuse_constraint += self.L_LAMBDA * (self.E_DEALTA - self.mc_interference_reuse_constraint[pt, k])
+
         self.mc_maximum_transmit_power_constraint[pt] = self.L_UPSILON * self.mc_maximum_transmit_power_constraint[pt]
         if self.type == self.BS_ID:
             self.mc_interference_reuse_constraint[pt] = Antenna.PMmax - self.mc_interference_reuse_constraint[pt]
@@ -85,7 +92,8 @@ class AntennaMc(Antenna):
         #debug_printf('DataRate: ' + str(self.mc_data_rate[pt]))
         #debug_printf('PowerConsumption: ' + str(self.mc_power_consumption[pt]))
        
-        self.mc_antenna_energy_efficient[pt] = self.mc_data_rate[pt] - (self.energy_efficient * self.mc_power_consumption[pt]) + self.mc_high_rate_constraint[pt] + self.mc_low_rate_constraint[pt] + self.mc_interference_reuse_constraint[pt] + self.mc_maximum_transmit_power_constraint[pt]
+        #self.mc_antenna_energy_efficient[pt] = self.mc_data_rate[pt] - (self.energy_efficient * self.mc_power_consumption[pt]) + self.mc_high_rate_constraint[pt] + self.mc_low_rate_constraint[pt] + self.mc_interference_reuse_constraint[pt] + self.mc_maximum_transmit_power_constraint[pt]
+        self.mc_antenna_energy_efficient[pt] = self.mc_data_rate[pt] - (self.energy_efficient * self.mc_power_consumption[pt]) + self.mc_high_rate_constraint[pt] + self.mc_low_rate_constraint[pt] + self.mc_maximum_transmit_power_constraint[pt]
         #debug_printf('EnergyEfficient: ' + str(self.mc_antenna_energy_efficient[pt]))
 
 
@@ -103,7 +111,7 @@ class AntennaMc(Antenna):
             debug_printf("----- PARTICULA " + str(pt+1) + " -----")
             debug_printf("Alloc = \n" + str(numpy.matrix(self.mc_a[pt])))
             debug_printf("Power = \n" + str(numpy.matrix(self.p)))
-            debug_printf("Noise = \n" + str(numpy.matrix(self.noise_plus_interference)))
+            debug_printf("Noise = \n" + str(numpy.matrix(self.i)))
 
 
     def mc_new_particles_generation(self):
@@ -140,12 +148,12 @@ class AntennaMc(Antenna):
         ant = 0       
         mean = 0
         for ue in range(0, len(self.connected_ues)):
-            rsnr = 1
-            if (max(self.noise_plus_interference[:,rb])!=0):
-                rsnr = (self.noise_plus_interference[ue,rb]/max(self.noise_plus_interference[:,rb]))
-            if (rsnr==0):
-                rsnr = 1
-            roleta_ues[ue] = (self.p[ue,rb]/max(self.p[:,rb]))/rsnr
+            ri = 1
+            if (max(self.i[:,rb])!=0):
+                ri = (self.i[ue,rb]/max(self.i[:,rb]))
+            if (ri==0):
+                ri = 1
+            roleta_ues[ue] = (self.p[ue,rb]/max(self.p[:,rb]))/ri
             if particle != None:
                 roleta_ues[ue] = roleta_ues[ue] * (particle[ue,rb]+1)
             mean = mean + roleta_ues[ue]

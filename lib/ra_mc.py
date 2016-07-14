@@ -76,11 +76,11 @@ class Mc(object):
                 if len(antennas[nAntennas].connected_ues) > 0:   
                     if(i == 0):
                         antennas[nAntennas].init_mc(antennas, nAntennas)
-                        antennas[nAntennas].obtain_sinr(grid)
+                        antennas[nAntennas].obtain_interference_and_power(grid)
                         # Generating the first particles
                         antennas[nAntennas].mc_initial_particles()
                     else:
-                        antennas[nAntennas].obtain_sinr(grid)
+                        antennas[nAntennas].obtain_interference_and_power(grid)
                         antennas[nAntennas].mc_spinning_roulette()
                         antennas[nAntennas].mc_backup_particles()
                         antennas[nAntennas].mc_clean_variables()

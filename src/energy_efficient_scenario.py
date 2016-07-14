@@ -38,8 +38,8 @@ DROPRADIUS_SC           = 500
 DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
-MAX_BS                  = 7
-MAX_REP                 = 10
+MAX_BS                  = 3
+MAX_REP                 = 5
 
 ###############################
 #Test Variables
@@ -329,8 +329,8 @@ def build_fixed_scenario():
     rrh.a = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
     rrh.p = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
 
-    bs.obtain_sinr(grid)
-    rrh.obtain_sinr(grid)
+    bs.obtain_interference_and_power(grid)
+    rrh.obtain_interference_and_power(grid)
     
     debug_printf("----- BS -----")
     debug_printf("Alloc = \n" + str(numpy.matrix(bs.a)))
@@ -365,9 +365,9 @@ def do_peng(nbs, ue, rep, grid):
 
 def processInput(nbs):
     bbu = 2 
-    cluster = 1
-    rrh = 10
-    ue = 30
+    cluster = 2
+    rrh = 3
+    ue = 12
 
     bs = (nbs%MAX_BS)+1
     rep = (nbs%MAX_REP)+1
@@ -375,6 +375,7 @@ def processInput(nbs):
     #print "Starting scenario", rep, "with", bs, "macros for MC!"
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
+    #util.plot_grid(grids[0])
     do_mc(bs, ue, rep, grids[0])
     
     #do_peng(bs, ue, rep, grids[1])
@@ -399,11 +400,11 @@ if __name__ == "__main__":
     num_cores = multiprocessing.cpu_count()
 
     #for rep in range(0, 10):
-    #Parallel(n_jobs=num_cores)(delayed(processInput)(nbs) for nbs in range(0, MAX_BS*MAX_REP))
+    Parallel(n_jobs=num_cores)(delayed(processInput)(nbs) for nbs in range(0, MAX_BS*MAX_REP))
 
     #grid = build_scenario(bbu, bs, cluster, rrh, ue)
-    grid = build_fixed_scenario()
-    util.plot_grid(grid)
+    #grid = build_fixed_scenario()
+    #util.plot_grid(grid)
     #mc = Mc(1, 30, 1)
     #mc.run(grid)
 
