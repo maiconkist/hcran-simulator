@@ -20,7 +20,7 @@ class Antenna(object):
     #VARIABLE CONSTANTS
     POWER_BS    = 46
     POWER_RRH   = 23
-    TOTAL_RBS   = 5
+    TOTAL_RBS   = 1
     TARGET_SINR = 14.5 #[db]
     T_GAIN      = 0                       #transmission antenna gain
     R_GAIN      = 0                       #receptor antenna gain
@@ -309,7 +309,7 @@ class Antenna(object):
         self.data_rate = 0
         for n in range(0, len(self.connected_ues)):
             for k in range (0, self.TOTAL_RBS):
-                self.data_rate += self.shannon((self.a[n][k] * Antenna.B0), self.sinr(self.p[n][k], self.i[n][k], self.noise()))
+                self.data_rate += (self.shannon((self.a[n][k] * Antenna.B0), self.sinr(self.p[n][k], self.i[n][k], self.noise())))/2000#Qnt de bits em 0,5 ms
 
     def shannon(self, B, SINR):
         #Shannon Calc
@@ -322,7 +322,7 @@ class Antenna(object):
        return Pr
 
     def p_friis(self, I, N, Gt, Gr, R, Wl):
-       Pt = self.TARGET_SINR*(I+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
+       Pt = self.TARGET_SINR+ (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
        return Pt
 
     def sinr(self, P, I, N):
@@ -339,7 +339,7 @@ class Antenna(object):
             if (ue._connected_antenna._id != ant._id and ant.a != None and sum(ant.a[:,rb])>0):
                 index = numpy.argmax(ant.a[:,rb])
                 R  =  util.dist(ue, ant)
-                interference += self.friis(ant.p[index,rb], self.T_GAIN, self.R_GAIN, R, self.WAVELENTH)#dBm
+                interference += abs(self.friis(ant.p[index,rb], self.T_GAIN, self.R_GAIN, R, self.WAVELENTH))#dBm
         return interference
 
     def dBm_to_watts(self, dBm):

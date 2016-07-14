@@ -413,14 +413,12 @@ if __name__ == "__main__":
 
     #bs = [1, 2, 3, 4, 5, 6, 7]
 
-    num_cores = multiprocessing.cpu_count()
+    #num_cores = multiprocessing.cpu_count()
 
-    #for rep in range(0, 10):
-    Parallel(n_jobs=num_cores)(delayed(processInput)(nbs) for nbs in range(0, MAX_BS*MAX_REP))
+    #Parallel(n_jobs=num_cores)(delayed(processInput)(nbs) for nbs in range(0, MAX_BS*MAX_REP))
 
-    #grid = build_scenario(bbu, bs, cluster, rrh, ue)
-    #grid = build_fixed_scenario()
-    #util.plot_grid(grid)
+    grid = build_fixed_scenario()
+    util.plot_grid(grid)
     #mc = Mc(1, 30, 1)
     #mc.run(grid)
 
