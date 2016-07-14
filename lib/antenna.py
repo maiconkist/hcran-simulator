@@ -20,12 +20,13 @@ class Antenna(object):
     #VARIABLE CONSTANTS
     POWER_BS    = 46
     POWER_RRH   = 23
-    TOTAL_RBS   = 1
     TARGET_SINR = 14.5 #[db]
     T_GAIN      = 0                       #transmission antenna gain
     R_GAIN      = 0                       #receptor antenna gain
     WAVELENTH   = (3/19.0)                #Comprimento de onda considerando uma frequencia de 1.9 GHz
+    TOTAL_RBS   = 100
     CHANNEL     = 20000000 #Hz
+    RB_BIT_CAPACITY = 406.499955591 #bits/0.5 ms with a SINR  18.8
 
     ################
     # Peng and MC constants
@@ -46,8 +47,8 @@ class Antenna(object):
     MEFF         = 4
     DR2M         = 125       
     HR2M         = 1 
-    NR           = 64/2000
-    NER          = 128/2000
+    NR           = 5242880/2000 #High Rate Constraint
+    NER          = 5242880/2000 #Low Rate Constraint
     E_BETA       = 0.1
     E_LAMBDA     = 0.1
     E_UPSILON    = 0.1
@@ -315,6 +316,7 @@ class Antenna(object):
         #Shannon Calc
         # B is in hertz
         # the signal and noise_plus_interference powers S and N are measured in watts or volts
+        #print B, SINR
         return B * math.log(1 + SINR, 2)
 
     def friis(self, Pt, Gt, Gr, R, Wl):
@@ -322,16 +324,16 @@ class Antenna(object):
        return Pr
 
     def p_friis(self, I, N, Gt, Gr, R, Wl):
-       Pt = self.TARGET_SINR+ (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
+       Pt = self.TARGET_SINR + (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
        return Pt
 
     def sinr(self, P, I, N):
-        sinr = P / (I+N) #dB
-        return sinr
+        sinr = P - (abs(I)+N) #dB
+        return abs(sinr)
 
     def noise(self):
         #fixed noise in dBm
-        return -140 
+        return -90 
 
     def interference(self, ue, rb, antennas):
         interference = 0
@@ -382,3 +384,13 @@ class Antenna(object):
                 self.i[ue][rb] = self.interference(self.connected_ues[ue], rb, grid._antennas) #dBm
                 R  =  util.dist(self.connected_ues[ue], self)
                 self.p[ue][rb] = self.p_friis(self.i[ue][rb], self.noise(), self.T_GAIN, self.R_GAIN, R, self.WAVELENTH) #dBm
+
+    def demand_in_rbs(self, ue):
+        demanda_bits = 0
+        if ue._type == User.HIGH_RATE_USER:
+            demanda_bits = self.NR
+        else:
+            demanda_bits = self.NER
+
+        return int(math.ceil(demanda_bits/self.RB_BIT_CAPACITY))
+

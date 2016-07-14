@@ -15,6 +15,7 @@ from cluster import *
 from antenna_peng import *
 from antenna_mc import *
 from ra_mc import *
+from ra_greedy import *
 from multiprocessing import Process, Queue
 from joblib import Parallel, delayed
 import csv
@@ -38,7 +39,7 @@ DROPRADIUS_SC           = 500
 DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
-MAX_BS                  = 3
+MAX_BS                  = 1
 MAX_REP                 = 5
 
 ###############################
@@ -63,6 +64,7 @@ def debug_printf(string):
 def build_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
     grid1 = Grid(size=(2000,2000))
     grid2 = Grid(size=(2000,2000))
+    grid3 = Grid(size=(2000,2000))
     macrocells_center = list()
 
     cntrl1 = Controller(grid1, control_network=False)
@@ -71,14 +73,20 @@ def build_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
     cntrl2 = Controller(grid2, control_network=False)
     grid2.add_controller(cntrl2)
 
+    cntrl3 = Controller(grid3, control_network=False)
+    grid3.add_controller(cntrl3)
+
+
     for i in range(n_bbu):
         rpos = grid1.random_pos()
         bbu1 = BBU(pos=rpos, controller=cntrl1, grid=grid1)
         bbu2 = BBU(pos=rpos, controller=cntrl2, grid=grid2)
+        bbu3 = BBU(pos=rpos, controller=cntrl3, grid=grid3)
         grid1.add_bbu(bbu1)
         grid2.add_bbu(bbu2)
+        grid3.add_bbu(bbu3)
 
-    grids = [grid1, grid2]
+    grids = [grid1, grid2, grid3]
 
     macrocells(grids, DMACROMACRO, n_bs,  macrocells_center)
 
@@ -109,7 +117,7 @@ def users(grids, macrocells_center, n_bs, n_clusters, n_ue):
                 x = (i*n_clusters)
                 y = ((i*n_clusters) + n_clusters)-1
                 r = random.randint(x,y)
-                print("x: " + str(x) + " y: " + str(y) + " r: " + str(r))
+                #print("x: " + str(x) + " y: " + str(y) + " r: " + str(r))
                 cluster = grids[0]._clusters[r]
 
             #Define type of user
@@ -124,7 +132,7 @@ def users(grids, macrocells_center, n_bs, n_clusters, n_ue):
                     reset = reset + 1
             else:
                 count_ue = count_ue + 1
-                print p
+                #print p
                 p_users.append(p)
             
         for j in range(0,len(p_users)):
@@ -136,6 +144,9 @@ def users(grids, macrocells_center, n_bs, n_clusters, n_ue):
             grids[0].add_user(u1)
             u2 = User(j, p_users[j], None, grids[1], user_type)
             grids[1].add_user(u2)
+            u3 = User(j, p_users[j], None, grids[2], user_type)
+            grids[2].add_user(u3)
+
 
 ########################################
 def clusters(grids, macrocells_center, n_clusters, n_antennas):
@@ -164,7 +175,7 @@ def clusters(grids, macrocells_center, n_clusters, n_antennas):
                 #If it is impossible to allocate the antennas
                 #then clean the clusters and do it again
                 if reset > 1000:
-                    print "rest"
+                    #print "rest"
                     count_antennas = 0
                     count_clusters = 0
                     p_local_clusters = list()
@@ -201,12 +212,18 @@ def clusters(grids, macrocells_center, n_clusters, n_antennas):
         grids[0].add_cluster(cluster1)
         cluster2 = Cluster(l+1, p_clusters[l], grids[1])
         grids[1].add_cluster(cluster2)
+        cluster3 = Cluster(l+1, p_clusters[l], grids[2])
+        grids[2].add_cluster(cluster3)
+
 
     for t in range(0, len(p_antennas)):
         rrh1 = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[0])
         grids[0].add_antenna(rrh1)
         rrh2 = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[1])
         grids[1].add_antenna(rrh2)
+        rrh3 = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[2])
+        grids[2].add_antenna(rrh3)
+
 
 ########################################
 def is_possition_ok(p, vector, min_distance):
@@ -248,6 +265,9 @@ def macrocells(grids, radius, n_bs, macrocells_center):
     bs2 = AntennaPeng(0, Antenna.BS_ID, center, None, grids[1])
     grids[1].add_antenna(bs2)
 
+    bs3 = Antenna(0, Antenna.BS_ID, center, None, grids[2])
+    grids[2].add_antenna(bs3)
+
     #Others
     for i in range (0, n_bs-1):
         v = (2 * i) + 1
@@ -263,6 +283,9 @@ def macrocells(grids, radius, n_bs, macrocells_center):
 
         bs2 = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grids[1])
         grids[1].add_antenna(bs2)
+
+        bs3 = Antenna(i+1, Antenna.BS_ID, p_antenna, None, grids[2])
+        grids[2].add_antenna(bs3)
 
 ########################################
 
@@ -303,7 +326,8 @@ def build_fixed_scenario():
     #Center Antenna
     center = numpy.array([grid.size[0]/2, grid.size[1]/2])
     #BS
-    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
+    bs = Antenna(0, Antenna.BS_ID, center, None, grid)
+    #bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
     #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
 
@@ -312,7 +336,8 @@ def build_fixed_scenario():
     grid.add_cluster(cluster)
 
     #RRHs
-    rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    #rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid)
     #rrh = AntennaPeng(1, Antenna.RRH_ID, [1040, 1040], None, grid)
     grid.add_antenna(rrh)
 
@@ -323,58 +348,66 @@ def build_fixed_scenario():
     u2 = User(2, [880, 880], None, grid, User.LOW_RATE_USER)
     grid.add_user(u2)
 
-    associate_user_in_antennas(grid._user, grid._antennas)
+
+    do_greedy(1, 1, 2, 1, grid)
 
 
-    bs.snir = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
-    bs.noise_plus_interference = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
-    bs.a = numpy.ones(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
-    bs.p = numpy.zeros(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
+    #associate_user_in_antennas(grid._user, grid._antennas)
 
-    rrh.snir = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
-    rrh.noise_plus_interference = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
-    rrh.a = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
-    rrh.p = numpy.zeros(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
+    #bs.init_mc(grid._antennas, len(grid._antennas))
+    #rrh.init_mc(grid._antennas, len(grid._antennas))
 
-    bs.obtain_interference_and_power(grid)
-    rrh.obtain_interference_and_power(grid)
+
+    #bs.a = numpy.ones(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
+
+    #rrh.a = numpy.ones(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
+
+
+
+    #bs.obtain_interference_and_power(grid)
+    #rrh.obtain_interference_and_power(grid)
     
-    debug_printf("----- BS -----")
-    debug_printf("Alloc = \n" + str(numpy.matrix(bs.a)))
-    debug_printf("Power = \n" + str(numpy.matrix(bs.p)))
-    debug_printf("Noise = \n" + str(numpy.matrix(bs.noise_plus_interference)))
-    bs.obtain_energy_efficient()
-    debug_printf("Data Rate = \n" + str(bs.data_rate))
-    debug_printf("Power Consumition = \n" + str(bs.power_consumition))
-    debug_printf("Energy Efficient = \n" + str(bs.energy_efficient))
+    #debug_printf("----- BS -----")
+    #debug_printf("Alloc = \n" + str(numpy.matrix(bs.a)))
+    #debug_printf("Power = \n" + str(numpy.matrix(bs.p)))
+    #debug_printf("Noise = \n" + str(numpy.matrix(bs.i)))
+    #bs.obtain_energy_efficient()
+    #debug_printf("Data Rate = \n" + str(bs.data_rate))
+    #debug_printf("Power Consumition = \n" + str(bs.power_consumition))
+    #debug_printf("Energy Efficient = \n" + str(bs.energy_efficient))
 
 
-    debug_printf("----- RRH -----")
-    debug_printf("Alloc = \n" + str(numpy.matrix(rrh.a)))
-    debug_printf("Power = \n" + str(numpy.matrix(rrh.p)))
-    debug_printf("Noise = \n" + str(numpy.matrix(rrh.noise_plus_interference)))
-    rrh.obtain_energy_efficient()
-    debug_printf("Data Rate = \n" + str(rrh.data_rate))
-    debug_printf("Power Consumition = \n" + str(rrh.power_consumition))
-    debug_printf("Energy Efficient = \n" + str(rrh.energy_efficient))
+    #debug_printf("----- RRH -----")
+    #debug_printf("Alloc = \n" + str(numpy.matrix(rrh.a)))
+    #debug_printf("Power = \n" + str(numpy.matrix(rrh.p)))
+    #debug_printf("Noise = \n" + str(numpy.matrix(rrh.i)))
+    #rrh.obtain_energy_efficient()
+    #debug_printf("Data Rate = \n" + str(rrh.data_rate))
+    #debug_printf("Power Consumition = \n" + str(rrh.power_consumition))
+    #debug_printf("Energy Efficient = \n" + str(rrh.energy_efficient))
 
     return grid
 
-def do_mc(nbs, ue, rep, grid):
+def do_mc(nbs, rrh, ue, rep, grid):
     print "Starting scenario", rep, "with", nbs, "macros for MC!"
-    mc = Mc(nbs, ue, rep)
+    mc = Mc(nbs, rrh, ue, rep)
     mc.run(grid);
 
-def do_peng(nbs, ue, rep, grid):
+def do_peng(nbs, rrh, ue, rep, grid):
     print "Starting scenario", rep, "with", nbs, "macros for Peng!"
-    peng = Peng(nbs, ue, rep)
+    peng = Peng(nbs, rrh, ue, rep)
     peng.run(grid);
 
-def processInput(nbs):
+def do_greedy(nbs, rrh, ue, rep, grid):
+    print "Starting scenario", rep, "with", nbs, "macros for Greedy!"
+    greedy = Greedy(nbs, rrh, ue, rep)
+    greedy.run(grid);
+
+def processInput(nbs, nues):
     bbu = 2 
-    cluster = 2
-    rrh = 3
-    ue = 12
+    cluster = 1
+    rrh = 4
+    ue = nues
 
     bs = (nbs%MAX_BS)+1
     rep = (nbs%MAX_REP)+1
@@ -383,10 +416,12 @@ def processInput(nbs):
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
-    do_mc(bs, ue, rep, grids[0])
+    do_mc(bs, rrh, ue, rep, grids[0])
     
     #do_peng(bs, ue, rep, grids[1])
 
+    do_greedy(bs, rrh, ue, rep, grids[2])
+    
     del grids
     gc.collect()
     
@@ -400,7 +435,8 @@ if __name__ == "__main__":
     f = open('resumo.csv','w')
     f.write('CASE,U,R,I,C,P,EE,T\n')
     f.close()
-    
+
+
     #Parametros do Bob
     #bs = 2
     #bbu = 2 
@@ -411,20 +447,15 @@ if __name__ == "__main__":
     #grids = build_scenario(bbu, bs, cluster, rrh, ue)
     #util.plot_grid(grids[0])
 
-    #bs = [1, 2, 3, 4, 5, 6, 7]
+    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
 
-    #num_cores = multiprocessing.cpu_count()
+    num_cores = multiprocessing.cpu_count()
+    for nues in ues:
+        Parallel(n_jobs=num_cores)(delayed(processInput)(nbs, nues) for nbs in range(0, MAX_BS*MAX_REP))
 
-    #Parallel(n_jobs=num_cores)(delayed(processInput)(nbs) for nbs in range(0, MAX_BS*MAX_REP))
-
-    grid = build_fixed_scenario()
-    util.plot_grid(grid)
-    #mc = Mc(1, 30, 1)
-    #mc.run(grid)
-
-    #peng = Peng(bs, ue, 1)
-    #peng.run(grid)
-
+    #grid = build_fixed_scenario()
+    #util.plot_grid(grid)
+    
             
 
 

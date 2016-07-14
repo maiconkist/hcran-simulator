@@ -18,7 +18,7 @@ import random
 import gc
 
 DEBUG = False
-IMAX = 2
+IMAX = 20
 
 def debug_printf(string):
     if DEBUG:
@@ -52,12 +52,12 @@ def associate_user_in_antennas(ues, antennas):
  
 
 class Mc(object): 
-    def __init__(self, m, u, c):
+    def __init__(self, m, s, u, r):
         self.antennas = []
-        self.active_antennas = []
+        self.small = s
         self.macros = m
-        self.users = u
-        self.cenario = c
+        self.users = u * m
+        self.repeticao = r
 
     def run(self, grid):
         antennas = grid._antennas    
@@ -90,9 +90,10 @@ class Mc(object):
                     antennas[nAntennas].mc_select_current_solution()
                     antennas[nAntennas].obtain_energy_efficient()
                     #f.write('CASE,R,I,C,P,EE,T\n')
-                    f = open('resumo.csv','a')
-                    f.write('MC['+str(self.macros)+'-'+str(self.macros*10)+'-'+str(self.macros*30)+'],'+str(self.macros*30)+','+str(self.cenario)+','+str(i+1)+','+str(antennas[nAntennas].data_rate)+','+str(antennas[nAntennas].power_consumition)+','+str(antennas[nAntennas].energy_efficient)+','+str(time.time()-init)+'\n')
-                    f.close()
+                    #f = open('resumo.csv','a')
+                    #f.write('MC['+str(self.macros)+'-'+str(self.small)+'-'+str(self.users)+'],'+str(self.macros)+','+str(self.small)+','+str(self.users)+','+str(self.repeticao)+','+str(i+1)+','+str(antennas[nAntennas].data_rate)+','+str(antennas[nAntennas].power_consumition)+','+str(antennas[nAntennas].energy_efficient)+','+str(time.time()-init)+'\n')
+                    #f.close()
+            grid.write_to_resume('MC', self.repeticao, i+1, time.time()-init)
 
 
                 # values.index(min(values))

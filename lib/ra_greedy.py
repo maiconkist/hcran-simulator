@@ -3,133 +3,105 @@ from grid import Grid
 from util import *
 import math
 import csv
+import time
+
+DEBUG = False
+
+def debug_printf(string):
+    if DEBUG:
+        print(string)
+
+def wait():
+    raw_input("Press Enter to continue.")
+
+def associate_user_in_antennas(ues, antennas):
+    #######################
+    # Associa usuario na 
+    # antena mais proxima
+    ########################
+    for ue in ues:
+        distance = 10000
+        near = antennas[0]
+        for antenna in antennas:
+            d = dist( ue, antenna ) 
+            if antenna.type == Antenna.BS_ID:
+                if d < distance and d<Antenna.BS_RADIUS:
+                    distance = d
+                    near = antenna
+            elif antenna.type == Antenna.RRH_ID:
+                if d < distance and  d<Antenna.RRH_RADIUS:
+                    distance = d
+                    near = antenna
+
+        ue._connected_antenna = near
+        near.connected_ues.append(ue)
 
 class Greedy(object):
     
-    def __init__( self ):
-        self.antenna_list = []
-        self.user_list = []
-        self.active_antennas = []
-    
-    def run( self, grid ):
-        rrhs = grid._antennas
+    def __init__(self, m, s, u, r):
+        self.antennas = []
+        self.small = s
+        self.macros = m
+        self.users = u * m
+        self.repeticao = r
+
+    def run(self, grid):
+        antennas = grid._antennas    
         ues = grid._user
-        rrhs_used = []
+        init = time.time()
+        associate_user_in_antennas(ues, antennas)
 
-        for ue in ues:
-            distance = 10000
-            users_no_met = 0
-            near = rrhs[0]
+        #Para as BS aloca de forma sequencial iniciando do RB zero
+        for bs in grid.bs_list:
+            used_rbs = 0
+            bs.i = numpy.zeros(shape=(len(bs.connected_ues), Antenna.TOTAL_RBS))
+            bs.a = numpy.zeros(shape=(len(bs.connected_ues), Antenna.TOTAL_RBS))
+            bs.p = numpy.zeros(shape=(len(bs.connected_ues), Antenna.TOTAL_RBS))
+            if(used_rbs<Antenna.TOTAL_RBS):
+                for ue in range(0,len(bs.connected_ues)):
+                    needed_rbs = bs.demand_in_rbs(bs.connected_ues[ue])
+                    for rb in range(used_rbs, used_rbs+needed_rbs):
+                        if(rb<Antenna.TOTAL_RBS):
+                            bs.i[ue][rb] = bs.interference(bs.connected_ues[ue], rb, grid._antennas) #dBm
+                            bs.p[ue][rb] = Antenna.POWER_BS
+                            bs.a[ue][rb] = 1
+                    used_rbs = used_rbs+needed_rbs
+            debug_printf("----- BS -----")
+            debug_printf("Alloc = \n" + str(numpy.matrix(bs.a)))
+            debug_printf("Power = \n" + str(numpy.matrix(bs.p)))
+            debug_printf("Noise = \n" + str(numpy.matrix(bs.i)))
 
-            # pega a antena mais proxima que tenha RBs disponiveis
-            for rrh in rrhs:
-                d = dist(ue, rrh)
-                if rrh.type == Antenna.BS_ID:
-                    if ((d < distance) and
-                          (grid.TOTAL_RBS -1 - len(rrh.resources) >=
-                              calculate_necessary_rbs(ue, rrh))
-                          and (d<Antenna.BS_RADIUS)):
-                        distance = d
-                        near = rrh
-                elif rrh.type == Antenna.RRH_ID:
-                    if ((d < distance) and
-                            ((grid.TOTAL_RBS -1 - len(rrh.resources)) >=
-                                calculate_necessary_rbs(ue, rrh)) and 
-                            (d<Antenna.RRH_RADIUS)):
-                        distance = d
-                        near = rrh
+        #Para as RRHs aloca o RB de menor interferencia
+        for rrh in grid.rrh_list:
+            rrh.i = numpy.zeros(shape=(len(rrh.connected_ues), Antenna.TOTAL_RBS))
+            rrh.a = numpy.zeros(shape=(len(rrh.connected_ues), Antenna.TOTAL_RBS))
+            rrh.p = numpy.zeros(shape=(len(rrh.connected_ues), Antenna.TOTAL_RBS))
+            auxi = numpy.zeros(shape=(len(rrh.connected_ues), Antenna.TOTAL_RBS))
+            for ue in range(0, len(rrh.connected_ues)):
+                needed_rbs = rrh.demand_in_rbs(rrh.connected_ues[ue])
+                for rb in range(0, Antenna.TOTAL_RBS):
+                    i = rrh.interference(rrh.connected_ues[ue], rb, grid._antennas) #dBm
+                    rrh.i[ue][rb] = i 
+                    auxi[ue][rb] = i    
+                for k in range(0, needed_rbs):
+                    rb = numpy.argmin(auxi[ue,:])
+                    if auxi[ue,rb] < 9999999:
+                        auxi[:,rb] = 9999999
+                        #NAO PODE USAR DUAS VEZES O MESMO RB - VERIFICAR SE OUTRO USUARIO JA NAO UTILIZOU
+                        rrh.p[ue][rb] = Antenna.POWER_RRH
+                        rrh.a[ue][rb] = 1
+                    else:
+                        break;
+            debug_printf("----- RRH -----")
+            debug_printf("Alloc = \n" + str(numpy.matrix(rrh.a)))
+            debug_printf("Power = \n" + str(numpy.matrix(rrh.p)))
+            debug_printf("Noise = \n" + str(numpy.matrix(rrh.i)))
 
-            if near.type == Antenna.BS_ID:
-                #inicio da proxima faixa de RBs
-                from_rb = len(near.resources) 
-                from_rb += grid.TOTAL_RBS_RRH        
-                to_rb = from_rb + calculate_necessary_rbs(ue, rrh) - 1
-                if (to_rb<grid.TOTAL_RBS):
-                    ue.from_rb = from_rb
-                    ue.to_rb = to_rb
-                    ue._connected_antenna = near
-                    ue.power_connected_antenna = friis(ue, near)
 
-                    #aloca RBs
-                    for rb in range( from_rb, to_rb + 1):  
-                        near.resources.append( rb )
-                        grid.matrix_resources[near._id][rb] = ue._id
-            
-            #inicio da proxima faixa de RBs
-            elif near.type == Antenna.RRH_ID:
-                from_rb = len(near.resources)
-                to_rb = from_rb + calculate_necessary_rbs(ue, rrh) - 1
-                if (to_rb<grid.TOTAL_RBS_RRH):
-                    ue.from_rb = from_rb
-                    ue.to_rb = to_rb
-                    ue._connected_antenna = near
-                    ue.power_connected_antenna = friis(ue, near)
+        grid.write_to_resume('GREEDY', self.repeticao, 1, time.time()-init)
 
-                    for rb in range(from_rb, to_rb + 1): # aloca RBs
-                        near.resources.append(rb)
-                        grid.matrix_resources[near._id][rb] = ue._id
 
-        rbs_reutilized = []
-        rbs_interf = []
-        power_consume = 0
-        sh_capacity = 0
-        vazao_total = 0
 
-    #print '#### Associacao ####'
 
-        for ue in ues:
-            if ue._connected_antenna != None:
-                sinr_ue = 0
-                from_rb = ue.from_rb
-                to_rb = ue.to_rb
-                id_antenna = ue._connected_antenna._id
-                vazao_ue = 0
-            
-                if ue._connected_antenna not in rrhs_used:
-                    rrhs_used.append( ue._connected_antenna )
-            
-                power_consume += ue.power_connected_antenna
-
-                for j in range( from_rb, to_rb + 1):            
-                    #if j not in ue.rb_excluded:
-                    sinr = snr(ue, ue._connected_antenna, power_interfering(ue, j, grid))
-                    #print sinr_db
-                    #UM USUARIO PODE RECEBER DOIS RBS COM MODULAcOES DIFERETES??
-                   
-                    ue._tx_rate += snr_to_bit( sinr ) *12*7*2*1000 #84RE com 2 RBs por ms para 1 segundo (1000 ms)
-                    #print sinr, snr_to_bit( sinr ), ue._tx_rate
-                    #vazao_ue += vazao  
-            
-                #SHANNON ----> PORQUE NAO ESTA SENDO UTILIZADO????        
-                sh_ue = math.floor( math.log( ( 1 + sinr_ue ), 2 ) * 180000 )
-                sh_capacity += sh_ue #CAPACIDADE EM BITS DISPONIVEL PARA TRANSMISSAO
-            
-                vazao_total += ue._tx_rate
-            
-                #vazao_necessaria = calculate_necessary_rbs(ue, rrh) * 1008 #1008? ALGO RELACIONADO AOS RBs EM 0,5 ms 
-                    
-                if vazao_ue < ue.demand:
-                    users_no_met += 1
-
-                #print 'U:', ue._id, 'A:', id_antenna, 'RB', from_rb, ',', to_rb, 'V:',ue.demand, '/', ue._tx_rate
-            else:
-                users_no_met += 1
-                #print 'U:', ue._id, 'A:', '?', 'RB', '?', ',', '?', 'V:',ue.demand, '/', '0'
-
-        se = vazao_total/20000000
-        print 'SE:', se
-        #ee_without_off = calculate_worst_energy_efficient(grid._antennas,vazao_total)
-        ee_with_off = calculate_energy_efficient(rrhs_used,vazao_total)
-        #print ee_without_off
-        print 'EE:', ee_with_off
         
-        f = open('resumo.csv','a')   # Trying to create a new file or open one
-        f.write(str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid._user))+','+str(len(rrhs_used))+','+str(users_no_met)+','+str(ee_with_off)+','+str(se)+'\n')
-        #f.write(str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid._user))+','+'EE_WITHOUT_OFF'+','+str(len(rrhs_used))+','+str(users_no_met)+','+str(ee_without_off)+'\n')
-        #f.write(str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid._user))+','+'EE_WITH_OFF'+','+str(len(rrhs_used))+','+str(users_no_met)+','+str(ee_with_off)+'\n')
-        f.close()
-
-        #plot_grid( grid )
-        #power_consume += ( len( rrhs_used ) * Antenna.ON ) + ( ( len( rrhs ) - len( rrhs_used ) ) * Antenna.OFF )
-
 

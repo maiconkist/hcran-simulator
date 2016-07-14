@@ -214,3 +214,16 @@ class Grid(object):
         # update controllers
         for cntrl in self._controllers:
             cntrl.update()
+
+
+    def write_to_resume(self, solucao, repeticao, iteracao, time):
+        for antenna in self._antennas:
+            for ue in range(0, len(antenna.connected_ues)):
+                for rb in range(0, antenna.TOTAL_RBS):
+                    if antenna.a[ue][rb] != 0:
+                        antenna.i[ue][rb] = antenna.interference(antenna.connected_ues[ue], rb, self._antennas)
+            antenna.obtain_energy_efficient()
+
+            f = open('resumo.csv','a')
+            f.write(str(solucao)+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self._user))+'],'+str(len(antenna.connected_ues))+','+str(repeticao)+','+str(iteracao)+','+str(antenna.data_rate)+','+str(antenna.power_consumition)+','+str(antenna.energy_efficient)+','+str(time)+'\n')
+            f.close()
