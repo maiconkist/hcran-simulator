@@ -40,7 +40,7 @@ DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 MAX_BS                  = 1
-MAX_REP                 = 5
+MAX_REP                 = 30
 
 ###############################
 #Test Variables
@@ -326,8 +326,8 @@ def build_fixed_scenario():
     #Center Antenna
     center = numpy.array([grid.size[0]/2, grid.size[1]/2])
     #BS
-    bs = Antenna(0, Antenna.BS_ID, center, None, grid)
-    #bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
+    #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
+    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
     #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
 
@@ -336,8 +336,8 @@ def build_fixed_scenario():
     grid.add_cluster(cluster)
 
     #RRHs
-    rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid)
-    #rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    #rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid)
     #rrh = AntennaPeng(1, Antenna.RRH_ID, [1040, 1040], None, grid)
     grid.add_antenna(rrh)
 
@@ -349,7 +349,8 @@ def build_fixed_scenario():
     grid.add_user(u2)
 
 
-    do_greedy(1, 1, 2, 1, grid)
+    #do_greedy(1, 1, 2, 1, grid)
+    do_mc(1, 1, 2, 1, grid)
 
 
     #associate_user_in_antennas(grid._user, grid._antennas)
@@ -447,7 +448,7 @@ if __name__ == "__main__":
     #grids = build_scenario(bbu, bs, cluster, rrh, ue)
     #util.plot_grid(grids[0])
 
-    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
 
     num_cores = multiprocessing.cpu_count()
     for nues in ues:

@@ -11,6 +11,9 @@ def debug_printf(string):
     if DEBUG:
         print(string)
 
+def wait():
+    raw_input("Press Enter to continue.")
+
 class Antenna(object):
     BS_ID       = 1
     RRH_ID      = 2
@@ -36,8 +39,8 @@ class Antenna(object):
     HRN          = 1         
     DMN          = 450
     HMN          = 1
-    Pmax         = 20        
-    PMmax        = 43
+    Pmax         = 23        
+    PMmax        = 46
     PRmax        = 1
     PRC          = 6.8
     PBH          = 3.85
@@ -324,8 +327,14 @@ class Antenna(object):
        return Pr
 
     def p_friis(self, I, N, Gt, Gr, R, Wl):
-       Pt = self.TARGET_SINR + (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
-       return Pt
+        Pt = self.TARGET_SINR + (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
+        if (self.type == Antenna.BS_ID):
+            if Pt > Antenna.PMmax:
+                Pt = Antenna.PMmax
+        else:
+            if Pt > Antenna.Pmax:
+                Pt = Antenna.Pmax
+        return Pt
 
     def sinr(self, P, I, N):
         sinr = P - (abs(I)+N) #dB
@@ -358,6 +367,15 @@ class Antenna(object):
             self.power_consumition = (self.MEFF * result) + self.PMC + self.PMBH
         else:
             self.power_consumition = (self.EFF * result) + self.PMC + self.PMBH
+        print 'Consumo atual:' , self.power_consumition
+        #if self.power_consumition > 14692223.0241:
+            #print("Data Rate = \n" + str(self.data_rate))
+            #print("Power Consumition = \n" + str(self.power_consumition))
+            #print("Energy Efficient = \n" + str(self.energy_efficient))
+            #print("Alloc = \n" + str(numpy.matrix(self.a)))
+            #print("Power = \n" + str(numpy.matrix(self.p)))
+            #print("Noise = \n" + str(numpy.matrix(self.i)))
+            #wait()
                                 
     def obtain_energy_efficient(self):
         self.obtain_data_rate()

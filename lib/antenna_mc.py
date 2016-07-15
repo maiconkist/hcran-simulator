@@ -25,7 +25,7 @@ class AntennaMc(Antenna):
         debug_printf("\n##########################\n## STARTING MONTE CARLO ##\n##########################\n")
         self.HISTORICALRATE = 0.2
         self.RESETRATE    = 0.01
-        self.NPARTICLES   = 1000
+        self.NPARTICLES   = 10000
         self.L_BETA       = 0.1
         self.L_LAMBDA     = 0.1
         self.L_UPSILON    = 0.1
@@ -82,12 +82,17 @@ class AntennaMc(Antenna):
                 self.mc_low_rate_constraint[pt] += self.L_BETA *  self.mc_user_data_rate[pt][ue] - Antenna.NER
         #for rb in range(0,self.TOTAL_RBS): #RB
         #    interference_reuse_constraint += self.L_LAMBDA * (self.E_DEALTA - self.mc_interference_reuse_constraint[pt, k])
+        #if self.type == self.BS_ID:
+        #    self.mc_interference_reuse_constraint[pt] = Antenna.PMmax - self.mc_interference_reuse_constraint[pt]
+        #else:        
+        #    self.mc_interference_reuse_constraint[pt] = Antenna.PRmax - self.mc_interference_reuse_constraint[pt]
 
-        self.mc_maximum_transmit_power_constraint[pt] = self.L_UPSILON * self.mc_maximum_transmit_power_constraint[pt]
+
+        
         if self.type == self.BS_ID:
-            self.mc_interference_reuse_constraint[pt] = Antenna.PMmax - self.mc_interference_reuse_constraint[pt]
+            self.mc_maximum_transmit_power_constraint[pt] = self.L_UPSILON * (Antenna.PMmax - self.mc_maximum_transmit_power_constraint[pt])
         else:        
-            self.mc_interference_reuse_constraint[pt] = Antenna.PRmax - self.mc_interference_reuse_constraint[pt]
+            self.mc_maximum_transmit_power_constraint[pt] = self.L_UPSILON * (Antenna.Pmax - self.mc_maximum_transmit_power_constraint[pt])
         
         #debug_printf('DataRate: ' + str(self.mc_data_rate[pt]))
         #debug_printf('PowerConsumption: ' + str(self.mc_power_consumption[pt]))
@@ -184,7 +189,7 @@ class AntennaMc(Antenna):
         self.mc_hist_ee = list(self.mc_antenna_energy_efficient)
         index = numpy.argmax(self.mc_antenna_energy_efficient)        
         self.energy_efficient = self.mc_antenna_energy_efficient[index]        
-        debug_printf("Max value element : " + str(self.energy_efficient))
+        debug_printf("Max value element : index"+ str(index) + str(self.energy_efficient))
         self.a = self.mc_a[index]
 
 
