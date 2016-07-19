@@ -215,9 +215,9 @@ class AntennaMc(Antenna):
 
 
     def mc_raises_temperature(self):
-        self.L_BETA += 0.1
-        self.L_LAMBDA += 0.1
-        self.L_UPSILON += 0.1
-        self.E_DEALTA += 0.2
+        self.L_BETA = self.L_BETA * 2
+        self.L_LAMBDA = self.L_LAMBDA * 2
+        self.L_UPSILON = self.L_UPSILON * 2
+        self.E_DEALTA = self.E_DEALTA * 2
 
 

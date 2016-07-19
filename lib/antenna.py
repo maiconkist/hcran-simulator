@@ -328,13 +328,13 @@ class Antenna(object):
 
     def p_friis(self, I, N, Gt, Gr, R, Wl):
         Pt = self.TARGET_SINR + (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
-        if (self.type == Antenna.BS_ID):
-            if Pt > Antenna.PMmax:
-                Pt = Antenna.PMmax
-        else:
-            if Pt > Antenna.Pmax:
-                Pt = Antenna.Pmax
-        return Pt
+        #if (self.type == Antenna.BS_ID):
+        #    if Pt > Antenna.PMmax:
+        #        Pt = Antenna.PMmax
+        #else:
+        #    if Pt > Antenna.Pmax:
+        #        Pt = Antenna.Pmax
+        #return Pt
 
     def sinr(self, P, I, N):
         sinr = P - (abs(I)+N) #dB
