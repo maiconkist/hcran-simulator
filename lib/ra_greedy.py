@@ -38,11 +38,11 @@ def associate_user_in_antennas(ues, antennas):
 
 class Greedy(object):
     
-    def __init__(self, m, s, u, r):
+    def __init__(self, r):
         self.antennas = []
-        self.small = s
-        self.macros = m
-        self.users = u * m
+        #self.small = s
+        #self.macros = m
+        #self.users = u * m
         self.repeticao = r
 
     def run(self, grid):
@@ -98,7 +98,7 @@ class Greedy(object):
             debug_printf("Noise = \n" + str(numpy.matrix(rrh.i)))
 
 
-        grid.write_to_resume('GREEDY', self.repeticao, 1, time.time()-init)
+        grid.write_to_resume('GREEDY', self.repeticao, 1, init)
 
 
 

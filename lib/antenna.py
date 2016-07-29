@@ -5,7 +5,7 @@ import controller
 from user import *
 
 
-DEBUG = False
+DEBUG = True
 
 def debug_printf(string):
     if DEBUG:
@@ -52,6 +52,8 @@ class Antenna(object):
     HR2M         = 1 
     NR           = 5242880/2000 #High Rate Constraint
     NER          = 5242880/2000 #Low Rate Constraint
+    #NR           = 1000000/2000 #High Rate Constraint
+    #NER          = 1000000/2000 #Low Rate Constraint
     E_BETA       = 0.1
     E_LAMBDA     = 0.1
     E_UPSILON    = 0.1
@@ -117,6 +119,8 @@ class Antenna(object):
         self.energy_efficient           = 0 
         self.power_consumition          = 0 
         self.data_rate                  = 0
+        self.user_data_rate             = None
+        self.users_meet                 = 0
         self.p_energy_efficient        = []
 
     @property
@@ -291,6 +295,22 @@ class Antenna(object):
         """
         return str(self.pos)
 
+    def toString(self):
+        numpy.set_printoptions(precision=2)
+        if (self.type == Antenna.BS_ID):
+            debug_printf("\n\n----- BS -----")
+        else: 
+            debug_printf("\n\n----- RRH -----")
+        debug_printf("Users (Meet/Total) = "+ str(self.users_meet) +"/"+str(len(self.connected_ues)))
+        debug_printf("Resource Block (Used/Total) = " + str(self.a.sum()) +"/"+ str(self.TOTAL_RBS))
+        debug_printf("Data Rate = " + str(self.data_rate))
+        debug_printf("Power Consumition = " + str(self.power_consumition))
+        debug_printf("Energy Efficient = " + str(self.energy_efficient))
+        debug_printf("Alloc = \n" + str(numpy.matrix(self.a)))
+        debug_printf("Power = \n" + str(numpy.matrix(self.p)))
+        debug_printf("Noise = \n" + str(numpy.matrix(self.i)))
+
+
     def add_antenna_in_range( self, antenna ):
         if not antenna in self.antenna_in_range:
             self.antenna_in_range.append( antenna )
@@ -311,15 +331,25 @@ class Antenna(object):
     def obtain_data_rate(self):
         #Shannon Calc
         self.data_rate = 0
-        for n in range(0, len(self.connected_ues)):
-            for k in range (0, self.TOTAL_RBS):
-                self.data_rate += (self.shannon((self.a[n][k] * Antenna.B0), self.sinr(self.p[n][k], self.i[n][k], self.noise())))/2000#Qnt de bits em 0,5 ms
+        self.users_meet = 0
+        if self.connected_ues != None:
+            self.user_data_rate = numpy.zeros(shape=(len(self.connected_ues)))
+            for n in range(0, len(self.connected_ues)):
+                for k in range (0, self.TOTAL_RBS):
+                    data_bits = (self.shannon((self.a[n][k] * Antenna.B0), self.sinr(self.p[n][k], self.i[n][k], self.noise())))/2000#Qnt de bits em 0,5 ms
+                    self.data_rate += data_bits
+                    self.user_data_rate[n] += data_bits
+                if self.connected_ues[n]._type == User.HIGH_RATE_USER:
+                    if self.user_data_rate[n] >= Antenna.NR:
+                        self.users_meet += 1
+                else:
+                    if self.user_data_rate[n] >= Antenna.NER:
+                        self.users_meet += 1
 
     def shannon(self, B, SINR):
         #Shannon Calc
         # B is in hertz
         # the signal and noise_plus_interference powers S and N are measured in watts or volts
-        #print B, SINR
         return B * math.log(1 + SINR, 2)
 
     def friis(self, Pt, Gt, Gr, R, Wl):
@@ -328,13 +358,13 @@ class Antenna(object):
 
     def p_friis(self, I, N, Gt, Gr, R, Wl):
         Pt = self.TARGET_SINR + (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
-        #if (self.type == Antenna.BS_ID):
-        #    if Pt > Antenna.PMmax:
-        #        Pt = Antenna.PMmax
-        #else:
-        #    if Pt > Antenna.Pmax:
-        #        Pt = Antenna.Pmax
-        #return Pt
+        if (self.type == Antenna.BS_ID):
+            if Pt > Antenna.PMmax:
+                Pt = Antenna.PMmax
+        else:
+            if Pt > Antenna.Pmax:
+                Pt = Antenna.Pmax
+        return Pt
 
     def sinr(self, P, I, N):
         sinr = P - (abs(I)+N) #dB
@@ -367,24 +397,24 @@ class Antenna(object):
             self.power_consumition = (self.MEFF * result) + self.PMC + self.PMBH
         else:
             self.power_consumition = (self.EFF * result) + self.PMC + self.PMBH
-        print 'Consumo atual:' , self.power_consumition
+        #debug_printf('Consumo atual:' + self.power_consumition)
         #if self.power_consumition > 14692223.0241:
-            #print("Data Rate = \n" + str(self.data_rate))
-            #print("Power Consumition = \n" + str(self.power_consumition))
-            #print("Energy Efficient = \n" + str(self.energy_efficient))
-            #print("Alloc = \n" + str(numpy.matrix(self.a)))
-            #print("Power = \n" + str(numpy.matrix(self.p)))
-            #print("Noise = \n" + str(numpy.matrix(self.i)))
+            #debug_printf("Data Rate = \n" + str(self.data_rate))
+            #debug_printf("Power Consumition = \n" + str(self.power_consumition))
+            #debug_printf("Energy Efficient = \n" + str(self.energy_efficient))
+            #debug_printf("Alloc = \n" + str(numpy.matrix(self.a)))
+            #debug_printf("Power = \n" + str(numpy.matrix(self.p)))
+            #debug_printf("Noise = \n" + str(numpy.matrix(self.i)))
             #wait()
                                 
     def obtain_energy_efficient(self):
         self.obtain_data_rate()
         self.obtain_power_consumition()
         self.energy_efficient = self.data_rate/self.CHANNEL/self.power_consumition
-        debug_printf("Data Rate = \n" + str(self.data_rate))
-        debug_printf("Power Consumition = \n" + str(self.power_consumition))
-        debug_printf("Energy Efficient = \n" + str(self.energy_efficient))
-        #print numpy.matrix(self.energy_efficient)
+        #debug_printf("Data Rate = \n" + str(self.data_rate))
+        #debug_printf("Power Consumition = \n" + str(self.power_consumition))
+        #debug_printf("Energy Efficient = \n" + str(self.energy_efficient))
+        #debug_printf(numpy.matrix(self.energy_efficient))
 
     ##########################
     # Peng and MC Calcs

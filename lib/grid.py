@@ -2,7 +2,7 @@ import random
 import scipy.spatial
 from util import *
 import re
-
+import time
 
 class Log():
     """
@@ -150,6 +150,12 @@ class Grid(object):
         """
         """
         return self._user
+
+    @property
+    def antennas(self):
+        """
+        """
+        return self._antennas
     
     @property
     def clusters(self):
@@ -216,14 +222,24 @@ class Grid(object):
             cntrl.update()
 
 
-    def write_to_resume(self, solucao, repeticao, iteracao, time):
+    def write_to_resume(self, solucao, repeticao, iteracao, init):
+        data_rate = 0
+        consumption = 0
+        ee = 0
+        meet_user = 0
         for antenna in self._antennas:
             for ue in range(0, len(antenna.connected_ues)):
                 for rb in range(0, antenna.TOTAL_RBS):
                     if antenna.a[ue][rb] != 0:
                         antenna.i[ue][rb] = antenna.interference(antenna.connected_ues[ue], rb, self._antennas)
             antenna.obtain_energy_efficient()
-
-            f = open('resumo.csv','a')
-            f.write(str(solucao)+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self._user))+'],'+str(len(antenna.connected_ues))+','+str(repeticao)+','+str(iteracao)+','+str(antenna.data_rate)+','+str(antenna.power_consumition)+','+str(antenna.energy_efficient)+','+str(time)+'\n')
-            f.close()
+            data_rate += antenna.data_rate
+            consumption += antenna.power_consumition
+            ee = 0
+            meet_user += antenna.users_meet
+            #f = open('resumo.csv','a')
+            #f.write(str(solucao)+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self._user))+'],'+str(len(antenna.connected_ues))+','+str(repeticao)+','+str(iteracao)+','+str(antenna.data_rate)+','+str(antenna.power_consumition)+','+str(antenna.energy_efficient)+','+str(time)+'\n')
+            #f.close()
+        f = open('resumo.csv','a')
+        f.write(solucao+','+solucao+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self.users))+'],'+str(len(self.bs_list))+','+str(len(self.rrh_list))+','+str(len(self.users))+','+str(repeticao)+','+str(iteracao)+','+str(data_rate)+','+str(consumption)+','+str(ee)+','+str(meet_user)+','+str(time.time()-init)+'\n')
+        f.close()

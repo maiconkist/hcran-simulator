@@ -40,7 +40,7 @@ DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 MAX_BS                  = 1
-MAX_REP                 = 30
+MAX_REP                 = 3
 
 ###############################
 #Test Variables
@@ -350,7 +350,7 @@ def build_fixed_scenario():
 
 
     #do_greedy(1, 1, 2, 1, grid)
-    do_mc(1, 1, 2, 1, grid)
+    do_mc(1, grid)
 
 
     #associate_user_in_antennas(grid._user, grid._antennas)
@@ -389,25 +389,25 @@ def build_fixed_scenario():
 
     return grid
 
-def do_mc(nbs, rrh, ue, rep, grid):
-    print "Starting scenario", rep, "with", nbs, "macros for MC!"
-    mc = Mc(nbs, rrh, ue, rep)
+def do_mc(rep, grid):
+    print "Starting scenario", rep, "with", len(grid.bs_list), "macros for MC!"
+    mc = Mc(rep)
     mc.run(grid);
 
 def do_peng(nbs, rrh, ue, rep, grid):
-    print "Starting scenario", rep, "with", nbs, "macros for Peng!"
+    print "Starting scenario", rep, "with", len(grid.bs_list), "macros for Peng!"
     peng = Peng(nbs, rrh, ue, rep)
     peng.run(grid);
 
-def do_greedy(nbs, rrh, ue, rep, grid):
-    print "Starting scenario", rep, "with", nbs, "macros for Greedy!"
-    greedy = Greedy(nbs, rrh, ue, rep)
+def do_greedy(rep, grid):
+    print "Starting scenario", rep, "with", len(grid.bs_list), "macros for Greedy!"
+    greedy = Greedy(rep)
     greedy.run(grid);
 
 def processInput(nbs, nues):
     bbu = 2 
     cluster = 1
-    rrh = 4
+    rrh = 1
     ue = nues
 
     bs = (nbs%MAX_BS)+1
@@ -417,11 +417,11 @@ def processInput(nbs, nues):
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
-    do_mc(bs, rrh, ue, rep, grids[0])
+    do_mc(rep, grids[0])
     
     #do_peng(bs, ue, rep, grids[1])
 
-    do_greedy(bs, rrh, ue, rep, grids[2])
+    do_greedy(rep, grids[2])
     
     del grids
     gc.collect()
@@ -434,7 +434,7 @@ if __name__ == "__main__":
 
     # Trying to create a new file or open one
     f = open('resumo.csv','w')
-    f.write('CASE,U,R,I,C,P,EE,T\n')
+    f.write('ALG,CASE,M,S,U,R,I,C,P,EE,MU,T\n')
     f.close()
 
 
@@ -448,7 +448,9 @@ if __name__ == "__main__":
     #grids = build_scenario(bbu, bs, cluster, rrh, ue)
     #util.plot_grid(grids[0])
 
-    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+    #ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+    #ues = [5]
+    ues = [15, 30, 60]
 
     num_cores = multiprocessing.cpu_count()
     for nues in ues:

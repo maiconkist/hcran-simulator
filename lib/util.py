@@ -5,6 +5,55 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from antenna import * 
 
+
+
+
+def shannon(B, SINR):
+    #Shannon Calc
+    # B is in hertz
+    # the signal and noise_plus_interference powers S and N are measured in watts or volts
+    return B * math.log(1 + SINR, 2)
+
+def friis(Pt, Gt, Gr, R, Wl):
+   Pr = Pt + Gt + Gr + (20 * math.log(Wl/(4*math.pi*R), 10))
+   return Pr
+
+def p_friis(antenna, I, N, Gt, Gr, R, Wl):
+    Pt = antenna.TARGET_SINR + (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
+    if (antenna.type == antenna.BS_ID):
+        if Pt > antenna.PMmax:
+            Pt = antenna.PMmax
+    else:
+        if Pt > antenna.Pmax:
+            Pt = antenna.Pmax
+    return Pt
+
+def sinr(P, I, N):
+    sinr = P - (abs(I)+N) #dB
+    return abs(sinr)
+
+def noise():
+    #fixed noise in dBm
+    return -90 
+
+def dBm_to_watts(dBm):
+    watts = dBm * 0.001258925
+    return watts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def nearest(p1, p_list, idx=0):
     """ Return the closest point to p1 in p_list
 
@@ -35,14 +84,14 @@ def calculate_necessary_rbs( user, antenna ):
     #print rbs
     return rbs
 
-def friis( user, antenna ):
-    WAVE_LENGTH = (3/19.0)  #Comprimento de onda considerando uma frequencia de 1.9 GHz
-    GAIN = 0.1              #Representa o ganho das antenas = -5 dB
-    distance = dist( user, antenna )
-    #Friis -> power transmnited in watts
-    power_received = ( math.pow( 10, ( antenna.power/10.0 ) ) * GAIN * math.pow( ( WAVE_LENGTH/(4 * math.pi * distance ) ), 2 ) )
-
-    return power_received
+#def friis( user, antenna ):
+#    WAVE_LENGTH = (3/19.0)  #Comprimento de onda considerando uma frequencia de 1.9 GHz
+#    GAIN = 0.1              #Representa o ganho das antenas = -5 dB
+#    distance = dist( user, antenna )
+#    #Friis -> power transmnited in watts
+#    power_received = ( math.pow( 10, ( antenna.power/10.0 ) ) * GAIN * math.pow( ( WAVE_LENGTH/(4 * math.pi * distance ) ), 2 ) )
+#
+#    return power_received
 
 
 def snr(ue, antenna, power_interfering=0):
