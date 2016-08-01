@@ -56,7 +56,7 @@ class Mc(object):
     def __init__(self, r):
         self.repeticao = r
         self.IMAX = 10000
-        self.DELTA_HISTORY = 10
+        self.DELTA_HISTORY = 50
         self.NPARTICLES   = 100
         self.HISTORICALRATE = 0.2
         self.RESETRATE    = 0.01
@@ -294,7 +294,7 @@ class Mc(object):
             best_particle = numpy.argmax(self.ee_particles[:,0])
             #f.write('ALG,CASE,M,S,U,R,I,C,P,EE,MU,T\n')
             f = open('resumo.csv','a')
-            f.write('MC,MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(i)+','+str(self.data_rate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle])+','+str(self.meet_user_particles[best_particle])+','+str(time.time()-init)+'\n')
+            f.write('MC,MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(i)+','+str(self.data_rate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(time.time()-init)+'\n')
             f.close()
             i = i + 1
             self.raises_temperature()
