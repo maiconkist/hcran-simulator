@@ -233,13 +233,13 @@ class Mc(object):
                             #print covered_users, len(antenna.connected_ues)
                             covered_users += len(antenna.connected_ues)
                             #print covered_users
-
-                        user = random.randint(covered_users, covered_users+len(antenna.connected_ues)-1) #Seleciona de forma aletoria um usuario valido para a antenna
-                        #print user, "= randon", covered_users, covered_users+len(antenna.connected_ues)
-                        if user > covered_users: # Se usuario nao for zero
-                            self.a_particles[p, user, arb] = 1 # Seleta 1 para o estado 
-                            self.i_particles[p, user, arb] = self.interference_calc(arb, user, p, grid)
-                            self.p_particles[p, user, arb] = self.power_calc(arb, user, p, grid)
+                        if len(antenna.connected_ues) > 0:
+                            user = random.randint(covered_users, covered_users+len(antenna.connected_ues)-1) #Seleciona de forma aletoria um usuario valido para a antenna
+                            #print user, "= randon", covered_users, covered_users+len(antenna.connected_ues)
+                            if user > covered_users: # Se usuario nao for zero
+                                self.a_particles[p, user, arb] = 1 # Seleta 1 para o estado 
+                                self.i_particles[p, user, arb] = self.interference_calc(arb, user, p, grid)
+                                self.p_particles[p, user, arb] = self.power_calc(arb, user, p, grid)
 
                     for arb in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):# Loop de K * M para calcular I e P
                         user = numpy.argmax(self.a_particles[p, :, arb])
@@ -257,6 +257,12 @@ class Mc(object):
                         antenna_index = int(random_arb/Antenna.TOTAL_RBS)
                         #print "antenna_index = ", antenna_index
                         antenna = grid.antennas[antenna_index]# Identifica antena 
+                        
+                        while len(antenna.connected_ues) == 0:
+                            random_arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
+                            antenna_index = int(random_arb/Antenna.TOTAL_RBS)
+                            antenna = grid.antennas[antenna_index]
+
                         covered_users = self.covered_users_calc(grid.antennas, antenna_index) #ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
                         user = random.randint(covered_users, covered_users+len(antenna.connected_ues)-1) #Seleciona de forma aletoria um usuario valido para a antenna
                         new_a_particle = deepcopy(self.a_particles[p])
