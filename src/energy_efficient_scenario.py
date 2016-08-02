@@ -448,9 +448,9 @@ if __name__ == "__main__":
     #grids = build_scenario(bbu, bs, cluster, rrh, ue)
     #util.plot_grid(grids[0])
 
-    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+#    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
     #ues = [5]
-    #ues = [15, 30, 60]
+    ues = [15, 30, 60]
 
     num_cores = multiprocessing.cpu_count()
     for nues in ues:

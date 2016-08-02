@@ -107,8 +107,9 @@ class Mc(object):
 
     def data_rate_and_power_consumption_calc(self, particle, grid):
         self.data_rate_user_particles[particle] = numpy.zeros(shape=(len(grid.users)))
+        #print "Data User (zero): ", str(numpy.matrix(self.data_rate_user_particles[particle]))
         self.data_rate_particles[particle] = 0
-        self.meet_user_particles[particle] = 0
+        
         self.consumption_antenna_particles[particle] = numpy.zeros(shape=(len(grid.antennas)))
         self.consumption_particles[particle] = 0
 
@@ -122,13 +123,8 @@ class Mc(object):
                 #DATA RATE
                 data_bits = (util.shannon((self.a_particles[particle, user, arb] * Antenna.B0), util.sinr(self.p_particles[particle, user, arb], self.i_particles[particle, user, arb], util.noise())))/2000#Qnt de bits em 0,5 ms
                 self.data_rate_user_particles[particle, user] += data_bits
+                #print "Data User: ", str(numpy.matrix(self.data_rate_user_particles[particle]))
                 self.data_rate_particles[particle] += data_bits
-                if grid.users[user]._type == User.HIGH_RATE_USER:
-                    if self.data_rate_user_particles[particle, user] >= Antenna.NR:
-                        self.meet_user_particles[particle] += 1
-                else:
-                    if self.data_rate_user_particles[particle, user] >= Antenna.NER:
-                        self.meet_user_particles[particle] += 1
 
                 previous_consumption += util.dBm_to_watts(self.a_particles[particle, user, arb] * self.p_particles[particle, user, arb]) 
 
@@ -151,15 +147,24 @@ class Mc(object):
 
     def ee_calc(self, particle, grid):
         self.data_rate_and_power_consumption_calc(particle, grid)
+        self.meet_user_particles[particle] = 0
         data_rate_constraint = 0
         for ue in range(0, len(grid.users)):
             if grid.users[ue]._type == User.HIGH_RATE_USER:
-                data_rate_constraint += self.L_BETA * self.data_rate_user_particles[particle, ue] - Antenna.NR
+                #print "Datarates : ", data_rate_constraint, self.data_rate_user_particles[particle, ue] 
+                if(self.data_rate_user_particles[particle, ue] < Antenna.NR):
+                    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
+                else:
+                    self.meet_user_particles[particle] += 1
             else:
-                data_rate_constraint += self.L_BETA * self.data_rate_user_particles[particle, ue] - Antenna.NER
-        
-        #print "EE = ", self.data_rate_particles[particle], "/", self.consumption_particles[particle], "+", data_rate_constraint
-        particle_ee = (self.data_rate_particles[particle] / self.consumption_particles[particle]) + data_rate_constraint
+                if(self.data_rate_user_particles[particle, ue] < Antenna.NER):
+                    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
+                else:
+                    self.meet_user_particles[particle] += 1
+
+
+        #print "EE = ", (self.data_rate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", data_rate_constraint
+        particle_ee = ((self.data_rate_particles[particle]*2000/1048576) / self.consumption_particles[particle]) + data_rate_constraint
 
         #print "EE = ", particle_ee
         return particle_ee
@@ -191,6 +196,7 @@ class Mc(object):
         return False
 
     def exp_ee_calc(self, new_ee, old_ee):
+        #print "EEs :", new_ee, old_ee
         return new_ee/old_ee
 
     def run(self, grid):
@@ -251,7 +257,7 @@ class Mc(object):
                         antenna_index = int(random_arb/Antenna.TOTAL_RBS)
                         #print "antenna_index = ", antenna_index
                         antenna = grid.antennas[antenna_index]# Identifica antena 
-                        covered_users = self.covered_users_calc(grid.antennas, antenna_index) #ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
+                        covered_users = self.covered_users_calc(grid.antennas, antenna_index) -1#ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
                         user = random.randint(covered_users, covered_users+len(antenna.connected_ues)) #Seleciona de forma aletoria um usuario valido para a antenna
                         new_a_particle = deepcopy(self.a_particles[p])
                         new_i_particle = deepcopy(self.i_particles[p])
