@@ -234,7 +234,7 @@ class Mc(object):
                             covered_users += len(antenna.connected_ues)
                             #print covered_users
 
-                        user = random.randint(covered_users, covered_users+len(antenna.connected_ues)) #Seleciona de forma aletoria um usuario valido para a antenna
+                        user = random.randint(covered_users, covered_users+len(antenna.connected_ues)-1) #Seleciona de forma aletoria um usuario valido para a antenna
                         #print user, "= randon", covered_users, covered_users+len(antenna.connected_ues)
                         if user > covered_users: # Se usuario nao for zero
                             self.a_particles[p, user, arb] = 1 # Seleta 1 para o estado 
@@ -257,8 +257,8 @@ class Mc(object):
                         antenna_index = int(random_arb/Antenna.TOTAL_RBS)
                         #print "antenna_index = ", antenna_index
                         antenna = grid.antennas[antenna_index]# Identifica antena 
-                        covered_users = self.covered_users_calc(grid.antennas, antenna_index) -1#ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
-                        user = random.randint(covered_users, covered_users+len(antenna.connected_ues)) #Seleciona de forma aletoria um usuario valido para a antenna
+                        covered_users = self.covered_users_calc(grid.antennas, antenna_index) #ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
+                        user = random.randint(covered_users, covered_users+len(antenna.connected_ues)-1) #Seleciona de forma aletoria um usuario valido para a antenna
                         new_a_particle = deepcopy(self.a_particles[p])
                         new_i_particle = deepcopy(self.i_particles[p])
                         new_p_particle = deepcopy(self.p_particles[p])
