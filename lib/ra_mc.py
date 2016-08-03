@@ -302,7 +302,7 @@ class Mc(object):
                             #print self.ee_particles[p]
                             exp = self.exp_ee_calc(new_ee_particle, old_ee_particle)
                             rand = random.uniform(0.0, 1.0)
-                            print "if ", rand, "<", exp
+                            #print "if ", rand, "<", exp
                             if rand < exp:
                                 self.append_ee(p, new_ee_particle)
                             else:
