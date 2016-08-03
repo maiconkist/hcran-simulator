@@ -76,10 +76,11 @@ class Mc(object):
         self.consumption_particles = None
 
     def raises_temperature(self):
-        self.L_BETA = self.L_BETA * 2
-        self.L_LAMBDA = self.L_LAMBDA * 2
-        self.L_UPSILON = self.L_UPSILON * 2
-        self.E_DEALTA = self.E_DEALTA * 2 
+        self.L_BETA = 0.01
+        #self.L_BETA = self.L_BETA * 2
+        #self.L_LAMBDA = self.L_LAMBDA * 2
+        #self.L_UPSILON = self.L_UPSILON * 2
+        #self.E_DEALTA = self.E_DEALTA * 2 
 
 
     def interference_calc(self, arb, user, particle ,grid):
@@ -140,6 +141,7 @@ class Mc(object):
                 previous_consumption = 0
 
                 
+    #def ee_draft_calc(self, a, i, p, grid):
 
 
                 
@@ -150,21 +152,28 @@ class Mc(object):
         self.meet_user_particles[particle] = 0
         data_rate_constraint = 0
         for ue in range(0, len(grid.users)):
-            if grid.users[ue]._type == User.HIGH_RATE_USER:
-                #print "Datarates : ", data_rate_constraint, self.data_rate_user_particles[particle, ue] 
-                if(self.data_rate_user_particles[particle, ue] < Antenna.NR):
-                    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
-                else:
+            #print "Datarates : ", data_rate_constraint, self.data_rate_user_particles[particle, ue]
+            if grid.users[ue]._type == User.HIGH_RATE_USER: 
+                data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
+                if(self.data_rate_user_particles[particle, ue] > Antenna.NR):
                     self.meet_user_particles[particle] += 1
+                
+                #if(self.data_rate_user_particles[particle, ue] < Antenna.NR):
+                #    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
+                #else:
+                #    self.meet_user_particles[particle] += 1
             else:
-                if(self.data_rate_user_particles[particle, ue] < Antenna.NER):
-                    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
-                else:
+                data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
+                if(self.data_rate_user_particles[particle, ue] > Antenna.NER):
                     self.meet_user_particles[particle] += 1
+                #if(self.data_rate_user_particles[particle, ue] < Antenna.NER):
+                #    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
+                #else:
+                #    self.meet_user_particles[particle] += 1
 
 
-        #print "EE = ", (self.data_rate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", data_rate_constraint
-        particle_ee = ((self.data_rate_particles[particle]*2000/1048576) / self.consumption_particles[particle]) + data_rate_constraint
+        #print "EE = ", (self.data_rate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", (data_rate_constraint*2000/1048576)
+        particle_ee = ((self.data_rate_particles[particle]*2000/1048576) / self.consumption_particles[particle]) + (data_rate_constraint*2000/1048576)
 
         #print "EE = ", particle_ee
         return particle_ee
@@ -196,8 +205,8 @@ class Mc(object):
         return False
 
     def exp_ee_calc(self, new_ee, old_ee):
-        #print "EEs :", new_ee, old_ee
-        return new_ee/old_ee
+        #print "EEs :", old_ee, new_ee, " = ", abs(old_ee/new_ee)
+        return old_ee/new_ee
 
     def run(self, grid):
         self.i_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
@@ -212,6 +221,8 @@ class Mc(object):
         self.consumption_particles = numpy.zeros(shape=(self.NPARTICLES))
 
         associate_user_in_antennas(grid.users, grid.antennas)
+
+        -2977.34629967 -1486.69737859
 
         i = 0
         stabilized_particles = 0
@@ -265,39 +276,45 @@ class Mc(object):
 
                         covered_users = self.covered_users_calc(grid.antennas, antenna_index) #ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
                         user = random.randint(covered_users, covered_users+len(antenna.connected_ues)-1) #Seleciona de forma aletoria um usuario valido para a antenna
-                        new_a_particle = deepcopy(self.a_particles[p])
-                        new_i_particle = deepcopy(self.i_particles[p])
-                        new_p_particle = deepcopy(self.p_particles[p])
-                        previous_user = numpy.argmax(new_a_particle[:,random_arb])
-                        new_a_particle[previous_user, random_arb] = 0
-                        new_i_particle[previous_user, random_arb] = 0
-                        new_p_particle[previous_user, random_arb] = 0
+                        #old_a_particle = deepcopy(self.a_particles[p])
+                        #old_i_particle = deepcopy(self.i_particles[p])
+                        #old_p_particle = deepcopy(self.p_particles[p])
+                        previous_user = numpy.argmax(self.a_particles[p,:,random_arb])
+                        self.a_particles[p, previous_user, random_arb] = 0
+                        self.i_particles[p, previous_user, random_arb] = 0
+                        self.p_particles[p, previous_user, random_arb] = 0
                         if user > covered_users: # Se usuario nao for zero e for diferente do anterior
-                                new_a_particle[user, random_arb] = 1 # Seleta 1 para o estado 
-                                new_i_particle[user, random_arb] = self.interference_calc(random_arb, user, p, grid)
-                                new_p_particle[user, random_arb] = self.power_calc(random_arb, user, p, grid) 
+                                self.a_particles[p, user, random_arb] = 1 # Seleta 1 para o estado 
+                                self.i_particles[p, user, random_arb] = self.interference_calc(random_arb, user, p, grid)
+                                self.p_particles[p, user, random_arb] = self.power_calc(random_arb, user, p, grid) 
 
                         for arb in range((random_arb%Antenna.TOTAL_RBS), Antenna.TOTAL_RBS*len(grid.antennas), Antenna.TOTAL_RBS):# Loop de K * M para calcular I e P
-                            current_user = numpy.argmax(new_a_particle[:, arb])
-                            if new_a_particle[current_user, arb] > 0:
-                                new_i_particle[user, random_arb] = self.interference_calc(random_arb, user, p, grid)
-                                new_p_particle[user, random_arb] = self.power_calc(random_arb, user, p, grid) 
+                            current_user = numpy.argmax(self.a_particles[p,:, arb])
+                            if self.a_particles[p, current_user, arb] > 0:
+                                self.i_particles[p, current_user, arb] = self.interference_calc(arb, current_user, p, grid)
+                                self.p_particles[p, current_user, arb] = self.power_calc(arb, current_user, p, grid) 
 
+                        old_ee_particle = self.ee_particles[p,0]
                         new_ee_particle = self.ee_calc(p, grid)
-                        if new_ee_particle > self.ee_particles[p,0]:
-                            self.a_particles[p] = new_a_particle
-                            self.i_particles[p] = new_i_particle
-                            self.p_particles[p] = new_p_particle
+                        if new_ee_particle > old_ee_particle:
                             self.append_ee(p, new_ee_particle)
                         else:
                             #print self.ee_particles[p]
-                            exp = self.exp_ee_calc(new_ee_particle, self.ee_particles[p, 0])
+                            exp = self.exp_ee_calc(new_ee_particle, old_ee_particle)
                             rand = random.uniform(0.0, 1.0)
+                            print "if ", rand, "<", exp
                             if rand < exp:
-                                self.a_particles[p] = new_a_particle
-                                self.i_particles[p] = new_i_particle
-                                self.p_particles[p] = new_p_particle
                                 self.append_ee(p, new_ee_particle)
+                            else:
+                                self.a_particles[p, previous_user, random_arb] = 1 # Seleta 1 para o estado 
+                                self.i_particles[p, previous_user, random_arb] = self.interference_calc(random_arb, previous_user, p, grid)
+                                self.p_particles[p, previous_user, random_arb] = self.power_calc(random_arb, previous_user, p, grid) 
+
+                                for arb in range((random_arb%Antenna.TOTAL_RBS), Antenna.TOTAL_RBS*len(grid.antennas), Antenna.TOTAL_RBS):# Loop de K * M para calcular I e P
+                                    current_user = numpy.argmax(self.a_particles[p,:, arb])
+                                    if self.a_particles[p, current_user, arb] > 0:
+                                        self.i_particles[p, current_user, arb] = self.interference_calc(arb, current_user, p, grid)
+                                        self.p_particles[p, current_user, arb] = self.power_calc(arb, current_user, p, grid)
 
                     if self.is_stable(self.ee_particles[p]):
                         self.stable_particles[p] = 1
