@@ -55,7 +55,7 @@ def associate_user_in_antennas(ues, antennas):
 class Mc(object): 
     def __init__(self, r):
         self.repeticao = r
-        self.MC_STEPS = 10000
+        self.MC_STEPS = 100
         self.DELTA_HISTORY = 10
         self.NPARTICLES   = 100
         self.HISTORICALRATE = 0.2
@@ -200,7 +200,8 @@ class Mc(object):
             #amin = numpy.amin(lst)
             std = numpy.std(lst)
             if std < (mean*self.TX_FLUTUATION):
-                return True 
+                print 'Stable!!'
+                return True
 
         return False
 
@@ -264,6 +265,7 @@ class Mc(object):
             else:
                 for p in range(0, self.NPARTICLES):
                     if self.stable_particles[p] < 1:
+                        self.append_ee(p, self.ee_particles[p,0])
                         for stepezinho in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):
                             random_arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
                             #print "random_arb = ", random_arb
@@ -299,14 +301,16 @@ class Mc(object):
                             old_ee_particle = self.ee_particles[p,0]
                             new_ee_particle = self.ee_calc(p, grid)
                             if new_ee_particle > old_ee_particle:
-                                self.append_ee(p, new_ee_particle)
+                                #self.append_ee(p, new_ee_particle)
+                                self.ee_particles[p,0] = new_ee_particle
                             else:
                                 #print self.ee_particles[p]
                                 exp = self.exp_ee_calc(new_ee_particle, old_ee_particle)
                                 rand = random.uniform(0.0, 1.0)
                                 #print "if ", rand, "<", exp
                                 if rand < exp:
-                                    self.append_ee(p, new_ee_particle)
+                                    #self.append_ee(p, new_ee_particle)
+                                    self.ee_particles[p,0] = new_ee_particle
                                 else:
                                     self.a_particles[p, previous_user, random_arb] = 1 # Seleta 1 para o estado 
                                     self.i_particles[p, previous_user, random_arb] = self.interference_calc(random_arb, previous_user, p, grid)
@@ -339,7 +343,7 @@ class Mc(object):
             f.write('MC,MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.data_rate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(time.time()-init)+'\n')
             f.close()
             step = step + 1
-            self.raises_temperature()
+
 
 
 
