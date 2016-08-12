@@ -154,22 +154,22 @@ class Mc(object):
         for ue in range(0, len(grid.users)):
             #print "Datarates : ", data_rate_constraint, self.data_rate_user_particles[particle, ue]
             if grid.users[ue]._type == User.HIGH_RATE_USER: 
-                data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
-                if(self.data_rate_user_particles[particle, ue] > Antenna.NR):
-                    self.meet_user_particles[particle] += 1
+                #data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
+                #if(self.data_rate_user_particles[particle, ue] > Antenna.NR):
+                #    self.meet_user_particles[particle] += 1
                 
-                #if(self.data_rate_user_particles[particle, ue] < Antenna.NR):
-                #    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
-                #else:
-                #    self.meet_user_particles[particle] += 1
-            else:
-                data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
-                if(self.data_rate_user_particles[particle, ue] > Antenna.NER):
+                if(self.data_rate_user_particles[particle, ue] < Antenna.NR):
+                    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
+                else:
                     self.meet_user_particles[particle] += 1
-                #if(self.data_rate_user_particles[particle, ue] < Antenna.NER):
-                #    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
-                #else:
+            else:
+                #data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
+                #f(self.data_rate_user_particles[particle, ue] > Antenna.NER):
                 #    self.meet_user_particles[particle] += 1
+                if(self.data_rate_user_particles[particle, ue] < Antenna.NER):
+                    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
+                else:
+                    self.meet_user_particles[particle] += 1
 
 
         #print "EE = ", (self.data_rate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", (data_rate_constraint*2000/1048576)
@@ -194,14 +194,14 @@ class Mc(object):
         #print self.ee_particles[particle]
 
     def is_stable(self, lst):
-        if lst[-1] != 0:
-            mean = numpy.mean(lst)
+#        if lst[-1] != 0:
+#            mean = numpy.mean(lst)
             #amax = numpy.amax(lst)
             #amin = numpy.amin(lst)
-            std = numpy.std(lst)
-            if std < (mean*self.TX_FLUTUATION):
-                print 'Stable!!'
-                return True
+#            std = numpy.std(lst)
+#            if std < (mean*self.TX_FLUTUATION):
+#                print 'Stable!!'
+#                return True
 
         return False
 
