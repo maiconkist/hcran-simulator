@@ -206,8 +206,10 @@ class Mc(object):
         return False
 
     def exp_ee_calc(self, new_ee, old_ee):
-        #print "EEs :", old_ee, new_ee, " = ", abs(old_ee/new_ee)
-        return old_ee/new_ee
+        #Y = (100 *self.L_BETA)^(old_e-new_ee* 10 * self.L_BETA)
+        #print "Y = (100 *",self.L_BETA,")^(",old_e, "-", new_ee, "* 10 *", self.L_BETA,") = ", 
+        Y = 1-((1-(new_ee/old_ee))*math.exp(2*self.L_BETA))
+        return Y
 
     def run(self, grid):
         self.i_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
@@ -308,10 +310,13 @@ class Mc(object):
                                 exp = self.exp_ee_calc(new_ee_particle, old_ee_particle)
                                 rand = random.uniform(0.0, 1.0)
                                 #print "if ", rand, "<", exp
-                                if rand < exp:
+                                if rand > exp:
                                     #self.append_ee(p, new_ee_particle)
                                     self.ee_particles[p,0] = new_ee_particle
                                 else:
+                                    self.a_particles[p, user, random_arb] = 0
+                                    self.i_particles[p, user, random_arb] = 0
+                                    self.p_particles[p, user, random_arb] = 0
                                     self.a_particles[p, previous_user, random_arb] = 1 # Seleta 1 para o estado 
                                     self.i_particles[p, previous_user, random_arb] = self.interference_calc(random_arb, previous_user, p, grid)
                                     self.p_particles[p, previous_user, random_arb] = self.power_calc(random_arb, previous_user, p, grid) 
