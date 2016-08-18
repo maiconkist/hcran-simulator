@@ -19,7 +19,7 @@ import random
 import gc
 import util
 
-DEBUG = True
+DEBUG = False
 
 def debug_printf(string):
     if DEBUG:
@@ -60,7 +60,7 @@ class Mc(object):
         self.NPARTICLES   = 100
         self.HISTORICALRATE = 0.2
         self.RESETRATE    = 0.01
-        self.L_BETA       = 0.1
+        self.L_BETA       = 0.0
         self.L_LAMBDA     = 0.1
         self.L_UPSILON    = 0.1
         self.E_DEALTA     = 0.2
@@ -77,7 +77,7 @@ class Mc(object):
         self.consumption_particles = None
 
     def raises_temperature(self):
-        self.L_BETA = self.L_BETA * 2
+        self.L_BETA = self.L_BETA + 0.1
         #self.L_LAMBDA = self.L_LAMBDA * 2
         #self.L_UPSILON = self.L_UPSILON * 2
         #self.E_DEALTA = self.E_DEALTA * 2 
@@ -208,10 +208,14 @@ class Mc(object):
     def exp_ee_calc(self, new_ee, old_ee):
         #Y = (100 *self.L_BETA)^(old_e-new_ee* 10 * self.L_BETA)
         #print "Y = (100 *",self.L_BETA,")^(",old_e, "-", new_ee, "* 10 *", self.L_BETA,") = ", 
-        Y = 1-((1-(new_ee/old_ee))*math.exp(2*self.L_BETA))
+        #print new_ee, old_ee, self.L_BETA
+        Y = 1-(abs(1-(new_ee/old_ee))*math.exp(2*self.L_BETA))
+        #print "Y = 1-((1-(",new_ee,"/",old_ee,"))*",math.exp(2*self.L_BETA),") = ", Y
         return Y
 
     def run(self, grid):
+        acceppt = 0
+        not_acceppt = 0
         self.i_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.a_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.p_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
@@ -231,6 +235,8 @@ class Mc(object):
         stabilized_particles = 0
         # Loop maximo de itaracoes
         while stabilized_particles < self.NPARTICLES and step < self.MC_STEPS:
+            acceppt = 0
+            not_acceppt = 0
             init = time.time()
             gc.collect() #Liberar memoria
             if(step == 0):
@@ -249,9 +255,10 @@ class Mc(object):
                             covered_users += len(antenna_ant.connected_ues)
                             #print covered_users
                         if len(antenna.connected_ues) > 0:
-                            user = random.randint(covered_users, covered_users+len(antenna.connected_ues)-1) #Seleciona de forma aletoria um usuario valido para a antenna
+                            user = random.randint(covered_users, covered_users+len(antenna.connected_ues)) #Seleciona de forma aletoria um usuario valido para a antenna
                             #print user, "= randon", covered_users, covered_users+len(antenna.connected_ues)
                             if user > covered_users: # Se usuario nao for zero
+                                #print "Setando 1"
                                 self.a_particles[p, user, arb] = 1 # Seleta 1 para o estado 
                                 self.i_particles[p, user, arb] = self.interference_calc(arb, user, p, grid)
                                 self.p_particles[p, user, arb] = self.power_calc(arb, user, p, grid)
@@ -266,11 +273,16 @@ class Mc(object):
                     self.append_ee(p, ee_particle)
             else:
                 for p in range(0, self.NPARTICLES):
+                    if (step-1) % 10 == 0:
+                        new_ee_particle = self.ee_calc(p, grid)
+                        self.append_ee(p, new_ee_particle)
+
                     if self.stable_particles[p] < 1:
-                        self.append_ee(p, self.ee_particles[p,0])
+                        #self.append_ee(p, self.ee_particles[p,0])
+                        current_ee_particle = self.ee_particles[p,0]
                         for stepezinho in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):
                             random_arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
-                            #print "random_arb = ", random_arb
+                            #print "random_arb = ", random_arb, 0, Antenna.TOTAL_RBS*len(grid.antennas)-1
                             antenna_index = int(random_arb/Antenna.TOTAL_RBS)
                             #print "antenna_index = ", antenna_index
                             antenna = grid.antennas[antenna_index]# Identifica antena 
@@ -279,17 +291,21 @@ class Mc(object):
                                 random_arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
                                 antenna_index = int(random_arb/Antenna.TOTAL_RBS)
                                 antenna = grid.antennas[antenna_index]
+                                #print "antenna_index = ", antenna_index
 
                             covered_users = self.covered_users_calc(grid.antennas, antenna_index) #ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
-                            user = random.randint(covered_users, covered_users+len(antenna.connected_ues)-1) #Seleciona de forma aletoria um usuario valido para a antenna
+                            #print "Covered users", covered_users
+                            user = random.randint(covered_users, covered_users+len(antenna.connected_ues)) #Seleciona de forma aletoria um usuario valido para a antenna
                             #old_a_particle = deepcopy(self.a_particles[p])
                             #old_i_particle = deepcopy(self.i_particles[p])
                             #old_p_particle = deepcopy(self.p_particles[p])
                             previous_user = numpy.argmax(self.a_particles[p,:,random_arb])
+                            #print "Usuario anterior", previous_user
                             self.a_particles[p, previous_user, random_arb] = 0
                             self.i_particles[p, previous_user, random_arb] = 0
                             self.p_particles[p, previous_user, random_arb] = 0
                             if user > covered_users: # Se usuario nao for zero e for diferente do anterior
+                                    #print "Seleta 1 para o estado", user, random_arb
                                     self.a_particles[p, user, random_arb] = 1 # Seleta 1 para o estado 
                                     self.i_particles[p, user, random_arb] = self.interference_calc(random_arb, user, p, grid)
                                     self.p_particles[p, user, random_arb] = self.power_calc(random_arb, user, p, grid) 
@@ -300,20 +316,26 @@ class Mc(object):
                                     self.i_particles[p, current_user, arb] = self.interference_calc(arb, current_user, p, grid)
                                     self.p_particles[p, current_user, arb] = self.power_calc(arb, current_user, p, grid) 
 
-                            old_ee_particle = self.ee_particles[p,0]
+                            
                             new_ee_particle = self.ee_calc(p, grid)
-                            if new_ee_particle > old_ee_particle:
+                            if new_ee_particle > current_ee_particle:
+                                #print "\nMELHOROU!!!\n"
+                                acceppt += 1
                                 #self.append_ee(p, new_ee_particle)
-                                self.ee_particles[p,0] = new_ee_particle
+                                current_ee_particle = new_ee_particle
                             else:
                                 #print self.ee_particles[p]
-                                exp = self.exp_ee_calc(new_ee_particle, old_ee_particle)
+                                exp = self.exp_ee_calc(new_ee_particle, current_ee_particle)
                                 rand = random.uniform(0.0, 1.0)
                                 #print "if ", rand, "<", exp
-                                if rand > exp:
+                                if rand < exp:
+                                    #print "Acceppt"
+                                    acceppt += 1
                                     #self.append_ee(p, new_ee_particle)
-                                    self.ee_particles[p,0] = new_ee_particle
+                                    current_ee_particle = new_ee_particle
                                 else:
+                                    #print "Not Acceppt"
+                                    not_acceppt += 1
                                     self.a_particles[p, user, random_arb] = 0
                                     self.i_particles[p, user, random_arb] = 0
                                     self.p_particles[p, user, random_arb] = 0
@@ -327,6 +349,9 @@ class Mc(object):
                                             self.i_particles[p, current_user, arb] = self.interference_calc(arb, current_user, p, grid)
                                             self.p_particles[p, current_user, arb] = self.power_calc(arb, current_user, p, grid)
 
+                        if current_ee_particle != self.ee_particles[p,0]:
+                            self.append_ee(p, new_ee_particle)
+
                         if self.is_stable(self.ee_particles[p]):
                             self.stable_particles[p] = 1
                             stabilized_particles += 1
@@ -334,16 +359,23 @@ class Mc(object):
                             if self.stable_particles[p] == 1:
                                 self.stable_particles[p] = 0
                                 stabilized_particles -= 1
-                    else:
-                        if step % 25 == 0:
-                            new_ee_particle = self.ee_calc(p, grid)
-                            self.append_ee(p, new_ee_particle)
 
-            if step % 25 == 0:
+                        print "Particula", p,"total aceitos = ", acceppt, " contra", not_acceppt, "nao aceitos."
+                        #if self.meet_user_particles[p] < 15:
+                        #    self.MC_STEPS += 1
+                        #else:
+                        #    step = self.MC_STEPS
+
+            if step % 10 == 0:
                 self.raises_temperature()
 
             best_particle = numpy.argmax(self.ee_particles[:,0])
+            debug_printf("----- GRID step "+str(step+1)+" -----")
+            debug_printf("Alloc = \n" + str(numpy.matrix(self.a_particles[best_particle])))
+            debug_printf("Power = \n" + str(numpy.matrix(self.p_particles[best_particle])))
+            debug_printf("Noise = \n" + str(numpy.matrix(self.i_particles[best_particle])))
             #f.write('ALG,CASE,M,S,U,R,I,C,P,EE,MU,T\n')
+            
             f = open('resumo.csv','a')
             f.write('MC,MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.data_rate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(time.time()-init)+'\n')
             f.close()

@@ -40,7 +40,7 @@ DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 MAX_BS                  = 1
-MAX_REP                 = 5
+MAX_REP                 = 10
 
 ###############################
 #Test Variables
@@ -313,20 +313,26 @@ def associate_user_in_antennas(ues, antennas):
 
 def build_fixed_scenario():
     grid = Grid(size=(2000,2000))
+    grid2 = Grid(size=(2000,2000))
     macrocells_center = list()
 
     cntrl = Controller(grid, control_network=False)
     grid.add_controller(cntrl)
+    cntrl = Controller(grid2, control_network=False)
+    grid2.add_controller(cntrl)
 
     n_bbu = 2
     for i in range(n_bbu):
-        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid)
+        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid2)
         grid.add_bbu(bbu)
+        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid2)
+        grid2.add_bbu(bbu)
 
     #Center Antenna
     center = numpy.array([grid.size[0]/2, grid.size[1]/2])
     #BS
-    #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
+    bs = Antenna(0, Antenna.BS_ID, center, None, grid2)
+    grid2.add_antenna(bs)
     bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
     #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
@@ -334,9 +340,12 @@ def build_fixed_scenario():
     #Cluster
     cluster = Cluster(1, [1050, 1050], grid)
     grid.add_cluster(cluster)
+    cluster = Cluster(1, [1050, 1050], grid2)
+    grid2.add_cluster(cluster)
 
     #RRHs
-    #rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
+    grid2.add_antenna(rrh)
     rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid)
     #rrh = AntennaPeng(1, Antenna.RRH_ID, [1040, 1040], None, grid)
     grid.add_antenna(rrh)
@@ -348,8 +357,13 @@ def build_fixed_scenario():
     u2 = User(2, [880, 880], None, grid, User.LOW_RATE_USER)
     grid.add_user(u2)
 
+    u1 = User(1, [1045, 1045], None, grid2, User.HIGH_RATE_USER)
+    grid2.add_user(u1)
 
-    #do_greedy(1, 1, 2, 1, grid)
+    u2 = User(2, [880, 880], None, grid2, User.LOW_RATE_USER)
+    grid2.add_user(u2)
+
+    do_greedy(1, grid2)
     do_mc(1, grid)
 
 
@@ -450,7 +464,7 @@ if __name__ == "__main__":
 
 #    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
     #ues = [15]
-    ues = [15]
+    ues = [60]
 
     num_cores = multiprocessing.cpu_count()
     for nues in ues:
