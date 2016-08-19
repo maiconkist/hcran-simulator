@@ -55,9 +55,9 @@ def associate_user_in_antennas(ues, antennas):
 class Mc(object): 
     def __init__(self, r):
         self.repeticao = r
-        self.MC_STEPS = 100
+        self.MC_STEPS = 10
         self.DELTA_HISTORY = 10
-        self.NPARTICLES   = 100
+        self.NPARTICLES   = 1000
         self.HISTORICALRATE = 0.2
         self.RESETRATE    = 0.01
         self.L_BETA       = 0.0
