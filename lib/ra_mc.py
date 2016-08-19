@@ -273,7 +273,7 @@ class Mc(object):
                     self.append_ee(p, ee_particle)
             else:
                 for p in range(0, self.NPARTICLES):
-                    if (step-1) % 10 == 0:
+                    if (step-1) % 1 == 0:
                         new_ee_particle = self.ee_calc(p, grid)
                         self.append_ee(p, new_ee_particle)
 
@@ -366,7 +366,7 @@ class Mc(object):
                         #else:
                         #    step = self.MC_STEPS
 
-            if step % 10 == 0:
+            if step % 1 == 0:
                 self.raises_temperature()
 
             best_particle = numpy.argmax(self.ee_particles[:,0])
