@@ -50,7 +50,6 @@ def associate_user_in_antennas(ues, antennas):
         ue._connected_antenna = near
         near.connected_ues.append(ue)   
 
- 
 
 class Mc(object): 
     def __init__(self, r):
@@ -60,7 +59,7 @@ class Mc(object):
         self.NPARTICLES   = 1000
         self.HISTORICALRATE = 0.2
         self.RESETRATE    = 0.01
-        self.L_BETA       = 0.0
+        self.L_BETA       = 0.1
         self.L_LAMBDA     = 0.1
         self.L_UPSILON    = 0.1
         self.E_DEALTA     = 0.2
@@ -75,9 +74,15 @@ class Mc(object):
         self.data_rate_particles = None
         self.consumption_antenna_particles = None
         self.consumption_particles = None
+        self.old_step_i_particles = None
+        self.old_step_a_particles = None
+        self.old_step_p_particles = None
+        self.old_step_ee_particles = None
+        
 
     def raises_temperature(self):
-        self.L_BETA = self.L_BETA + 0.1
+        self.L_BETA = self.L_BETA * 2
+        #self.L_BETA = self.L_BETA + 0.1
         #self.L_LAMBDA = self.L_LAMBDA * 2
         #self.L_UPSILON = self.L_UPSILON * 2
         #self.E_DEALTA = self.E_DEALTA * 2 
@@ -159,7 +164,7 @@ class Mc(object):
                 #    self.meet_user_particles[particle] += 1
                 
                 if(self.data_rate_user_particles[particle, ue] < Antenna.NR):
-                    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
+                    data_rate_constraint += (0.3*self.L_BETA) * (self.data_rate_user_particles[particle, ue] - Antenna.NR)
                 else:
                     self.meet_user_particles[particle] += 1
             else:
@@ -167,16 +172,17 @@ class Mc(object):
                 #f(self.data_rate_user_particles[particle, ue] > Antenna.NER):
                 #    self.meet_user_particles[particle] += 1
                 if(self.data_rate_user_particles[particle, ue] < Antenna.NER):
-                    data_rate_constraint += self.L_BETA * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
+                    data_rate_constraint += (0.3*self.L_BETA) * (self.data_rate_user_particles[particle, ue] - Antenna.NER)
                 else:
                     self.meet_user_particles[particle] += 1
 
 
         #print "EE = ", (self.data_rate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", (data_rate_constraint*2000/1048576)
-        particle_ee = ((self.data_rate_particles[particle]*2000/1048576) / self.consumption_particles[particle]) + (data_rate_constraint*2000/1048576)
+        particle_ee = self.L_BETA * ((self.data_rate_particles[particle]*2000/1048576) / self.consumption_particles[particle]) + (data_rate_constraint*2000/1048576)
 
         #print "EE = ", particle_ee
         return particle_ee
+
 
     def covered_users_calc(self, antennas, antenna_index): #ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
         ue_anteriores = -1
@@ -192,6 +198,34 @@ class Mc(object):
         ee_particle = np.delete(self.ee_particles[particle], -1)
         self.ee_particles[particle] = np.append(ee, ee_particle)
         #print self.ee_particles[particle]
+
+
+    def select_best_particles(self):
+        #for i in range(0, self.NPARTICLES*self.HISTORICALRATE):
+        #    self.old_step_ee_particles[i] = #RECALCULAR A EE BASEADO NO NOVO BETA
+        for i in range(0, self.NPARTICLES*self.HISTORICALRATE):
+            index = numpy.argmin(self.ee_particles[:,0])
+            if self.old_step_ee_particles[i] > self.ee_particles[index,0]:
+                self.i_particles[index] = self.old_step_i_particles[i].copy()
+                self.a_particles[index] = self.old_step_a_particles[i].copy()
+                self.p_particles[index] = self.old_step_p_particles[i].copy()
+                self.ee_particles[index] = self.old_step_ee_particles[i].copy()
+            else:
+                break
+
+
+
+    def make_history(self):
+        ee = ee_particles[:,0].copy()
+        for i in range(0, self.NPARTICLES*self.HISTORICALRATE):
+            part = numpy.argmax(ee)
+            ee[part] = -99999999
+            self.old_step_i_particles[i] = self.i_particles[part].copy()
+            self.old_step_a_particles[i] = self.a_particles[part].copy()
+            self.old_step_p_particles[i] = self.p_particles[part].copy()
+            self.old_step_ee_particles[i] = self.ee_particles[part].copy()
+
+
 
     def is_stable(self, lst):
 #        if lst[-1] != 0:
@@ -209,13 +243,19 @@ class Mc(object):
         #Y = (100 *self.L_BETA)^(old_e-new_ee* 10 * self.L_BETA)
         #print "Y = (100 *",self.L_BETA,")^(",old_e, "-", new_ee, "* 10 *", self.L_BETA,") = ", 
         #print new_ee, old_ee, self.L_BETA
-        Y = 1-(abs(1-(new_ee/old_ee))*math.exp(2*self.L_BETA))
+        #Y = 1-(abs(1-(new_ee/old_ee))*math.exp(2*self.L_BETA))
+        #X = -(new_ee-old_ee)
         #print "Y = 1-((1-(",new_ee,"/",old_ee,"))*",math.exp(2*self.L_BETA),") = ", Y
+        Y = math.exp(self.L_BETA*(new_ee-old_ee))
         return Y
 
     def run(self, grid):
         acceppt = 0
         not_acceppt = 0
+        self.old_step_i_particles = numpy.zeros(shape=(self.NPARTICLES*self.HISTORICALRATE,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
+        self.old_step_a_particles = numpy.zeros(shape=(self.NPARTICLES*self.HISTORICALRATE,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
+        self.old_step_p_particles = numpy.zeros(shape=(self.NPARTICLES*self.HISTORICALRATE,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
+        self.old_step_ee_particles = numpy.zeros(shape=(self.NPARTICLES*self.HISTORICALRATE))
         self.i_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.a_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.p_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
@@ -271,6 +311,7 @@ class Mc(object):
 
                     ee_particle = self.ee_calc(p, grid)
                     self.append_ee(p, ee_particle)
+                #make_history()
             else:
                 for p in range(0, self.NPARTICLES):
                     if (step-1) % 1 == 0:
@@ -365,7 +406,8 @@ class Mc(object):
                         #    self.MC_STEPS += 1
                         #else:
                         #    step = self.MC_STEPS
-
+                #select_best_particles()
+                #make_history()
             if step % 1 == 0:
                 self.raises_temperature()
 
