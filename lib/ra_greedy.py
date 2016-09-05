@@ -5,7 +5,7 @@ import math
 import csv
 import time
 
-DEBUG = True
+DEBUG = False
 
 def debug_printf(string):
     if DEBUG:
