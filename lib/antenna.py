@@ -336,7 +336,7 @@ class Antenna(object):
             self.user_data_rate = numpy.zeros(shape=(len(self.connected_ues)))
             for n in range(0, len(self.connected_ues)):
                 for k in range (0, self.TOTAL_RBS):
-                    data_bits = (self.shannon((self.a[n][k] * Antenna.B0), self.sinr(self.p[n][k], self.i[n][k], self.noise())))/2000#Qnt de bits em 0,5 ms
+                    data_bits = (util.shannon((self.a[n][k] * Antenna.B0), util.sinr(self.p[n][k], self.i[n][k], util.noise())))/2000#Qnt de bits em 0,5 ms
                     self.data_rate += data_bits
                     self.user_data_rate[n] += data_bits
                 if self.connected_ues[n]._type == User.HIGH_RATE_USER:
@@ -346,53 +346,13 @@ class Antenna(object):
                     if self.user_data_rate[n] >= Antenna.NER:
                         self.users_meet += 1
 
-    def shannon(self, B, SINR):
-        #Shannon Calc
-        # B is in hertz
-        # the signal and noise_plus_interference powers S and N are measured in watts or volts
-        return B * math.log(1 + SINR, 2)
-
-    def friis(self, Pt, Gt, Gr, R, Wl):
-       Pr = Pt + Gt + Gr + (20 * math.log(Wl/(4*math.pi*R), 10))
-       return Pr
-
-    def p_friis(self, I, N, Gt, Gr, R, Wl):
-        Pt = self.TARGET_SINR + (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
-        if (self.type == Antenna.BS_ID):
-            if Pt > Antenna.PMmax:
-                Pt = Antenna.PMmax
-        else:
-            if Pt > Antenna.Pmax:
-                Pt = Antenna.Pmax
-        return Pt
-
-    def sinr(self, P, I, N):
-        sinr = P - (abs(I)+N) #dB
-        return abs(sinr)
-
-    def noise(self):
-        #fixed noise in dBm
-        return -90 
-
-    def interference(self, ue, rb, antennas):
-        interference = 0
-        for ant in antennas:
-            if (ue._connected_antenna._id != ant._id and ant.a != None and sum(ant.a[:,rb])>0):
-                index = numpy.argmax(ant.a[:,rb])
-                R  =  util.dist(ue, ant)
-                interference += abs(self.friis(ant.p[index,rb], self.T_GAIN, self.R_GAIN, R, self.WAVELENTH))#dBm
-        return interference
-
-    def dBm_to_watts(self, dBm):
-        watts = dBm * 0.001258925
-        return watts
-
+    
     def obtain_power_consumition(self):
         self.power_consumition = 0
         result = 0
         for n in range(0, len(self.connected_ues)):
             for k in range(0, self.TOTAL_RBS):
-                result += self.dBm_to_watts(self.a[n][k] * self.p[n][k])   
+                result += util.dBm_to_watts(self.a[n][k] * self.p[n][k])   
         if (self.type == Antenna.BS_ID):
             self.power_consumition = (self.MEFF * result) + self.PMC + self.PMBH
         else:

@@ -4,7 +4,7 @@
 # @date     17 Mar 2016
 #########################################################
 
-from peng import *
+from ra_peng import *
 from antenna import *
 from user import *
 from bbu import *
@@ -40,7 +40,7 @@ DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 MAX_BS                  = 1
-MAX_REP                 = 10
+MAX_REP                 = 1
 
 ###############################
 #Test Variables
@@ -318,37 +318,37 @@ def build_fixed_scenario():
 
     cntrl = Controller(grid, control_network=False)
     grid.add_controller(cntrl)
-    cntrl = Controller(grid2, control_network=False)
-    grid2.add_controller(cntrl)
+    cntrl2 = Controller(grid2, control_network=False)
+    grid2.add_controller(cntrl2)
 
     n_bbu = 2
     for i in range(n_bbu):
-        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid2)
+        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid)
         grid.add_bbu(bbu)
-        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid2)
-        grid2.add_bbu(bbu)
+        bbu2 = BBU(pos=grid.random_pos(), controller=cntrl2, grid=grid2)
+        grid2.add_bbu(bbu2)
 
     #Center Antenna
     center = numpy.array([grid.size[0]/2, grid.size[1]/2])
     #BS
-    bs = Antenna(0, Antenna.BS_ID, center, None, grid2)
-    grid2.add_antenna(bs)
-    bs = AntennaMc(0, Antenna.BS_ID, center, None, grid)
-    #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
+    bs = Antenna(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
+    #bs2 = AntennaMc(0, Antenna.BS_ID, center, None, grid)
+    bs2 = AntennaPeng(0, Antenna.BS_ID, center, None, grid2)
+    grid2.add_antenna(bs2)
 
     #Cluster
     cluster = Cluster(1, [1050, 1050], grid)
     grid.add_cluster(cluster)
-    cluster = Cluster(1, [1050, 1050], grid2)
-    grid2.add_cluster(cluster)
+    cluster2 = Cluster(1, [1050, 1050], grid2)
+    grid2.add_cluster(cluster2)
 
     #RRHs
-    rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
-    grid2.add_antenna(rrh)
-    rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid)
-    #rrh = AntennaPeng(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid)
     grid.add_antenna(rrh)
+    #rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
+    rrh2 = AntennaPeng(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
+    grid2.add_antenna(rrh2)
 
     #Users
     u1 = User(1, [1045, 1045], None, grid, User.HIGH_RATE_USER)
@@ -363,9 +363,9 @@ def build_fixed_scenario():
     u2 = User(2, [880, 880], None, grid2, User.LOW_RATE_USER)
     grid2.add_user(u2)
 
-    do_greedy(1, grid2)
-    do_mc(1, grid)
-
+    #do_greedy(1, grid2)
+    #do_mc(1, grid)
+    do_peng(1, grid2)
 
     #associate_user_in_antennas(grid._user, grid._antennas)
 
@@ -408,9 +408,9 @@ def do_mc(rep, grid):
     mc = Mc(rep)
     mc.run(grid);
 
-def do_peng(nbs, rrh, ue, rep, grid):
+def do_peng(rep, grid):
     print "Starting scenario", rep, "with", len(grid.bs_list), "macros for Peng!"
-    peng = Peng(nbs, rrh, ue, rep)
+    peng = Peng(rep)
     peng.run(grid);
 
 def do_greedy(rep, grid):
@@ -463,8 +463,8 @@ if __name__ == "__main__":
     #util.plot_grid(grids[0])
 
 #    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
-    #ues = [15]
-    ues = [60, 30, 15]
+    ues = [15]
+    #ues = [60, 30, 15]
 
     num_cores = multiprocessing.cpu_count()
     for nues in ues:

@@ -11,15 +11,16 @@ class AntennaPeng(Antenna):
     def __init__(self, id, type, pos, radius, grid, bw = 1.4):
         Antenna.__init__(self, id, type, pos, radius, grid, bw)
 
-    def init_peng(self, rbs, antennas):
-        self.K = rbs
+    def init_peng(self, antennas):
+        self.K = Antenna.TOTAL_RBS
         self.N = len(self.connected_ues)
 
         if self.N < 1:
             return
 
         self.others = antennas
-        self.snir = numpy.zeros((self.N, self.K))
+        self.sigma = numpy.zeros((self.N, self.K))
+        self.i = numpy.zeros((self.N, self.K))
         self.noise_plus_interference = numpy.zeros((self.N, self.K))
         self.a = numpy.zeros((self.N, self.K))
         self.p = numpy.zeros((self.N, self.K))
@@ -53,12 +54,60 @@ class AntennaPeng(Antenna):
     def update_antennas(self, antennas):
         self.others = antennas
 
+    def obtain_snr(self):
+        for n in range(0, self.N):
+            for k in range (0, self.K):
+                self.i[n][k] = 0
+                ue = self.connected_ues[n]
+                for antenna in self.others:
+                    ue_ant_index = numpy.argmax(antenna.a[:, k])
+                    if self.a[ue_ant_index, k] > 0:
+                        R  =  util.dist(ue, antenna)
+                        self.i[n][k] += abs(util.friis(antenna.p[ue_ant_index, k], Antenna.T_GAIN, Antenna.R_GAIN, R, Antenna.WAVELENTH))#dBm       
+
+    def near_macro(self, bs_list):
+        near_bs = None 
+        near_dist = None
+        for bs in bs_list:
+            if near_bs == None:
+                near_bs = bs
+                near_dist = util.dist(self, bs)
+            else:
+                d = dist(self, bs)
+                if d < near_dist:
+                    near_dist = d
+                    near_bs = bs
+        return near_bs
+
+    def obtain_sigma(self, n, k):
+        if (self.type == Antenna.RRH_ID): #RRH
+            macro = self.near_macro(self._grid.bs_list)
+            dMue = util.dist(macro, self.connected_ues[n])#distancia rrh to user
+            dMn = 31.5 + 35.0 * math.log10(dMue) #pathloss
+            hRnk = 1#channel gain
+            hMnk = 1#channel gain
+            Pm = self.PMmax #pmax
+            b0 = self.B0#bandwidth
+            N0 = self.i[n][k] # estimated power spectrum density of both the sum of noise and weak inter-RRH interference (in dBm/Hz)
+            dRue = util.dist(self, self.connected_ues[n])#distancia rrh to user#distancia rrh to user
+            dRn = 31.5 + 40.0 * math.log10(dRue)
+            return (dRn*hRnk)/(Pm*dMn*hMnk+b0*N0)
+        else: #MACRO
+            dMue = util.dist(self, self.connected_ues[n])#distancia rrh to user
+            dMn = 31.5 + 35.0 * math.log10(dMue) #pathloss
+            hMnk = 1#channel gain
+            b0 = self.B0#bandwidth
+            N0 = self.i[n][k] # estimated power spectrum density of both the sum of noise and weak inter-RRH interference (in dBm/Hz)
+            return (dMn*hMnk)/(b0*N0)
+                    
+
     def obtain_matrix(self):
         # Obtain snir, W and H
         for n in range(0, self.N):
             for k in range (0, self.K):
+                self.sigma[n][k] = self.obtain_sigma(n, k)
                 self.w[n][k] = self.waterfilling_optimal(n, k)
-                h1 = self.snir[n][k] * self.w[n][k]
+                h1 = self.sigma[n][k] * self.w[n][k]
                 h2 = ((1 + self.betan[n][0]) * numpy.log(h1))
                 h3 = ((1 + self.betan[n][0]) / numpy.log(2)) 
                 h4 = (1 - (1 / h1))
@@ -93,7 +142,7 @@ class AntennaPeng(Antenna):
         for n in range(0, self.N):
             for k in range(0, self.K):
                 self.c[n][k] = self.a[n][k] * self.B0 * math.log(1
-                        + (self.snir[n][k] * self.p[n][k]))
+                        + (self.sigma[n][k] * self.p[n][k]))
 
     def obtain_sub_betan(self, n):
         soma = 0
@@ -126,7 +175,7 @@ class AntennaPeng(Antenna):
     def obtain_lagrange_betan(self, n):
         self.obtain_sub_betan(n)
         result = self.betan[n][0] - (Antenna.E_BETA * self.sub_betan)
-        print "betan " + str(result)
+        #print "betan " + str(result)
         if result > 0:
             self.betan[n][1] = result
         else:
@@ -153,7 +202,7 @@ class AntennaPeng(Antenna):
     def update_lagrange(self):
         self.sub_c()
         #print "snir:"
-        #print numpy.matrix(self.snir)
+        #print numpy.matrix(self.sigma)
         #print "p:"
         #print numpy.matrix(self.p)
         #raw_input("")
@@ -192,8 +241,8 @@ class AntennaPeng(Antenna):
         else:
             max_upsilonl = self.upsilonl[1] - self.upsilonl[0]
 
-        print ("max_beta: " + str(max_beta) + " ,max_lambdak: "
-                + str(max_lambdak) + " ,max_upsilonl: " + str(max_upsilonl))
+        #print ("max_beta: " + str(max_beta) + " ,max_lambdak: "
+        #        + str(max_lambdak) + " ,max_upsilonl: " + str(max_upsilonl))
         return max(max_beta, max_lambdak, max_upsilonl)
 
     def swap_l(self):

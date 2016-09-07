@@ -41,19 +41,6 @@ def dBm_to_watts(dBm):
     return watts
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 def nearest(p1, p_list, idx=0):
     """ Return the closest point to p1 in p_list
 
