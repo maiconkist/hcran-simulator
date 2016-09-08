@@ -40,7 +40,7 @@ DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 MAX_BS                  = 1
-MAX_REP                 = 1
+MAX_REP                 = 10
 
 ###############################
 #Test Variables
@@ -431,11 +431,11 @@ def processInput(nbs, nues):
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
-    do_mc(rep, grids[0])
+    #do_mc(rep, grids[0])
     
-    #do_peng(bs, ue, rep, grids[1])
+    do_peng(rep, grids[1])
 
-    do_greedy(rep, grids[2])
+    #do_greedy(rep, grids[2])
     
     del grids
     gc.collect()
@@ -463,8 +463,8 @@ if __name__ == "__main__":
     #util.plot_grid(grids[0])
 
 #    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
-    ues = [15]
-    #ues = [60, 30, 15]
+    #ues = [15]
+    ues = [60, 30, 15]
 
     num_cores = multiprocessing.cpu_count()
     for nues in ues:

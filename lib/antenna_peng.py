@@ -60,10 +60,12 @@ class AntennaPeng(Antenna):
                 self.i[n][k] = 0
                 ue = self.connected_ues[n]
                 for antenna in self.others:
-                    ue_ant_index = numpy.argmax(antenna.a[:, k])
-                    if self.a[ue_ant_index, k] > 0:
-                        R  =  util.dist(ue, antenna)
-                        self.i[n][k] += abs(util.friis(antenna.p[ue_ant_index, k], Antenna.T_GAIN, Antenna.R_GAIN, R, Antenna.WAVELENTH))#dBm       
+                    if(antenna.a != None):
+                        ue_ant_index = numpy.argmax(antenna.a[:, k])
+                        #print "pos = ", ue_ant_index, k
+                        if antenna.a[ue_ant_index, k] > 0:
+                            R  =  util.dist(ue, antenna)
+                            self.i[n][k] += abs(util.friis(antenna.p[ue_ant_index, k], Antenna.T_GAIN, Antenna.R_GAIN, R, Antenna.WAVELENTH))#dBm       
 
     def near_macro(self, bs_list):
         near_bs = None 
@@ -88,7 +90,7 @@ class AntennaPeng(Antenna):
             hMnk = 1#channel gain
             Pm = self.PMmax #pmax
             b0 = self.B0#bandwidth
-            N0 = self.i[n][k] # estimated power spectrum density of both the sum of noise and weak inter-RRH interference (in dBm/Hz)
+            N0 = util.sinr(self.p[n][k], self.i[n][k], util.noise()) # estimated power spectrum density of both the sum of noise and weak inter-RRH interference (in dBm/Hz)
             dRue = util.dist(self, self.connected_ues[n])#distancia rrh to user#distancia rrh to user
             dRn = 31.5 + 40.0 * math.log10(dRue)
             return (dRn*hRnk)/(Pm*dMn*hMnk+b0*N0)
@@ -97,7 +99,8 @@ class AntennaPeng(Antenna):
             dMn = 31.5 + 35.0 * math.log10(dMue) #pathloss
             hMnk = 1#channel gain
             b0 = self.B0#bandwidth
-            N0 = self.i[n][k] # estimated power spectrum density of both the sum of noise and weak inter-RRH interference (in dBm/Hz)
+            N0 = util.sinr(self.p[n][k], self.i[n][k], util.noise()) # estimated power spectrum density of both the sum of noise and weak inter-RRH interference (in dBm/Hz)
+            #print dMn, hMnk, b0, N0
             return (dMn*hMnk)/(b0*N0)
                     
 
