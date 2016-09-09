@@ -110,7 +110,6 @@ class AntennaPeng(Antenna):
             for k in range (0, self.K):
                 self.sigma[n][k] = self.obtain_sigma(n, k)
                 self.w[n][k] = self.waterfilling_optimal(n, k)
-                self.p[n][k] = self.power_optimal(n, k)
                 h1 = self.sigma[n][k] * self.w[n][k]
                 h2 = ((1 + self.betan[n][0]) * numpy.log(h1))
                 h3 = ((1 + self.betan[n][0]) / numpy.log(2)) 
@@ -132,10 +131,16 @@ class AntennaPeng(Antenna):
                     nn = n
                     n_max = self.h[n][k]
             self.a[nn][k] = 1
+            self.p[nn][k] = self.power_optimal(n, k)
 
     def power_optimal(self, n, k):
         power = self.w[n][k] - 1/self.sigma[n][k]
         if power > 0:
+            if self.type == self.BS_ID and power > self.PMmax:
+                return self.PMmax
+            else:
+                if self.type == self.RRH_ID and power > self.Pmax:
+                    return self.Pmax
             return power
         return 0
 
@@ -158,6 +163,7 @@ class AntennaPeng(Antenna):
     def sub_c(self):
         for n in range(0, self.N):
             for k in range(0, self.K):
+                #print self.sigma[n][k]
                 self.c[n][k] = self.a[n][k] * self.B0 * math.log(1
                         + (self.sigma[n][k] * self.p[n][k]))
 
@@ -304,7 +310,12 @@ class AntennaPeng(Antenna):
             #print "EE = ", (self.datarate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", (self.datarate_constraint_particles[particle]*2000/1048576)
             ee = (self.data_rate*2000/1048576) - self.p_energy_efficient[len(self.p_energy_efficient)-1] * self.power_consumition + (datarate_constraint) + self.lambdak[k][0] * transmit_power_constraint
 
-            #print "EE = ", ee
+            #if self.type == self.BS_ID:
+                #print "EE = ", ee
+                #debug_printf("----- BS step -----")
+                #debug_printf("Alloc = \n" + str(numpy.matrix(self.a)))
+                #debug_printf("Power = \n" + str(numpy.matrix(self.p)))
+                #debug_printf("Noise = \n" + str(numpy.matrix(self.i)))
             return ee
         else:
             return 0
