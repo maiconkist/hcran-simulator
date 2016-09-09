@@ -28,7 +28,7 @@ class AntennaPeng(Antenna):
         self.w = numpy.zeros((self.N, self.K))
         self.c = numpy.zeros((self.N, self.K))
 
-        self.p_energy_efficient.append(1)
+        self.p_energy_efficient.append(0)
 
         self.data_rate               = 0
         self.total_power_consumition = 0
@@ -102,7 +102,7 @@ class AntennaPeng(Antenna):
             N0 = util.sinr(self.p[n][k], self.i[n][k], util.noise()) # estimated power spectrum density of both the sum of noise and weak inter-RRH interference (in dBm/Hz)
             #print dMn, hMnk, b0, N0
             return (dMn*hMnk)/(b0*N0)
-                    
+                
 
     def obtain_matrix(self):
         # Obtain snir, W and H
@@ -110,6 +110,7 @@ class AntennaPeng(Antenna):
             for k in range (0, self.K):
                 self.sigma[n][k] = self.obtain_sigma(n, k)
                 self.w[n][k] = self.waterfilling_optimal(n, k)
+                self.p[n][k] = self.power_optimal(n, k)
                 h1 = self.sigma[n][k] * self.w[n][k]
                 h2 = ((1 + self.betan[n][0]) * numpy.log(h1))
                 h3 = ((1 + self.betan[n][0]) / numpy.log(2)) 
@@ -132,11 +133,24 @@ class AntennaPeng(Antenna):
                     n_max = self.h[n][k]
             self.a[nn][k] = 1
 
+    def power_optimal(self, n, k):
+        power = self.w[n][k] - 1/self.sigma[n][k]
+        if power > 0:
+            return power
+        return 0
+
     def waterfilling_optimal(self, n, k):
         p1 = (Antenna.B0 * (1 + self.betan[n][0])) 
-        p2 = math.log((self.p_energy_efficient[len(self.p_energy_efficient)-1]
+
+        #TODO: BUG
+        #print self.p_energy_efficient[len(self.p_energy_efficient)-1], self.lambdak[k][0], self.upsilonl[0]
+        #print ((self.p_energy_efficient[len(self.p_energy_efficient)-1] * Antenna.EFF) + (self.lambdak[k][0] * Antenna.DR2M * Antenna.HR2M) + self.upsilonl[0])
+
+        p2 = math.log(2) * ((self.p_energy_efficient[len(self.p_energy_efficient)-1]
             * Antenna.EFF) + (self.lambdak[k][0] * Antenna.DR2M * Antenna.HR2M) + 
             self.upsilonl[0])
+
+
         return p1 / p2
 
     ################################
@@ -260,4 +274,37 @@ class AntennaPeng(Antenna):
     def peng_obtain_energy_efficient(self):
         self.obtain_data_rate()
         self.obtain_power_consumition()
-        self.p_energy_efficient.append(self.data_rate/self.power_consumition)
+        ee = self.obtain_ee_with_constraints()
+        #self.data_rate/self.power_consumition
+        self.p_energy_efficient.append(ee)
+
+
+    def obtain_ee_with_constraints(self):
+        datarate_constraint = 0
+        if self.N > 0:
+            for n in range(0, self.N):
+                #print "Datarates : ", self.datarate_constraint_particles[particle], self.datarate_user_particles[particle, ue]
+                if self.connected_ues[n]._type == User.HIGH_RATE_USER: 
+                    #if(self.user_data_rate[ue] < Antenna.NR):
+                    datarate_constraint += self.betan[n][0] * (self.user_data_rate[n] - Antenna.NR)*2000/1048576
+                else:
+                    #if(self.user_data_rate[ue] < Antenna.NR):
+                    datarate_constraint += self.betan[n][0] * (self.user_data_rate[n] - Antenna.NER)*2000/1048576
+         
+            transmit_power_constraint = 0
+            if (self.p != None):
+                for k in range(0, self.K):
+                    index = numpy.argmax(self.p[:,k])
+                    if(self.p[index,k]>0):
+                        if self.type == self.BS_ID:
+                            transmit_power_constraint = (Antenna.PMmax - self.p[index,k])
+                        else:        
+                            transmit_power_constraint = (Antenna.Pmax - self.p[index,k])
+
+            #print "EE = ", (self.datarate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", (self.datarate_constraint_particles[particle]*2000/1048576)
+            ee = (self.data_rate*2000/1048576) - self.p_energy_efficient[len(self.p_energy_efficient)-1] * self.power_consumition + (datarate_constraint) + self.lambdak[k][0] * transmit_power_constraint
+
+            #print "EE = ", ee
+            return ee
+        else:
+            return 0

@@ -81,15 +81,15 @@ class Peng(object):
                 dif = 1000
                 if antenna.N > 0:
                     while dif > tolerancia: #Inner Loop
-                       # print ("dif: " + str(dif) + " - tol: " + str(tolerancia))
-                       # wait()
+                        #print ("dif: " + str(dif) + " - tol: " + str(tolerancia))
+                        #wait()
                         antenna.obtain_snr() # a zuado
                         antenna.obtain_matrix() # matrix a e p
                         antenna.update_lagrange() 
                         dif = antenna.max_dif()
                         antenna.swap_l()
                      
-                    antenna.peng_obtain_energy_efficient()
+                antenna.peng_obtain_energy_efficient()
 #                print numpy.matrix(antenna.p)
 #                raw_input("press enter to continue.")
 

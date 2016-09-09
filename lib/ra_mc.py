@@ -297,7 +297,8 @@ class Mc(object):
         step = 0
         stabilized_particles = 0
         # Loop maximo de itaracoes
-        while stabilized_particles < self.NPARTICLES and step < self.MC_STEPS:
+        #while stabilized_particles < self.NPARTICLES and step < self.MC_STEPS:
+        for step in range (0, self.MC_STEPS):
             acceppt = 0
             not_acceppt = 0
             init = time.time()
@@ -443,7 +444,7 @@ class Mc(object):
             f = open('resumo.csv','a')
             f.write('MC,MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.datarate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(time.time()-init)+'\n')
             f.close()
-            step = step + 1
+            #step = step + 1
 
 
 
