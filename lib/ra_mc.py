@@ -154,8 +154,16 @@ class Mc(object):
     #def ee_draft_calc(self, a, i, p, grid):
 
 
-                
-
+    def fairness_calc(self, p, grid):
+        x1 = 0
+        x2 = 0
+        n = len(grid.users)
+        for ue in range(0, len(grid.users)):
+            x1 +=  self.datarate_user_particles[p, ue]
+            x2 += math.pow(self.datarate_user_particles[p, ue], 2)
+        x1 = math.pow(x1, 2)
+        r = x1/(x2*n)
+        return r
 
     def ee_calc(self, particle, grid):
         self.data_rate_and_power_consumption_calc(particle, grid)
@@ -299,6 +307,7 @@ class Mc(object):
         # Loop maximo de itaracoes
         #while stabilized_particles < self.NPARTICLES and step < self.MC_STEPS:
         for step in range (0, self.MC_STEPS):
+            print "REP: ", self.repeticao, " I:", step
             acceppt = 0
             not_acceppt = 0
             init = time.time()
@@ -440,9 +449,11 @@ class Mc(object):
             debug_printf("Power = \n" + str(numpy.matrix(self.p_particles[best_particle])))
             debug_printf("Noise = \n" + str(numpy.matrix(self.i_particles[best_particle])))
             #f.write('ALG,CASE,M,S,U,R,I,C,P,EE,MU,T\n')
-            
+            fairness = self.fairness_calc(best_particle, grid)
+
+
             f = open('resumo.csv','a')
-            f.write('MC,MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.datarate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(time.time()-init)+'\n')
+            f.write('MC,MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.datarate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(fairness)+','+str(time.time()-init)+'\n')
             f.close()
             #step = step + 1
 

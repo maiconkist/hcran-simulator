@@ -431,11 +431,11 @@ def processInput(nbs, nues):
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
-    #do_mc(rep, grids[0])
+    do_mc(rep, grids[0])
     
-    do_peng(rep, grids[1])
+#    do_peng(rep, grids[1])
 
-    #do_greedy(rep, grids[2])
+    do_greedy(rep, grids[2])
     
     del grids
     gc.collect()
@@ -448,7 +448,7 @@ if __name__ == "__main__":
 
     # Trying to create a new file or open one
     f = open('resumo.csv','w')
-    f.write('ALG,CASE,M,S,U,R,I,C,P,EE,MU,T\n')
+    f.write('ALG,CASE,M,S,U,R,I,C,P,EE,MU,FS,T\n')
     f.close()
 
 

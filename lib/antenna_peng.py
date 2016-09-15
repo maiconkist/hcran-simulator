@@ -124,6 +124,9 @@ class AntennaPeng(Antenna):
         
         self.a = numpy.zeros((self.N, self.K))
         nn = 0
+        print "H = ", str(numpy.matrix(self.h))
+        print "beta = ", str(numpy.matrix(self.betan))
+        print "lambda = ", str(numpy.matrix(self.lambdak))
         for k in range(0, self.K):
             n_max = -9999
             for n in range(0, self.N):
