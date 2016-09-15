@@ -269,7 +269,7 @@ class Mc(object):
         if new_constraint > old_constraint:
             prob2 = 1
         else:
-            delta_constraint = old_constraint-new_constraint
+            delta_constraint = new_constraint-old_constraint
             prob2 = math.exp((self.L_BETA/30)*delta_constraint)
 
         prob = prob1 * prob2
