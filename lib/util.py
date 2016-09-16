@@ -32,6 +32,16 @@ def sinr(P, I, N):
     sinr = P - (abs(I)+N) #dB
     return abs(sinr)
 
+def interference(ue, rb, antennas):
+    interference = 0
+    for ant in antennas:
+        if (ue._connected_antenna._id != ant._id and ant.a != None and sum(ant.a[:,rb])>0):
+            index = numpy.argmax(ant.a[:,rb])
+            R  =  dist(ue, ant)
+            interference += abs(friis(ant.p[index,rb], ant.T_GAIN, ant.R_GAIN, R, ant.WAVELENTH))#dBm
+    return interference
+
+
 def noise():
     #fixed noise in dBm
     return -90 

@@ -230,15 +230,15 @@ class Grid(object):
         meet_user = 0
         x1 = 0
         x2 = 0
-        n = len(grid.users)
+        n = len(self.users)
         for antenna in self._antennas:
+            antenna.obtain_energy_efficient()
             for ue in range(0, len(antenna.connected_ues)):
                 for rb in range(0, antenna.TOTAL_RBS):
                     if antenna.a[ue][rb] != 0:
-                        antenna.i[ue][rb] = antenna.interference(antenna.connected_ues[ue], rb, self._antennas)
+                        antenna.i[ue][rb] = interference(antenna.connected_ues[ue], rb, self._antennas)
                 x1 += antenna.user_data_rate[ue]
                 x2 += math.pow(antenna.user_data_rate[ue], 2)
-            antenna.obtain_energy_efficient()
             data_rate += antenna.data_rate
             consumption += antenna.power_consumition
             ee = 0

@@ -39,7 +39,7 @@ DROPRADIUS_SC           = 500
 DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
-MAX_BS                  = 1
+MAX_DELTA                  = 10
 MAX_REP                 = 10
 
 ###############################
@@ -365,7 +365,7 @@ def build_fixed_scenario():
 
     #do_greedy(1, grid2)
     #do_mc(1, grid)
-    do_peng(1, grid2)
+    #do_peng(1, grid2)
 
     #associate_user_in_antennas(grid._user, grid._antennas)
 
@@ -403,9 +403,9 @@ def build_fixed_scenario():
 
     return grid
 
-def do_mc(rep, grid):
+def do_mc(rep, grid, delta1, delta2):
     print "Starting scenario", rep, "with", len(grid.bs_list), "macros for MC!"
-    mc = Mc(rep)
+    mc = Mc(rep, delta1, delta2)
     mc.run(grid);
 
 def do_peng(rep, grid):
@@ -424,14 +424,16 @@ def processInput(nbs, nues):
     rrh = 4
     ue = nues
 
-    bs = (nbs%MAX_BS)+1
+    delta1 = (nbs%MAX_DELTA)+1
+    delta2 = 10 - (nbs%MAX_DELTA)
+    bs = 1
     rep = (nbs%MAX_REP)+1
 
     #print "Starting scenario", rep, "with", bs, "macros for MC!"
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
-    do_mc(rep, grids[0])
+    do_mc(rep, grids[0], delta1, delta2)
     
 #    do_peng(rep, grids[1])
 
@@ -468,7 +470,7 @@ if __name__ == "__main__":
 
     num_cores = multiprocessing.cpu_count()
     for nues in ues:
-        Parallel(n_jobs=num_cores)(delayed(processInput)(nbs, nues) for nbs in range(0, MAX_BS*MAX_REP))
+        Parallel(n_jobs=num_cores)(delayed(processInput)(nbs, nues) for nbs in range(0, MAX_DELTA*MAX_REP))
 
     #grid = build_fixed_scenario()
     #util.plot_grid(grid)

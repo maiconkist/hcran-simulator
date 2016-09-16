@@ -62,10 +62,11 @@ class Greedy(object):
                     needed_rbs = bs.demand_in_rbs(bs.connected_ues[ue])
                     for rb in range(used_rbs, used_rbs+needed_rbs):
                         if(rb<Antenna.TOTAL_RBS):
-                            bs.i[ue][rb] = bs.interference(bs.connected_ues[ue], rb, grid._antennas) #dBm
+                            bs.i[ue][rb] = interference(bs.connected_ues[ue], rb, grid._antennas) #dBm
                             bs.p[ue][rb] = Antenna.POWER_BS
                             bs.a[ue][rb] = 1
                     used_rbs = used_rbs+needed_rbs
+            bs.obtain_energy_efficient()
             debug_printf("----- BS -----")
             debug_printf("Alloc = \n" + str(numpy.matrix(bs.a)))
             debug_printf("Power = \n" + str(numpy.matrix(bs.p)))
@@ -80,7 +81,7 @@ class Greedy(object):
             for ue in range(0, len(rrh.connected_ues)):
                 needed_rbs = rrh.demand_in_rbs(rrh.connected_ues[ue])
                 for rb in range(0, Antenna.TOTAL_RBS):
-                    i = rrh.interference(rrh.connected_ues[ue], rb, grid._antennas) #dBm
+                    i = interference(rrh.connected_ues[ue], rb, grid._antennas) #dBm
                     rrh.i[ue][rb] = i 
                     auxi[ue][rb] = i    
                 for k in range(0, needed_rbs):
@@ -92,6 +93,7 @@ class Greedy(object):
                         rrh.a[ue][rb] = 1
                     else:
                         break;
+            rrh.obtain_energy_efficient()
             debug_printf("----- RRH -----")
             debug_printf("Alloc = \n" + str(numpy.matrix(rrh.a)))
             debug_printf("Power = \n" + str(numpy.matrix(rrh.p)))

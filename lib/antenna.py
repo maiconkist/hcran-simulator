@@ -389,9 +389,11 @@ class Antenna(object):
     def obtain_interference_and_power(self, grid):
         for ue in range (0, len(self.connected_ues)):
             for rb in range (0, self.TOTAL_RBS):
-                self.i[ue][rb] = self.interference(self.connected_ues[ue], rb, grid._antennas) #dBm
+                self.i[ue][rb] = util.interference(self.connected_ues[ue], rb, grid._antennas) #dBm
                 R  =  util.dist(self.connected_ues[ue], self)
                 self.p[ue][rb] = self.p_friis(self.i[ue][rb], self.noise(), self.T_GAIN, self.R_GAIN, R, self.WAVELENTH) #dBm
+
+
 
     def demand_in_rbs(self, ue):
         demanda_bits = 0

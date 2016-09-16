@@ -52,17 +52,19 @@ def associate_user_in_antennas(ues, antennas):
 
 
 class Mc(object): 
-    def __init__(self, r):
+    def __init__(self, r, delta1, delta2):
+        self.delta1 = delta1
+        self.delta2 = delta2
         self.repeticao = r
         self.MC_STEPS = 25
         self.STABLE_STEPS_LENGTH = 10
         self.NPARTICLES   = 100
         self.HISTORY_LENGTH = 0.05
         self.RESETRATE    = 0.01
-        self.L_BETA       = 1
-        self.L_LAMBDA     = 0.1
-        self.L_UPSILON    = 0.1
-        self.E_DEALTA     = 0.2
+        self.L_BETA       = delta1
+        self.L_LAMBDA     = delta2
+        #self.L_UPSILON    = 0.1
+        #self.E_DEALTA     = 0.2
         self.TX_FLUTUATION = 0.2
         self.i_particles = None
         self.a_particles = None
@@ -88,7 +90,7 @@ class Mc(object):
     def raises_temperature(self):
         self.L_BETA = self.L_BETA * 2
         #self.L_BETA = self.L_BETA + 0.1
-        #self.L_LAMBDA = self.L_LAMBDA * 2
+        self.L_LAMBDA = self.L_LAMBDA * 2
         #self.L_UPSILON = self.L_UPSILON * 2
         #self.E_DEALTA = self.E_DEALTA * 2 
 
@@ -173,12 +175,12 @@ class Mc(object):
             #print "Datarates : ", self.datarate_constraint_particles[particle], self.datarate_user_particles[particle, ue]
             if grid.users[ue]._type == User.HIGH_RATE_USER: 
                 if(self.datarate_user_particles[particle, ue] < Antenna.NR):
-                    self.datarate_constraint_particles[particle] += (self.L_BETA/30) * (self.datarate_user_particles[particle, ue] - Antenna.NR)
+                    self.datarate_constraint_particles[particle] += (self.L_LAMBDA) * (self.datarate_user_particles[particle, ue] - Antenna.NR)
                 else:
                     self.meet_user_particles[particle] += 1
             else:
                 if(self.datarate_user_particles[particle, ue] < Antenna.NER):
-                    self.datarate_constraint_particles[particle] += (self.L_BETA/30) * (self.datarate_user_particles[particle, ue] - Antenna.NER)
+                    self.datarate_constraint_particles[particle] += (self.L_LAMBDA) * (self.datarate_user_particles[particle, ue] - Antenna.NER)
                 else:
                     self.meet_user_particles[particle] += 1
 
@@ -210,9 +212,9 @@ class Mc(object):
         for i in range(0, int(self.NPARTICLES*self.HISTORY_LENGTH)):
             for ue in range(0, len(grid.users)):
                 if grid.users[ue]._type == User.HIGH_RATE_USER: 
-                    self.history_datarate_constraint_particles[i] += (self.L_BETA/30) * (self.history_datarate_user_particles[i, ue] - Antenna.NR)
+                    self.history_datarate_constraint_particles[i] += (self.L_LAMBDA) * (self.history_datarate_user_particles[i, ue] - Antenna.NR)
                 else:
-                    self.history_datarate_constraint_particles[i] += (self.L_BETA/30) * (self.history_datarate_user_particles[i, ue] - Antenna.NER)
+                    self.history_datarate_constraint_particles[i] += (self.L_LAMBDA) * (self.history_datarate_user_particles[i, ue] - Antenna.NER)
             self.history_ee_particles[i,0] = self.L_BETA * ((self.history_datarate_particles[i]*2000/1048576) / self.history_consumption_particles[i]) + (self.history_datarate_constraint_particles[i]*2000/1048576)#RECALCULAR A EE BASEADO NO NOVO BETA
         
         for i in range(0, int(self.NPARTICLES*self.HISTORY_LENGTH)):
@@ -270,7 +272,7 @@ class Mc(object):
             prob2 = 1
         else:
             delta_constraint = new_constraint-old_constraint
-            prob2 = math.exp((self.L_BETA/30)*delta_constraint)
+            prob2 = math.exp((self.L_LAMBDA)*delta_constraint)
 
         prob = prob1 * prob2
         return prob
@@ -453,7 +455,7 @@ class Mc(object):
 
 
             f = open('resumo.csv','a')
-            f.write('MC,MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.datarate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(fairness)+','+str(time.time()-init)+'\n')
+            f.write('MC(B:'+str(self.delta1)+'L:'+str(self.delta2)+'),MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.datarate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(fairness)+','+str(time.time()-init)+'\n')
             f.close()
             #step = step + 1
 
