@@ -39,8 +39,8 @@ DROPRADIUS_SC           = 500
 DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
-MAX_DELTA                  = 10
-MAX_REP                 = 10
+MAX_DELTA               = 1
+MAX_REP                 = 30
 
 ###############################
 #Test Variables
@@ -424,8 +424,8 @@ def processInput(nbs, nues):
     rrh = 4
     ue = nues
 
-    delta1 = (nbs%MAX_DELTA)+1
-    delta2 = 10 - (nbs%MAX_DELTA)
+    #delta1 = (nbs%MAX_DELTA)+1
+    #delta2 = 10 - (nbs%MAX_DELTA)
     bs = 1
     rep = (nbs%MAX_REP)+1
 
@@ -433,7 +433,7 @@ def processInput(nbs, nues):
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
-    do_mc(rep, grids[0], delta1, delta2)
+    do_mc(rep, grids[0], 1, 1)
     
 #    do_peng(rep, grids[1])
 
@@ -466,11 +466,11 @@ if __name__ == "__main__":
 
 #    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
     #ues = [15]
-    ues = [60, 30, 15]
+    ues = [60]
 
     num_cores = multiprocessing.cpu_count()
     for nues in ues:
-        Parallel(n_jobs=num_cores)(delayed(processInput)(nbs, nues) for nbs in range(0, MAX_DELTA*MAX_REP))
+        Parallel(n_jobs=num_cores)(delayed(processInput)(nbs, nues) for nbs in range(0, MAX_REP))
 
     #grid = build_fixed_scenario()
     #util.plot_grid(grid)

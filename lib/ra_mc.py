@@ -61,11 +61,13 @@ class Mc(object):
         self.NPARTICLES   = 100
         self.HISTORY_LENGTH = 0.05
         self.RESETRATE    = 0.01
-        self.L_BETA       = delta1
-        self.L_LAMBDA     = delta2
+        self.L_BETA       = 1
+        self.L_LAMBDA     = 1
         #self.L_UPSILON    = 0.1
         #self.E_DEALTA     = 0.2
         self.TX_FLUTUATION = 0.2
+        self.lambda_particles = None
+        self.beta_particles = None 
         self.i_particles = None
         self.a_particles = None
         self.p_particles = None
@@ -87,10 +89,63 @@ class Mc(object):
         self.history_datarate_user_particles = None
         
 
+    def select_best_particle(self):
+        self.L_BETA = numpy.max(self.beta_particles[:])
+        self.L_LAMBDA = numpy.max(self.lambda_particles[:])
+        best_particle = -1
+        for p in range(0, self.NPARTICLES):
+            if best_particle == -1:
+                best_particle = p
+                best_ee = self.L_BETA * ((self.datarate_particles[p][0]*2000/1048576) / self.consumption_particles[p][0]) + (self.L_LAMBDA) * (self.datarate_constraint_particles[p][0]*2000/1048576)
+            else:
+                ee = self.L_BETA * ((self.datarate_particles[p][0]*2000/1048576) / self.consumption_particles[p][0]) + (self.L_LAMBDA) * (self.datarate_constraint_particles[p][0]*2000/1048576)
+                if ee > best_ee:
+                    best_ee = ee
+                    best_particle = p
+
+        return best_particle
+
+
     def raises_temperature(self):
-        self.L_BETA = self.L_BETA * 2
+        ee_list = numpy.zeros(shape=(self.NPARTICLES, 10))
+        for p in range(0, self.NPARTICLES):
+            for t in range(0, 10):
+                if(self.datarate_particles[p][t] > 0 and self.consumption_particles[p][t]> 0):
+                    ee_list[p][t] = (self.datarate_particles[p][t]*2000/1048576) / self.consumption_particles[p][t]
+
+        ee_sum = 0
+        ee_std_particle = numpy.zeros(shape=(self.NPARTICLES))
+        constrait_sum = 0
+        constrait_std_particle = numpy.zeros(shape=(self.NPARTICLES))
+        for p in range(0, self.NPARTICLES):
+            ee_sum += ee_list[p][0]
+            constrait_sum += self.datarate_constraint_particles[p][0]
+            constrait_std_particle[p] = numpy.std(self.datarate_constraint_particles[p])
+            ee_std_particle[p] = numpy.std(ee_list[p])
+
+        mean_ee = ee_sum/self.NPARTICLES
+        mean_constrait = constrait_sum/self.NPARTICLES
+
+        for p in range(0, self.NPARTICLES):
+            if ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) < 0.05:
+                self.beta_particles[p] = self.beta_particles[p] * 0.5
+            elif ee_list[p][0] > mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.05:
+                self.beta_particles[p] = self.beta_particles[p] * 1.5
+            elif ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.05:
+                self.beta_particles[p] = self.beta_particles[p] * 2
+
+            if self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) < 0.05:
+                self.lambda_particles[p] = self.lambda_particles[p] * 0.5
+            elif self.datarate_constraint_particles[p][0] > mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.05:
+                self.lambda_particles[p] = self.lambda_particles[p] * 1.5
+            elif self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.05:
+                self.lambda_particles[p] = self.lambda_particles[p] * 2
+
+        #TODO: Fazer os ifs
+
+        #self.L_BETA = self.L_BETA * 2
         #self.L_BETA = self.L_BETA + 0.1
-        self.L_LAMBDA = self.L_LAMBDA * 2
+        #self.L_LAMBDA = self.L_LAMBDA * 2
         #self.L_UPSILON = self.L_UPSILON * 2
         #self.E_DEALTA = self.E_DEALTA * 2 
 
@@ -120,11 +175,9 @@ class Mc(object):
 
     def data_rate_and_power_consumption_calc(self, particle, grid):
         self.datarate_user_particles[particle] = numpy.zeros(shape=(len(grid.users)))
-        #print "Data User (zero): ", str(numpy.matrix(self.datarate_user_particles[particle]))
-        self.datarate_particles[particle] = 0
-        
         self.consumption_antenna_particles[particle] = numpy.zeros(shape=(len(grid.antennas)))
-        self.consumption_particles[particle] = 0
+        datarate_particle = 0
+        consumption_particle = 0
 
         previous_antennas = 0
         previous_consumption = 0
@@ -137,7 +190,7 @@ class Mc(object):
                 data_bits = (util.shannon((self.a_particles[particle, user, arb] * Antenna.B0), util.sinr(self.p_particles[particle, user, arb], self.i_particles[particle, user, arb], util.noise())))/2000#Qnt de bits em 0,5 ms
                 self.datarate_user_particles[particle, user] += data_bits
                 #print "Data User: ", str(numpy.matrix(self.datarate_user_particles[particle]))
-                self.datarate_particles[particle] += data_bits
+                datarate_particle += data_bits
 
                 previous_consumption += util.dBm_to_watts(self.a_particles[particle, user, arb] * self.p_particles[particle, user, arb]) 
 
@@ -149,9 +202,10 @@ class Mc(object):
                 else:
                     self.consumption_antenna_particles[particle, antenna_index] = (Antenna.EFF * previous_consumption) + Antenna.PMC + Antenna.PMBH
 
-                self.consumption_particles[particle] += self.consumption_antenna_particles[particle, antenna_index] 
+                consumption_particle += self.consumption_antenna_particles[particle, antenna_index] 
                 previous_consumption = 0
-
+        self.datarate_particles[particle] = self.list_append(self.datarate_particles[particle], datarate_particle)
+        self.consumption_particles[particle] = self.list_append(self.consumption_particles[particle], consumption_particle)
                 
     #def ee_draft_calc(self, a, i, p, grid):
 
@@ -170,23 +224,23 @@ class Mc(object):
     def ee_calc(self, particle, grid):
         self.data_rate_and_power_consumption_calc(particle, grid)
         self.meet_user_particles[particle] = 0
-        self.datarate_constraint_particles[particle] = 0
+        datarate_constraint_particle = 0
         for ue in range(0, len(grid.users)):
             #print "Datarates : ", self.datarate_constraint_particles[particle], self.datarate_user_particles[particle, ue]
             if grid.users[ue]._type == User.HIGH_RATE_USER: 
                 if(self.datarate_user_particles[particle, ue] < Antenna.NR):
-                    self.datarate_constraint_particles[particle] += (self.L_LAMBDA) * (self.datarate_user_particles[particle, ue] - Antenna.NR)
+                    datarate_constraint_particle += (self.datarate_user_particles[particle, ue] - Antenna.NR)
                 else:
                     self.meet_user_particles[particle] += 1
             else:
                 if(self.datarate_user_particles[particle, ue] < Antenna.NER):
-                    self.datarate_constraint_particles[particle] += (self.L_LAMBDA) * (self.datarate_user_particles[particle, ue] - Antenna.NER)
+                    datarate_constraint_particle += (self.datarate_user_particles[particle, ue] - Antenna.NER)
                 else:
                     self.meet_user_particles[particle] += 1
 
-
+        self.datarate_constraint_particles[particle] = self.list_append(self.datarate_constraint_particles[particle], datarate_constraint_particle)            
         #print "EE = ", (self.datarate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", (self.datarate_constraint_particles[particle]*2000/1048576)
-        particle_ee = self.L_BETA * ((self.datarate_particles[particle]*2000/1048576) / self.consumption_particles[particle]) + (self.datarate_constraint_particles[particle]*2000/1048576)
+        particle_ee = self.beta_particles[particle] * ((self.datarate_particles[particle][0]*2000/1048576) / self.consumption_particles[particle][0]) + (self.lambda_particles[particle]) * (self.datarate_constraint_particles[particle][0]*2000/1048576)
 
         #print "EE = ", particle_ee
         return particle_ee
@@ -207,15 +261,20 @@ class Mc(object):
         self.ee_particles[particle] = np.append(ee, ee_particle)
         #print self.ee_particles[particle]
 
+    def list_append(self, lista, value):
+        lista = np.delete(lista, -1)
+        lista = np.append(value, lista)
+        return lista
+
 
     def define_best_particles(self, grid):
         for i in range(0, int(self.NPARTICLES*self.HISTORY_LENGTH)):
             for ue in range(0, len(grid.users)):
                 if grid.users[ue]._type == User.HIGH_RATE_USER: 
-                    self.history_datarate_constraint_particles[i] += (self.L_LAMBDA) * (self.history_datarate_user_particles[i, ue] - Antenna.NR)
+                    self.history_datarate_constraint_particles[i][0] += (self.history_datarate_user_particles[i, ue] - Antenna.NR)
                 else:
-                    self.history_datarate_constraint_particles[i] += (self.L_LAMBDA) * (self.history_datarate_user_particles[i, ue] - Antenna.NER)
-            self.history_ee_particles[i,0] = self.L_BETA * ((self.history_datarate_particles[i]*2000/1048576) / self.history_consumption_particles[i]) + (self.history_datarate_constraint_particles[i]*2000/1048576)#RECALCULAR A EE BASEADO NO NOVO BETA
+                    self.history_datarate_constraint_particles[i][0] += (self.history_datarate_user_particles[i, ue] - Antenna.NER)
+            self.history_ee_particles[i,0] = self.beta_particles[particle] * ((self.history_datarate_particles[i][0]*2000/1048576) / self.history_consumption_particles[i][0]) + (self.lambda_particles[particle]) *(self.history_datarate_constraint_particles[i][0]*2000/1048576)#RECALCULAR A EE BASEADO NO NOVO BETA
         
         for i in range(0, int(self.NPARTICLES*self.HISTORY_LENGTH)):
             index = numpy.argmin(self.ee_particles[:,0])
@@ -258,21 +317,21 @@ class Mc(object):
 
         return False
 
-    def exp_ee_calc(self, new_ee, old_ee, new_constraint, old_constraint):
+    def exp_ee_calc(self, particle, new_ee, old_ee, new_constraint, old_constraint):
         #prob = math.exp(self.L_BETA*(new_ee-old_ee))
         prob1 = 0
         prob2 = 0
-        if new_ee > old_ee:
+        if new_ee >= old_ee:
             prob1 = 1
         else:
             delta_ee = new_ee-old_ee
-            prob1 = math.exp(self.L_BETA*delta_ee)
+            prob1 = math.exp(self.beta_particles[particle]*delta_ee)
 
-        if new_constraint > old_constraint:
+        if new_constraint >= old_constraint:
             prob2 = 1
         else:
             delta_constraint = new_constraint-old_constraint
-            prob2 = math.exp((self.L_LAMBDA)*delta_constraint)
+            prob2 = math.exp((self.lambda_particles[particle])*delta_constraint)
 
         prob = prob1 * prob2
         return prob
@@ -288,7 +347,8 @@ class Mc(object):
         self.history_consumption_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH)))
         self.history_datarate_constraint_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH)))
         self.history_datarate_user_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH), len(grid.users)))
-        self.datarate_constraint_particles = numpy.zeros(shape=(self.NPARTICLES))
+        self.lambda_particles = numpy.ones(shape=(self.NPARTICLES))
+        self.beta_particles = numpy.ones(shape=(self.NPARTICLES))
         self.i_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.a_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.p_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
@@ -296,9 +356,12 @@ class Mc(object):
         self.stable_particles = numpy.zeros(shape=(self.NPARTICLES))
         self.meet_user_particles = numpy.zeros(shape=(self.NPARTICLES))
         self.datarate_user_particles = numpy.zeros(shape=(self.NPARTICLES, len(grid.users)))
-        self.datarate_particles = numpy.zeros(shape=(self.NPARTICLES))
         self.consumption_antenna_particles = numpy.zeros(shape=(self.NPARTICLES, len(grid.antennas)))
-        self.consumption_particles = numpy.zeros(shape=(self.NPARTICLES))
+        
+        self.datarate_particles = numpy.zeros(shape=(self.NPARTICLES,10))
+        self.consumption_particles = numpy.zeros(shape=(self.NPARTICLES,10))
+        self.datarate_constraint_particles = numpy.zeros(shape=(self.NPARTICLES,10))
+ 
 
         associate_user_in_antennas(grid.users, grid.antennas)
 
@@ -346,7 +409,7 @@ class Mc(object):
 
                     ee_particle = self.ee_calc(p, grid)
                     self.append_ee(p, ee_particle)
-                self.make_history()
+                #self.make_history()
             else:
                 for p in range(0, self.NPARTICLES):
                     if (step-1) % 2 == 0:
@@ -356,7 +419,7 @@ class Mc(object):
                     if self.stable_particles[p] < 1:
                         #self.append_ee(p, self.ee_particles[p,0])
                         current_ee_particle = self.ee_particles[p,0]
-                        current_datarate_constraint = self.datarate_constraint_particles[p]
+                        current_datarate_constraint = self.datarate_constraint_particles[p][0]
                         for stepezinho in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):
                             random_arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
                             #print "random_arb = ", random_arb, 0, Antenna.TOTAL_RBS*len(grid.antennas)-1
@@ -395,8 +458,8 @@ class Mc(object):
 
                             
                             new_ee_particle = self.ee_calc(p, grid)
-                            new_datarate_constraint = self.datarate_constraint_particles[p]
-                            prob = self.exp_ee_calc(new_ee_particle, current_ee_particle, new_datarate_constraint, current_datarate_constraint)
+                            new_datarate_constraint = self.datarate_constraint_particles[p][0]
+                            prob = self.exp_ee_calc(p,new_ee_particle, current_ee_particle, new_datarate_constraint, current_datarate_constraint)
                             rand = random.uniform(0.0, 1.0)
                             #print "Rand = ", rand
                             #print "Prob = ", prob
@@ -440,12 +503,13 @@ class Mc(object):
                         #    self.MC_STEPS += 1
                         #else:
                         #    step = self.MC_STEPS
-                self.define_best_particles(grid)
-                self.make_history()
+                #self.define_best_particles(grid)
+                #self.make_history()
             if step % 2 == 0:
                 self.raises_temperature()
 
-            best_particle = numpy.argmax(self.ee_particles[:,0])
+            #best_particle = numpy.argmax(self.ee_particles[:,0])
+            best_particle = self.select_best_particle()
             debug_printf("----- GRID step "+str(step+1)+" -----")
             debug_printf("Alloc = \n" + str(numpy.matrix(self.a_particles[best_particle])))
             debug_printf("Power = \n" + str(numpy.matrix(self.p_particles[best_particle])))
@@ -455,7 +519,7 @@ class Mc(object):
 
 
             f = open('resumo.csv','a')
-            f.write('MC(B:'+str(self.delta1)+'L:'+str(self.delta2)+'),MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.datarate_particles[best_particle])+','+str(self.consumption_particles[best_particle])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(fairness)+','+str(time.time()-init)+'\n')
+            f.write('MC(B:'+str(self.delta1)+'L:'+str(self.delta2)+'),MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.datarate_particles[best_particle,0])+','+str(self.consumption_particles[best_particle,0])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(fairness)+','+str(time.time()-init)+'\n')
             f.close()
             #step = step + 1
 
