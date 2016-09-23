@@ -65,6 +65,7 @@ class Greedy(object):
                             bs.i[ue][rb] = interference(bs.connected_ues[ue], rb, grid._antennas) #dBm
                             bs.p[ue][rb] = Antenna.POWER_BS
                             bs.a[ue][rb] = 1
+                            
                     used_rbs = used_rbs+needed_rbs
             bs.obtain_energy_efficient()
             debug_printf("----- BS -----")
@@ -99,6 +100,7 @@ class Greedy(object):
             debug_printf("Power = \n" + str(numpy.matrix(rrh.p)))
             debug_printf("Noise = \n" + str(numpy.matrix(rrh.i)))
 
+         
 
         grid.write_to_resume('GREEDY', self.repeticao, 1, init)
 
