@@ -21,11 +21,11 @@ def friis(Pt, Gt, Gr, R, Wl):
 def p_friis(antenna, I, N, Gt, Gr, R, Wl):
     Pt = antenna.TARGET_SINR + (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
     if (antenna.type == antenna.BS_ID):
-        if Pt > antenna.PMmax:
-            Pt = antenna.PMmax
+        if Pt > antenna.POWER_BS:
+            Pt = antenna.POWER_BS
     else:
-        if Pt > antenna.Pmax:
-            Pt = antenna.Pmax
+        if Pt > antenna.POWER_RRH:
+            Pt = antenna.POWER_RRH
     return Pt
 
 def sinr(P, I, N):

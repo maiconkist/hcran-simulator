@@ -56,13 +56,13 @@ class Mc(object):
         self.delta1 = delta1
         self.delta2 = delta2
         self.repeticao = r
-        self.MC_STEPS = 25
+        self.MC_STEPS = 100
         self.STABLE_STEPS_LENGTH = 10
-        self.NPARTICLES   = 1
-        self.HISTORY_LENGTH = 0.05
+        self.NPARTICLES   = 100
+        self.HISTORY_LENGTH = 0.02
         self.RESETRATE    = 0.01
         self.L_BETA       = 1
-        self.L_LAMBDA     = 1
+        self.L_LAMBDA     = 10
         #self.L_UPSILON    = 0.1
         #self.E_DEALTA     = 0.2
         self.TX_FLUTUATION = 0.2
@@ -90,8 +90,8 @@ class Mc(object):
         
 
     def select_best_particle(self):
-        self.L_BETA = numpy.max(self.beta_particles[:])
-        self.L_LAMBDA = numpy.max(self.lambda_particles[:])
+        #self.L_BETA = numpy.max(self.beta_particles[:])
+        #self.L_LAMBDA = numpy.max(self.lambda_particles[:])
         best_particle = -1
         for p in range(0, self.NPARTICLES):
             if best_particle == -1:
@@ -143,27 +143,32 @@ class Mc(object):
 
         #TODO: Fazer os ifs
 
-        #self.L_BETA = self.L_BETA * 2
+        self.L_BETA = self.L_BETA * 2
         #self.L_BETA = self.L_BETA + 0.1
-        #self.L_LAMBDA = self.L_LAMBDA * 2
+        self.L_LAMBDA = self.L_LAMBDA * 10
         #self.L_UPSILON = self.L_UPSILON * 2
         #self.E_DEALTA = self.E_DEALTA * 2 
 
 
     def interference_calc(self, arb, user, particle ,grid):
-            antenna_index = int(arb/Antenna.TOTAL_RBS)
-            antenna = grid.antennas[antenna_index]
-            ue = grid.users[user]
-            interference = 0
-            for rb in range((arb%Antenna.TOTAL_RBS), Antenna.TOTAL_RBS*len(grid.antennas), Antenna.TOTAL_RBS):
-                if rb != arb:
-                    ant_index = int(rb/Antenna.TOTAL_RBS)
-                    ant = grid.antennas[ant_index]
-                    current_user = numpy.argmax(self.a_particles[particle, :, rb])
-                    if self.a_particles[particle, current_user, rb] > 0:
-                        R  =  util.dist(ue, ant)
-                        interference += abs(util.friis(self.p_particles[particle, current_user, rb], Antenna.T_GAIN, Antenna.R_GAIN, R, Antenna.WAVELENTH))#dBm
-            return interference
+        antenna_index = int(arb/Antenna.TOTAL_RBS)
+        antenna = grid.antennas[antenna_index]
+        rb = arb%Antenna.TOTAL_RBS
+        ue = grid.users[user]
+        interference = 0
+        ant_index = -1
+        for ant in grid.antennas:
+            ant_index += 1
+            if (antenna._id != ant._id):
+                arb_index = (ant_index*Antenna.TOTAL_RBS)+rb
+                index = numpy.argmax(self.a_particles[particle, :, arb_index])
+                if self.a_particles[particle, index, arb_index] > 0 and ue._id != grid.users[index]:
+                    R  =  util.dist(ue, ant)
+                    interference += abs(util.friis(self.p_particles[particle, index, arb_index], Antenna.T_GAIN, Antenna.R_GAIN, R, Antenna.WAVELENTH))#dBm
+                    #print ue._id, ant._id, R, interference, self.p_particles[particle, index, arb_index]
+
+        #print interference
+        return interference
 
     def power_calc(self, arb, user, particle, grid):
         antenna_index = int(arb/Antenna.TOTAL_RBS)
@@ -215,9 +220,12 @@ class Mc(object):
         x2 = 0
         n = len(grid.users)
         for ue in range(0, len(grid.users)):
-            x1 +=  self.datarate_user_particles[p, ue]
+            x1 += self.datarate_user_particles[p, ue]
             x2 += math.pow(self.datarate_user_particles[p, ue], 2)
         x1 = math.pow(x1, 2)
+        if (x2 == 0):
+            return 1
+
         r = x1/(x2*n)
         return r
 
@@ -240,7 +248,7 @@ class Mc(object):
 
         self.datarate_constraint_particles[particle] = self.list_append(self.datarate_constraint_particles[particle], datarate_constraint_particle)            
         #print "EE = ", (self.datarate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", (self.datarate_constraint_particles[particle]*2000/1048576)
-        particle_ee = self.beta_particles[particle] * ((self.datarate_particles[particle][0]*2000/1048576) / self.consumption_particles[particle][0]) + (self.lambda_particles[particle]) * (self.datarate_constraint_particles[particle][0]*2000/1048576)
+        particle_ee = self.L_BETA * ((self.datarate_particles[particle][0]*2000/1048576) / self.consumption_particles[particle][0]) + (self.L_LAMBDA) * (self.datarate_constraint_particles[particle][0]*2000/1048576)
 
         #print "EE = ", particle_ee
         return particle_ee
@@ -274,7 +282,7 @@ class Mc(object):
                     self.history_datarate_constraint_particles[i][0] += (self.history_datarate_user_particles[i, ue] - Antenna.NR)
                 else:
                     self.history_datarate_constraint_particles[i][0] += (self.history_datarate_user_particles[i, ue] - Antenna.NER)
-            self.history_ee_particles[i,0] = self.beta_particles[particle] * ((self.history_datarate_particles[i][0]*2000/1048576) / self.history_consumption_particles[i][0]) + (self.lambda_particles[particle]) *(self.history_datarate_constraint_particles[i][0]*2000/1048576)#RECALCULAR A EE BASEADO NO NOVO BETA
+            self.history_ee_particles[i,0] = self.L_BETA * ((self.history_datarate_particles[i][0]*2000/1048576) / self.history_consumption_particles[i][0]) + (self.L_LAMBDA) *(self.history_datarate_constraint_particles[i][0]*2000/1048576)#RECALCULAR A EE BASEADO NO NOVO BETA
         
         for i in range(0, int(self.NPARTICLES*self.HISTORY_LENGTH)):
             index = numpy.argmin(self.ee_particles[:,0])
@@ -317,6 +325,25 @@ class Mc(object):
 
         return False
 
+    def calc_prob_zero(self, particle, antenna_index, antenna, covered_users):
+        totalUes = len(antenna.connected_ues)
+        meet_users = 0
+        for ue in range (covered_users+1, totalUes):
+            if antenna.connected_ues[ue]._type == User.HIGH_RATE_USER: 
+                if(self.datarate_user_particles[particle, ue] >= Antenna.NR):
+                    meet_users += 1
+            else:
+                if(self.datarate_user_particles[particle, ue] >= Antenna.NER):
+                    meet_users += 1
+
+        if (meet_users < totalUes/2):
+            return totalUes*2
+        elif (meet_users < totalUes):
+            return totalUes*4
+        else:
+            return totalUes*10
+
+
     def exp_ee_calc(self, particle, new_ee, old_ee, new_constraint, old_constraint):
         #prob = math.exp(self.L_BETA*(new_ee-old_ee))
         prob1 = 0
@@ -343,9 +370,9 @@ class Mc(object):
         self.history_p_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH),len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.history_i_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH),len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.history_ee_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH), self.STABLE_STEPS_LENGTH))
-        self.history_datarate_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH)))
-        self.history_consumption_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH)))
-        self.history_datarate_constraint_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH)))
+        self.history_datarate_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH),10))
+        self.history_consumption_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH),10))
+        self.history_datarate_constraint_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH),10))
         self.history_datarate_user_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH), len(grid.users)))
         self.lambda_particles = numpy.ones(shape=(self.NPARTICLES))
         self.beta_particles = numpy.ones(shape=(self.NPARTICLES))
@@ -364,12 +391,6 @@ class Mc(object):
  
         associate_user_in_antennas(grid.users, grid.antennas)
 
-        step = 0
-        stabilized_particles = 0
-        used_rbs = 0
-        min_arb = Antenna.TOTAL_RBS*len(grid.antennas)
-        max_arb = 0
-        isum = 0
         # Loop maximo de itaracoes
         #while stabilized_particles < self.NPARTICLES and step < self.MC_STEPS:
         for step in range (0, self.MC_STEPS):
@@ -381,148 +402,108 @@ class Mc(object):
             if(step == 0):
                 # Loop sobre as particulas
                 for p in range(0, self.NPARTICLES):
-                    covered_users = -1
-                    previous_antennas = 0
                     for stepezinho in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):# Loop de K * M para preencher A
                         arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
                         u = numpy.argmax(self.a_particles[p, :, arb])
                         if(self.a_particles[p, u, arb] == 0):
                             antenna_index = int(arb/Antenna.TOTAL_RBS)
                             antenna = grid.antennas[antenna_index]# Identifica antena 
-                            if antenna_index > previous_antennas:
-                                #print "Nova antenna"
-                                previous_antennas += 1
-                                antenna_ant = grid.antennas[antenna_index-1]#
-                                #print covered_users, len(antenna_ant.connected_ues)
-                                #covered_users += len(antenna_ant.connected_ues)
-                                #print covered_users
                             if len(antenna.connected_ues) > 0:
                                 covered_users = self.covered_users_calc(grid.antennas, antenna_index)
-                                user = random.randint(covered_users, covered_users+len(antenna.connected_ues)) #Seleciona de forma aletoria um usuario valido para a antenna
-                                #print user, "= randon", covered_users, covered_users+len(antenna.connected_ues)
+                                probZero = self.calc_prob_zero(p, antenna_index, antenna, covered_users)
+                                user = random.randint(covered_users-probZero, covered_users+len(antenna.connected_ues)) #Seleciona de forma aletoria um usuario valido para a antenna
                                 if user > covered_users: # Se usuario nao for zero
-                                    #print "Setando 1"
-                                    used_rbs += 1
                                     self.a_particles[p, user, arb] = 1 # Seleta 1 para o estado 
                                     self.i_particles[p, user, arb] = self.interference_calc(arb, user, p, grid)
                                     self.p_particles[p, user, arb] = self.power_calc(arb, user, p, grid)
 
-                    for arb in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):# Loop de K * M para calcular I e P
-                        user = numpy.argmax(self.a_particles[p, :, arb])
-                        if self.a_particles[p, user, arb] > 0:
-                            self.i_particles[p, user, arb] = self.interference_calc(arb, user, p, grid)
-                            isum += self.i_particles[p, user, arb]
-                            self.p_particles[p, user, arb] = self.power_calc(arb, user, p, grid)                    
+                    # for arb in range(0, Antenna.TOTAL_RBS*len(grid.antennas)-1):# Loop de K * M para calcular I e P
+                    #     user = numpy.argmax(self.a_particles[p, :, arb])
+                    #     if self.a_particles[p, user, arb] > 0:
+                    #         self.i_particles[p, user, arb] = self.interference_calc(arb, user, p, grid)
+                    #         isum += self.i_particles[p, user, arb]
+                    #         self.p_particles[p, user, arb] = self.power_calc(arb, user, p, grid)                    
 
                     ee_particle = self.ee_calc(p, grid)
                     self.append_ee(p, ee_particle)
-                #self.make_history()
+                self.make_history()
             else:
                 for p in range(0, self.NPARTICLES):
-                    if (step-1) % 2 == 0:
-                        new_ee_particle = self.ee_calc(p, grid)
-                        self.append_ee(p, new_ee_particle)
 
-                    if self.stable_particles[p] < 1:
-                        #self.append_ee(p, self.ee_particles[p,0])
-                        current_ee_particle = self.ee_particles[p,0]
-                        current_datarate_constraint = self.datarate_constraint_particles[p][0]
-                        for stepezinho in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):
+                    current_ee_particle = self.ee_particles[p,0]
+                    current_datarate_constraint = self.datarate_constraint_particles[p][0]
+                    for stepezinho in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):
+                        random_arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
+                        antenna_index = int(random_arb/Antenna.TOTAL_RBS)
+                        antenna = grid.antennas[antenna_index]# Identifica antena 
+                        
+                        while len(antenna.connected_ues) == 0:
                             random_arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
-                            if (min_arb > random_arb):
-                                min_arb = random_arb
-                            if (max_arb < random_arb):
-                                max_arb = random_arb
-                            #print "random_arb = ", random_arb, 0, Antenna.TOTAL_RBS*len(grid.antennas)-1
                             antenna_index = int(random_arb/Antenna.TOTAL_RBS)
-                            #print "antenna_index = ", antenna_index
-                            antenna = grid.antennas[antenna_index]# Identifica antena 
-                            
-                            while len(antenna.connected_ues) == 0:
-                                random_arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
-                                antenna_index = int(random_arb/Antenna.TOTAL_RBS)
-                                antenna = grid.antennas[antenna_index]
-                                #print "antenna_index = ", antenna_index
+                            antenna = grid.antennas[antenna_index]
 
-                            covered_users = self.covered_users_calc(grid.antennas, antenna_index) #ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
-                            #print "Covered users", covered_users
-                            user = random.randint(covered_users, covered_users+len(antenna.connected_ues)) #Seleciona de forma aletoria um usuario valido para a antenna
-                            #old_a_particle = deepcopy(self.a_particles[p])
-                            #old_i_particle = deepcopy(self.i_particles[p])
-                            #old_p_particle = deepcopy(self.p_particles[p])
-                            previous_user = numpy.argmax(self.a_particles[p,:,random_arb])
-                            #print "Usuario anterior", previous_user
-                            if(self.a_particles[p, previous_user, random_arb] > 0):
-                                used_rbs -= 1
-
+                        covered_users = self.covered_users_calc(grid.antennas, antenna_index) #ue _anteriores = -1, for ate index: ue anteriores += antennas[x].conected_ues
+                        probZero = self.calc_prob_zero(p, antenna_index, antenna, covered_users)
+                        user = random.randint(covered_users-probZero, covered_users+len(antenna.connected_ues)) #Seleciona de forma aletoria um usuario valido para a antenna
+                        previous_user = numpy.argmax(self.a_particles[p,:,random_arb])
+                       
+                        if(self.a_particles[p, previous_user, random_arb] > 0):
                             self.a_particles[p, previous_user, random_arb] = 0
                             self.i_particles[p, previous_user, random_arb] = 0
-                            isum -= self.i_particles[p, previous_user, random_arb]
                             self.p_particles[p, previous_user, random_arb] = 0
-                            if user > covered_users: # Se usuario nao for zero e for diferente do anterior
-                                    #print "Seleta 1 para o estado", user, random_arb
-                                    used_rbs += 1
-                                    self.a_particles[p, user, random_arb] = 1 # Seleta 1 para o estado 
-                                    self.i_particles[p, user, random_arb] = self.interference_calc(random_arb, user, p, grid)
-                                    isum += self.i_particles[p, user, random_arb]
-                                    self.p_particles[p, user, random_arb] = self.power_calc(random_arb, user, p, grid) 
+                        else:
+                            previous_user = -1
+
+                        if user > covered_users: # Se usuario nao for zero e for diferente do anterior
+                            self.a_particles[p, user, random_arb] = 1 # Seleta 1 para o estado 
+                            self.i_particles[p, user, random_arb] = self.interference_calc(random_arb, user, p, grid)
+                            self.p_particles[p, user, random_arb] = self.power_calc(random_arb, user, p, grid) 
+
+                        for arb in range((random_arb%Antenna.TOTAL_RBS), Antenna.TOTAL_RBS*len(grid.antennas), Antenna.TOTAL_RBS):# Loop de K * M para calcular I e P
+                            current_user = numpy.argmax(self.a_particles[p,:, arb])
+                            if self.a_particles[p, current_user, arb] > 0:
+                                self.i_particles[p, current_user, arb] = self.interference_calc(arb, current_user, p, grid)
+                                self.p_particles[p, current_user, arb] = self.power_calc(arb, current_user, p, grid) 
+
+                        
+                        new_ee_particle = self.ee_calc(p, grid)
+                        new_datarate_constraint = self.datarate_constraint_particles[p][0]
+                        prob = self.exp_ee_calc(p, new_ee_particle, current_ee_particle, new_datarate_constraint, current_datarate_constraint)
+                        rand = random.uniform(0.0, 1.0)
+                        if rand <= prob:
+                            current_ee_particle = new_ee_particle
+                        else:
+                            if user > covered_users:
+                                if(self.a_particles[p, user, random_arb] > 0):
+                                    self.a_particles[p, user, random_arb] = 0
+                                    self.i_particles[p, user, random_arb] = 0
+                                    self.p_particles[p, user, random_arb] = 0
+                            if previous_user > 0:
+                                self.a_particles[p, previous_user, random_arb] = 1 # Seleta 1 para o estado 
+                                self.i_particles[p, previous_user, random_arb] = self.interference_calc(random_arb, previous_user, p, grid)
+                                self.p_particles[p, previous_user, random_arb] = self.power_calc(random_arb, previous_user, p, grid) 
 
                             for arb in range((random_arb%Antenna.TOTAL_RBS), Antenna.TOTAL_RBS*len(grid.antennas), Antenna.TOTAL_RBS):# Loop de K * M para calcular I e P
                                 current_user = numpy.argmax(self.a_particles[p,:, arb])
                                 if self.a_particles[p, current_user, arb] > 0:
-                                    isum -= self.i_particles[p, current_user, arb]
                                     self.i_particles[p, current_user, arb] = self.interference_calc(arb, current_user, p, grid)
-                                    isum += self.i_particles[p, current_user, arb]
-                                    self.p_particles[p, current_user, arb] = self.power_calc(arb, current_user, p, grid) 
+                                    self.p_particles[p, current_user, arb] = self.power_calc(arb, current_user, p, grid)
 
-                            
-                            new_ee_particle = self.ee_calc(p, grid)
-                            new_datarate_constraint = self.datarate_constraint_particles[p][0]
-                            prob = self.exp_ee_calc(p,new_ee_particle, current_ee_particle, new_datarate_constraint, current_datarate_constraint)
-                            rand = random.uniform(0.0, 1.0)
-                            #print "Rand = ", rand
-                            #print "Prob = ", prob
-                            if rand <= prob:
-                                #print "Acceppt"
-                                #print "\nMELHOROU!!!\n"
-                                acceppt += 1
-                                #self.append_ee(p, new_ee_particle)
-                                current_ee_particle = new_ee_particle
-                            else:
-                                #print "Not Acceppt"
-                                not_acceppt += 1
-                                if(self.a_particles[p, user, random_arb] > 0):
-                                    used_rbs -= 1
-                                self.a_particles[p, user, random_arb] = 0
-                                isum -= self.i_particles[p, user, random_arb]
-                                self.i_particles[p, user, random_arb] = 0
-                                self.p_particles[p, user, random_arb] = 0
-                                used_rbs += 1
-                                self.a_particles[p, previous_user, random_arb] = 1 # Seleta 1 para o estado 
-                                self.i_particles[p, previous_user, random_arb] = self.interference_calc(random_arb, previous_user, p, grid)
-                                isum += self.i_particles[p, previous_user, random_arb]
-                                self.p_particles[p, previous_user, random_arb] = self.power_calc(random_arb, previous_user, p, grid) 
+                            self.ee_particles[p,0] = self.ee_calc(p, grid)
 
-                                for arb in range((random_arb%Antenna.TOTAL_RBS), Antenna.TOTAL_RBS*len(grid.antennas), Antenna.TOTAL_RBS):# Loop de K * M para calcular I e P
-                                    current_user = numpy.argmax(self.a_particles[p,:, arb])
-                                    if self.a_particles[p, current_user, arb] > 0:
-                                        isum -= self.i_particles[p, current_user, arb]
-                                        self.i_particles[p, current_user, arb] = self.interference_calc(arb, current_user, p, grid)
-                                        isum += self.i_particles[p, current_user, arb]
-                                        self.p_particles[p, current_user, arb] = self.power_calc(arb, current_user, p, grid)
+                    ee_particle = self.ee_calc(p, grid)
+                    self.append_ee(p, ee_particle)
 
-                                self.ee_calc(p, grid)
+                        #if current_ee_particle != self.ee_particles[p,0]:
+                        #    self.append_ee(p, new_ee_particle)
 
-                        if current_ee_particle != self.ee_particles[p,0]:
-                            self.append_ee(p, new_ee_particle)
-
-                        if self.is_stable(self.ee_particles[p]):
-                            self.stable_particles[p] = 1
-                            stabilized_particles += 1
-                        else:
-                            if self.stable_particles[p] == 1:
-                                self.stable_particles[p] = 0
-                                stabilized_particles -= 1
+                        #if self.is_stable(self.ee_particles[p]):
+                        #    self.stable_particles[p] = 1
+                        #    stabilized_particles += 1
+                        #else:
+                        #    if self.stable_particles[p] == 1:
+                        #        self.stable_particles[p] = 0
+                        #       stabilized_particles -= 1
 
                         #print "Particula", p,"total aceitos = ", acceppt, " contra", not_acceppt, "nao aceitos."
                         #if self.meet_user_particles[p] < 15:
@@ -530,29 +511,36 @@ class Mc(object):
                         #else:
                         #    step = self.MC_STEPS
                     
-                #self.define_best_particles(grid)
-                #self.make_history()
+                self.define_best_particles(grid)
+                self.make_history()
+                      
             if step % 2 == 0:
                 self.raises_temperature()
-
-            #best_particle = numpy.argmax(self.ee_particles[:,0])
             best_particle = self.select_best_particle()
-            debug_printf("----- GRID step "+str(step+1)+" -----")
-            debug_printf("Alloc = \n" + str(numpy.matrix(self.a_particles[best_particle])))
-            debug_printf("Power = \n" + str(numpy.matrix(self.p_particles[best_particle])))
-            debug_printf("Noise = \n" + str(numpy.matrix(self.i_particles[best_particle])))
-            #f.write('ALG,CASE,M,S,U,R,I,C,P,EE,MU,T\n')
             fairness = self.fairness_calc(best_particle, grid)
-            #isum = 0
-            #for arb in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):
-            #    for ue in range(0, len(grid.users)):
-            #        isum += self.i_particles[0, ue, arb]
+            isum = 0
+            used_rbs = 0
+            for arb in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):
+                for ue in range(0, len(grid.users)):
+                    antenna_index = int(arb/Antenna.TOTAL_RBS)
+                    antenna = grid.antennas[antenna_index]# Identifica antena 
+                    if (self.a_particles[best_particle, ue, arb] != 0):
+                        self.i_particles[best_particle, ue, arb] = self.interference_calc(arb, ue, best_particle, grid)
+                        isum += self.a_particles[best_particle, ue, arb]*self.i_particles[best_particle, ue, arb]
+                        used_rbs += self.a_particles[best_particle, ue, arb]
 
-            #print 'TotalRbs:', str(Antenna.TOTAL_RBS*len(grid.antennas)), "UsedRbs:", str(used_rbs), "MinArb:", str(min_arb), "MaxArb:", str(max_arb), "Imean", str(isum/used_rbs),"MU:", str(self.meet_user_particles[best_particle])
+
+            print isum, "/", used_rbs
+            print 'TotalRbs:', str(Antenna.TOTAL_RBS*len(grid.antennas)), "UsedRbs:", str(used_rbs), "Imean", str(isum/used_rbs), "EE:", str(self.ee_particles[best_particle,0]), "MU:", str(self.meet_user_particles[best_particle]), "C:", str(self.datarate_particles[best_particle,0]), "P:", str(self.consumption_particles[best_particle,0])
 
             f = open('resumo.csv','a')
             f.write('MC(B:'+str(self.delta1)+'L:'+str(self.delta2)+'),MC['+str(len(grid.bs_list))+'-'+str(len(grid.rrh_list))+'-'+str(len(grid.users))+'],'+str(len(grid.bs_list))+','+str(len(grid.rrh_list))+','+str(len(grid.users))+','+str(self.repeticao)+','+str(step)+','+str(self.datarate_particles[best_particle,0])+','+str(self.consumption_particles[best_particle,0])+','+str(self.ee_particles[best_particle,0])+','+str(self.meet_user_particles[best_particle])+','+str(fairness)+','+str(time.time()-init)+'\n')
             f.close()
+
+            debug_printf("----- GRID step "+str(step+1)+" -----")
+            debug_printf("Alloc = \n" + str(numpy.matrix(self.a_particles[best_particle])))
+            debug_printf("Power = \n" + str(numpy.matrix(self.p_particles[best_particle])))
+            debug_printf("Noise = \n" + str(numpy.matrix(self.i_particles[best_particle])))
             #step = step + 1
 
 
@@ -571,45 +559,4 @@ class Mc(object):
 
 
 
-
-
-
-
-
-
-#            for nAntennas in range(0, len(antennas)):
-#                if len(antennas[nAntennas].connected_ues) > 0:   
-#                    if(i == 0):
-#                        debug_printf("\n##########################\n## STARTING MONTE CARLO ##\n##########################\n")
-#                        antennas[nAntennas].init_mc(antennas, nAntennas)
-#                        antennas[nAntennas].obtain_interference_and_power(grid)
-#                        # Generating the first particles
-#                        antennas[nAntennas].mc_initial_particles()
-#                    else:
-#                        antennas[nAntennas].obtain_interference_and_power(grid)
-#                        antennas[nAntennas].mc_spinning_roulette()
-#                        antennas[nAntennas].mc_backup_particles()
-#                        antennas[nAntennas].mc_clean_variables()
-#                        antennas[nAntennas].mc_raises_temperature()
-#                        antennas[nAntennas].mc_new_particles_generation()
-#                    wait()
-#                        
-#                    antennas[nAntennas].mc_select_current_solution()
-#                    antennas[nAntennas].obtain_energy_efficient()
-#                    antennas[nAntennas].toString()
-#                    wait()
-#            grid.write_to_resume('MC', self.repeticao, i+1, time.time()-init)
-
-
-                # values.index(min(values))
-                #p = antennas[nAnt].mt_power_consumition(antennas[nAnt].best_a, antennas[nAnt].best_p)
-                #c = antennas[nAnt].mt_data_rate(antennas[nAnt].best_a, antennas[nAnt].best_i,antennas[nAnt].best_p)
-                #print p
-                #print c
-                #ee = c / p
-                #end = time.time()
-                #string = "MT[H:" + str(self.macros) + ";S:2" + ";U:" +  str(self.users) + "]"
-                #string2 = str(i) + "," + str(c) + "," + str(p) + "," + str(ee) + "," + str(end-init) + "\n"
-                #print string2
-                #wait()
 

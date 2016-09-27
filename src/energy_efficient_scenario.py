@@ -351,20 +351,22 @@ def build_fixed_scenario():
     grid2.add_antenna(rrh2)
 
     #Users
-    u1 = User(1, [1045, 1045], None, grid, User.HIGH_RATE_USER)
+    u1 = User(0, [880, 880], None, grid, User.HIGH_RATE_USER)
     grid.add_user(u1)
 
-    u2 = User(2, [880, 880], None, grid, User.LOW_RATE_USER)
+    u2 = User(1, [1045, 1045], None, grid, User.LOW_RATE_USER)
     grid.add_user(u2)
 
-    u1 = User(1, [1045, 1045], None, grid2, User.HIGH_RATE_USER)
+    u1 = User(0, [880, 880], None, grid2, User.HIGH_RATE_USER)
     grid2.add_user(u1)
 
-    u2 = User(2, [880, 880], None, grid2, User.LOW_RATE_USER)
+    u2 = User(1, [1045, 1045], None, grid2, User.LOW_RATE_USER)
     grid2.add_user(u2)
 
-    #do_greedy(1, grid2)
-    #do_mc(1, grid)
+    do_greedy(1, grid2)
+    #util.plot_grid(grid2)
+    do_mc(1, grid, 1, 1)
+    #util.plot_grid(grid)
     #do_peng(1, grid2)
 
     #associate_user_in_antennas(grid._user, grid._antennas)
@@ -433,11 +435,14 @@ def processInput(nbs, nues):
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
+    
+    do_greedy(rep, grids[2])
+
     do_mc(rep, grids[0], 1, 1)
     
 #    do_peng(rep, grids[1])
 
-    do_greedy(rep, grids[2])
+    
     
     del grids
     gc.collect()
@@ -466,7 +471,7 @@ if __name__ == "__main__":
 
 #    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
     #ues = [15]
-    ues = [60, 30, 15]
+    ues = [60]
 
     num_cores = multiprocessing.cpu_count()
     for nues in ues:

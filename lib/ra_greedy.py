@@ -65,7 +65,7 @@ class Greedy(object):
                             bs.i[ue][rb] = interference(bs.connected_ues[ue], rb, grid._antennas) #dBm
                             bs.p[ue][rb] = Antenna.POWER_BS
                             bs.a[ue][rb] = 1
-                            
+
                     used_rbs = used_rbs+needed_rbs
             bs.obtain_energy_efficient()
             debug_printf("----- BS -----")
@@ -88,8 +88,7 @@ class Greedy(object):
                 for k in range(0, needed_rbs):
                     rb = numpy.argmin(auxi[ue,:])
                     if auxi[ue,rb] < 9999999:
-                        auxi[:,rb] = 9999999
-                        #NAO PODE USAR DUAS VEZES O MESMO RB - VERIFICAR SE OUTRO USUARIO JA NAO UTILIZOU
+                        auxi[:,rb] = 9999999 #NAO PODE USAR DUAS VEZES O MESMO RB - VERIFICAR SE OUTRO USUARIO JA NAO UTILIZOU
                         rrh.p[ue][rb] = Antenna.POWER_RRH
                         rrh.a[ue][rb] = 1
                     else:

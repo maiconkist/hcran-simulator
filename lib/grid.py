@@ -241,6 +241,7 @@ class Grid(object):
                     if antenna.a[ue][rb] != 0:
                         tused_rbs += 1
                         antenna.i[ue][rb] = interference(antenna.connected_ues[ue], rb, self._antennas)
+                        #print antenna.i[ue][rb]
                         isum += antenna.i[ue][rb]
                 x1 += antenna.user_data_rate[ue]
                 x2 += math.pow(antenna.user_data_rate[ue], 2)
@@ -252,7 +253,8 @@ class Grid(object):
         x1 = math.pow(x1, 2)
         fairness = x1/(x2*n)
 
-        #print solucao, 'TotalRbs:', str(Antenna.TOTAL_RBS*len(self.antennas)), "UsedRbs:", str(tused_rbs), "Imean", str(isum/tused_rbs), "MU:",  str(meet_user)
+        print isum, "/", tused_rbs
+        print solucao, 'TotalRbs:', str(Antenna.TOTAL_RBS*len(self.antennas)), "UsedRbs:", str(tused_rbs), "Imean", str(isum/tused_rbs), "MU:",  str(meet_user)
 
         f = open('resumo.csv','a')
         f.write(solucao+','+solucao+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self.users))+'],'+str(len(self.bs_list))+','+str(len(self.rrh_list))+','+str(len(self.users))+','+str(repeticao)+','+str(iteracao)+','+str(data_rate)+','+str(consumption)+','+str(ee)+','+str(meet_user)+','+str(fairness)+','+str(time.time()-init)+'\n')
