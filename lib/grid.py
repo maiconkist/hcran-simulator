@@ -117,6 +117,13 @@ class Grid(object):
         """
         self._user.append(user)
 
+    def remove_users(self):
+        """
+        """
+        #print self._user
+        self._user = []
+        #print self._user
+
     def add_antenna(self, antenna):
         """
         """
