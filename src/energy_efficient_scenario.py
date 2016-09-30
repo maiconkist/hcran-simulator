@@ -40,7 +40,7 @@ DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 MAX_DELTA               = 1
-MAX_REP                 = 1
+MAX_REP                 = 30
 
 ###############################
 #Test Variables
@@ -471,12 +471,12 @@ if __name__ == "__main__":
 
 #    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
     #ues = [15]
-    #ues = [60]
-    processInput(1, 60)
+    ues = [60, 30, 15]
+    #processInput(1, 60)
 
-    #num_cores = multiprocessing.cpu_count()
-    #for nues in ues:
-    #    Parallel(n_jobs=num_cores)(delayed(processInput)(nbs, nues) for nbs in range(0, MAX_REP))
+    num_cores = multiprocessing.cpu_count()
+    for nues in ues:
+        Parallel(n_jobs=num_cores)(delayed(processInput)(nbs, nues) for nbs in range(0, MAX_REP))
 
     #grid = build_fixed_scenario()
     #util.plot_grid(grid)
