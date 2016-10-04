@@ -315,7 +315,7 @@ class Mc(object):
         for i in range(0, int(self.NPARTICLES*self.HISTORY_LENGTH)):
             index = numpy.argmin(self.ee_particles[:,0])
             if self.history_ee_particles[i,0] > self.ee_particles[index,0]:
-                print "Remove", self.ee_particles[index, 0], "and Restore ", self.history_ee_particles[i,0]
+                #print "Remove", self.ee_particles[index, 0], "and Restore ", self.history_ee_particles[i,0]
                 self.i_particles[index] = self.history_i_particles[i].copy()
                 self.a_particles[index] = self.history_a_particles[i].copy()
                 self.p_particles[index] = self.history_p_particles[i].copy()
