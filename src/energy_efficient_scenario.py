@@ -40,7 +40,7 @@ DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 MAX_DELTA               = 1
-MAX_REP                 = 30
+MAX_REP                 = 1
 
 ###############################
 #Test Variables
