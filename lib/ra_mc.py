@@ -141,27 +141,30 @@ class Mc(object):
         mean_constrait = constrait_sum/self.NPARTICLES
 
         for p in range(0, self.NPARTICLES):
-            print "EE = ", ee_list[p][0]-mean_ee
-            if ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) < 0.001:
-                self.beta_particles[p] = self.beta_particles[p] * 0.5
-                #print "Relaxa"
-            elif ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.001:
-                self.beta_particles[p] = self.beta_particles[p] * 1.5
-                #print "Prende 1"
-            elif ee_list[p][0] > mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.001:
-                self.beta_particles[p] = self.beta_particles[p] * 2
-                #print "Prende 2"
+            self.beta_particles[p] = math.pow(10, 3*(ee_list[p][0]-mean_ee + (ee_std_particle[p]/ee_list[p][0]) - 0.001))
+            self.lambda_particles[p] = math.pow(1.0005, (self.datarate_constraint_particles[p][0]-mean_constrait + (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) - 0.001))
+
+            # print "EE = ", ee_list[p][0]-mean_ee
+            # if ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) < 0.001:
+            #     self.beta_particles[p] = self.beta_particles[p] * 0.5
+            #     #print "Relaxa"
+            # elif ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.001:
+            #     self.beta_particles[p] = self.beta_particles[p] * 1.5
+            #     #print "Prende 1"
+            # elif ee_list[p][0] > mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.001:
+            #     self.beta_particles[p] = self.beta_particles[p] * 2
+            #     #print "Prende 2"
  
-            print "Data = ", self.datarate_constraint_particles[p][0]-mean_constrait
-            if self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) < 0.001:
-                self.lambda_particles[p] = self.lambda_particles[p] * 0.9
-                #print "Relaxa"
-            elif self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.001:
-                self.lambda_particles[p] = self.lambda_particles[p] * 10
-                #print "Prende 1"
-            elif self.datarate_constraint_particles[p][0] > mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.001:
-                self.lambda_particles[p] = self.lambda_particles[p] * 20
-                #print "Prende 2"
+            # print "Data = ", self.datarate_constraint_particles[p][0]-mean_constrait
+            # if self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) < 0.001:
+            #     self.lambda_particles[p] = self.lambda_particles[p] * 0.9
+            #     #print "Relaxa"
+            # elif self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.001:
+            #     self.lambda_particles[p] = self.lambda_particles[p] * 10
+            #     #print "Prende 1"
+            # elif self.datarate_constraint_particles[p][0] > mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.001:
+            #     self.lambda_particles[p] = self.lambda_particles[p] * 20
+            #     #print "Prende 2"
 
         #TODO: Fazer os ifs
 
