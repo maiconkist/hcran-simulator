@@ -395,12 +395,22 @@ class Antenna(object):
 
 
 
-    def demand_in_rbs(self, ue):
+    def demand_in_rbs(self, ue, ue_index):
         demanda_bits = 0
         if ue._type == User.HIGH_RATE_USER:
             demanda_bits = self.NR
         else:
             demanda_bits = self.NER
+        if self.user_data_rate != None:
+            demanda_bits = demanda_bits - self.user_data_rate[ue_index]
 
-        return int(math.ceil(demanda_bits/self.RB_BIT_CAPACITY))
+        if demanda_bits < 0:
+            demanda_bits = 1
+
+        r = int(math.ceil(demanda_bits/self.RB_BIT_CAPACITY))
+
+        if r < 1:
+            r = 1
+
+        return r
 

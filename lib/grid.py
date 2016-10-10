@@ -242,26 +242,27 @@ class Grid(object):
         x2 = 0
         n = len(self.users)
         for antenna in self._antennas:
-            antenna.obtain_energy_efficient()
-            for ue in range(0, len(antenna.connected_ues)):
-                for rb in range(0, antenna.TOTAL_RBS):
-                    if antenna.a[ue][rb] != 0:
-                        tused_rbs += 1
-                        antenna.i[ue][rb] = interference(antenna.connected_ues[ue], rb, self._antennas)
-                        #print antenna.i[ue][rb]
-                        isum += antenna.i[ue][rb]
-                x1 += antenna.user_data_rate[ue]
-                x2 += math.pow(antenna.user_data_rate[ue], 2)
-            data_rate += antenna.data_rate
-            consumption += antenna.power_consumition
-            ee = 0
-            meet_user += antenna.users_meet
+            if antenna.a != None:
+                antenna.obtain_energy_efficient()
+                for ue in range(0, len(antenna.connected_ues)):
+                    for rb in range(0, antenna.TOTAL_RBS):
+                        if antenna.a[ue][rb] != 0:
+                            tused_rbs += 1
+                            antenna.i[ue][rb] = interference(antenna.connected_ues[ue], rb, self._antennas)
+                            #print antenna.i[ue][rb]
+                            isum += antenna.i[ue][rb]
+                    x1 += antenna.user_data_rate[ue]
+                    x2 += math.pow(antenna.user_data_rate[ue], 2)
+                data_rate += antenna.data_rate
+                consumption += antenna.power_consumition
+                ee = 0
+                meet_user += antenna.users_meet
             
         x1 = math.pow(x1, 2)
         fairness = x1/(x2*n)
 
-        print isum, "/", tused_rbs
-        print solucao, 'TotalRbs:', str(Antenna.TOTAL_RBS*len(self.antennas)), "UsedRbs:", str(tused_rbs), "Imean", str(isum/tused_rbs), "MU:",  str(meet_user)
+       #print isum, "/", tused_rbs
+        #print iteracao, "-", solucao, 'TotalRbs:', str(Antenna.TOTAL_RBS*len(self.antennas)), "UsedRbs:", str(tused_rbs), "Imean", str(isum/tused_rbs), "MU:",  str(meet_user)
 
         f = open('resumo.csv','a')
         f.write(solucao+','+solucao+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self.users))+'],'+str(len(self.bs_list))+','+str(len(self.rrh_list))+','+str(len(self.users))+','+str(repeticao)+','+str(iteracao)+','+str(data_rate)+','+str(consumption)+','+str(ee)+','+str(meet_user)+','+str(fairness)+','+str(time.time()-init)+'\n')

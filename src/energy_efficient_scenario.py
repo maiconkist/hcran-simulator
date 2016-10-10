@@ -16,6 +16,7 @@ from antenna_peng import *
 from antenna_mc import *
 from ra_mc import *
 from ra_greedy import *
+from ra_fixedpower import *
 from multiprocessing import Process, Queue
 from joblib import Parallel, delayed
 import csv
@@ -40,7 +41,8 @@ DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
 MAX_DELTA               = 1
-MAX_REP                 = 20
+MAX_REP                 = 1
+MAX_I                   = 100
 
 ###############################
 #Test Variables
@@ -217,9 +219,9 @@ def clusters(grids, macrocells_center, n_clusters, n_antennas):
 
 
     for t in range(0, len(p_antennas)):
-        rrh1 = AntennaMc(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[0])
+        rrh1 = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[0])
         grids[0].add_antenna(rrh1)
-        rrh2 = AntennaPeng(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[1])
+        rrh2 = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[1])
         grids[1].add_antenna(rrh2)
         rrh3 = Antenna(t+1, Antenna.RRH_ID, p_antennas[t], None, grids[2])
         grids[2].add_antenna(rrh3)
@@ -258,11 +260,11 @@ def macrocells(grids, radius, n_bs, macrocells_center):
     #Center Antenna
     macrocells_center.append((grids[0].size[0]/2, grids[0].size[1]/2))
     #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
-    #bs = AntennaPeng(0, Antenna.BS_ID, center, None, grid)
-    bs1 = AntennaMc(0, Antenna.BS_ID, center, None, grids[0])
+    #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
+    bs1 = Antenna(0, Antenna.BS_ID, center, None, grids[0])
     grids[0].add_antenna(bs1)
 
-    bs2 = AntennaPeng(0, Antenna.BS_ID, center, None, grids[1])
+    bs2 = Antenna(0, Antenna.BS_ID, center, None, grids[1])
     grids[1].add_antenna(bs2)
 
     bs3 = Antenna(0, Antenna.BS_ID, center, None, grids[2])
@@ -278,10 +280,10 @@ def macrocells(grids, radius, n_bs, macrocells_center):
         p_antenna[1] = center[1] + radius * math.sin(v*math.pi/6)
         macrocells_center.append(p_antenna)
 
-        bs1 = AntennaMc(i+1, Antenna.BS_ID, p_antenna, None, grids[0])
+        bs1 = Antenna(i+1, Antenna.BS_ID, p_antenna, None, grids[0])
         grids[0].add_antenna(bs1)
 
-        bs2 = AntennaPeng(i+1, Antenna.BS_ID, p_antenna, None, grids[1])
+        bs2 = Antenna(i+1, Antenna.BS_ID, p_antenna, None, grids[1])
         grids[1].add_antenna(bs2)
 
         bs3 = Antenna(i+1, Antenna.BS_ID, p_antenna, None, grids[2])
@@ -334,7 +336,7 @@ def build_fixed_scenario():
     bs = Antenna(0, Antenna.BS_ID, center, None, grid)
     grid.add_antenna(bs)
     #bs2 = AntennaMc(0, Antenna.BS_ID, center, None, grid)
-    bs2 = AntennaPeng(0, Antenna.BS_ID, center, None, grid2)
+    bs2 = Antenna(0, Antenna.BS_ID, center, None, grid2)
     grid2.add_antenna(bs2)
 
     #Cluster
@@ -347,7 +349,7 @@ def build_fixed_scenario():
     rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid)
     grid.add_antenna(rrh)
     #rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
-    rrh2 = AntennaPeng(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
+    rrh2 = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
     grid2.add_antenna(rrh2)
 
     #Users
@@ -363,10 +365,12 @@ def build_fixed_scenario():
     u2 = User(1, [1045, 1045], None, grid2, User.LOW_RATE_USER)
     grid2.add_user(u2)
 
+    do_fixedpower(1, grid2)
+
     do_greedy(1, grid2)
-    #util.plot_grid(grid2)
+
     do_mc(1, grid, 1, 1)
-    #util.plot_grid(grid)
+
     #do_peng(1, grid2)
 
     #associate_user_in_antennas(grid._user, grid._antennas)
@@ -418,7 +422,12 @@ def do_peng(rep, grid):
 def do_greedy(rep, grid):
     print "Starting scenario", rep, "with", len(grid.bs_list), "macros for Greedy!"
     greedy = Greedy(rep)
-    greedy.run(grid);
+    greedy.run(grid, MAX_I);
+
+def do_fixedpower(rep, grid):
+    print "Starting scenario", rep, "with", len(grid.bs_list), "macros for Fixed Power!"
+    fixedpower = FixedPower(rep)
+    fixedpower.run(grid, MAX_I);
 
 def processInput(nbs, nues):
     bbu = 2 
@@ -436,7 +445,9 @@ def processInput(nbs, nues):
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
     
-    do_greedy(rep, grids[2])
+    do_greedy(rep, grids[1])
+
+    #do_fixedpower(rep, grids[2])
 
     do_mc(rep, grids[0], 1, 1)
     

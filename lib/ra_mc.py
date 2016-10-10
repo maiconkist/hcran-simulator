@@ -69,13 +69,14 @@ class Mc(object):
         self.NPARTICLES   = 100
         self.HISTORY_LENGTH = 0.02
         self.RESETRATE    = 0.01
-        self.L_BETA       = 2
+        self.L_BETA       = 1
         self.L_LAMBDA     = 20
-        #self.L_UPSILON    = 0.1
+        self.L_UPSILON    = 1
         #self.E_DEALTA     = 0.2
         self.TX_FLUTUATION = 0.2
         self.lambda_particles = None
         self.beta_particles = None 
+        self.upsilon_particles = None 
         self.i_particles = None
         self.a_particles = None
         self.p_particles = None
@@ -87,6 +88,7 @@ class Mc(object):
         self.consumption_antenna_particles = None
         self.consumption_particles = None
         self.datarate_constraint_particles = None
+        self.fairness_constraint_particles = None
         self.history_i_particles = None
         self.history_a_particles = None
         self.history_p_particles = None
@@ -94,9 +96,11 @@ class Mc(object):
         self.history_datarate_particles  = None
         self.history_consumption_particles  = None
         self.history_datarate_constraint_particles = None
+        self.history_fairness_constraint_particles = None
         self.history_datarate_user_particles = None
         self.history_lambda_particles = None
         self.history_beta_particles = None
+        self.history_upsilon_particles = None
         
 
     def select_best_particle(self, grid):
@@ -106,9 +110,9 @@ class Mc(object):
         for p in range(0, self.NPARTICLES):
             if best_particle == -1:
                 best_particle = p
-                best_ee = self.L_BETA * ((self.datarate_particles[p][0]*2000/1048576) / self.consumption_particles[p][0]) + (self.L_LAMBDA) * (self.datarate_constraint_particles[p][0]*2000/1048576)
+                best_ee = self.L_BETA * ((self.datarate_particles[p][0]*2000/1048576) / self.consumption_particles[p][0]) + (self.L_LAMBDA) * (self.datarate_constraint_particles[p][0]*2000/1048576) + (self.L_UPSILON) * (self.fairness_constraint_particles[p][0])
             else:
-                ee = self.L_BETA * ((self.datarate_particles[p][0]*2000/1048576) / self.consumption_particles[p][0]) + (self.L_LAMBDA) * (self.datarate_constraint_particles[p][0]*2000/1048576)
+                ee = self.L_BETA * ((self.datarate_particles[p][0]*2000/1048576) / self.consumption_particles[p][0]) + (self.L_LAMBDA) * (self.datarate_constraint_particles[p][0]*2000/1048576) + (self.L_UPSILON) * (self.fairness_constraint_particles[p][0])
                 if ee > best_ee:
                     best_ee = ee
                     best_particle = p
@@ -131,41 +135,55 @@ class Mc(object):
         ee_std_particle = numpy.zeros(shape=(self.NPARTICLES))
         constrait_sum = 0
         constrait_std_particle = numpy.zeros(shape=(self.NPARTICLES))
+        fairness_sum = 0
+        fairness_std_particle = numpy.zeros(shape=(self.NPARTICLES))
         for p in range(0, self.NPARTICLES):
             ee_sum += ee_list[p][0]
             constrait_sum += self.datarate_constraint_particles[p][0]
             constrait_std_particle[p] = numpy.std(self.datarate_constraint_particles[p])
             ee_std_particle[p] = numpy.std(ee_list[p])
+            fairness_sum += self.fairness_constraint_particles[p][0]
+            fairness_std_particle[p] = numpy.std(self.fairness_constraint_particles[p])
 
         mean_ee = ee_sum/self.NPARTICLES
         mean_constrait = constrait_sum/self.NPARTICLES
+        mean_fairness = fairness_sum/self.NPARTICLES
 
         for p in range(0, self.NPARTICLES):
-            self.beta_particles[p] = math.pow(10, 3*(ee_list[p][0]-mean_ee + (ee_std_particle[p]/ee_list[p][0]) - 0.001))
-            self.lambda_particles[p] = math.pow(1.0005, (self.datarate_constraint_particles[p][0]-mean_constrait + (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) - 0.001))
+            #self.beta_particles[p] = math.pow(10, 3*(ee_list[p][0]-mean_ee + (ee_std_particle[p]/ee_list[p][0]) - 0.001))
+            #self.lambda_particles[p] = math.pow(1.0005, (self.datarate_constraint_particles[p][0]-mean_constrait + (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) - 0.001))
 
-            # print "EE = ", ee_list[p][0]-mean_ee
-            # if ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) < 0.001:
-            #     self.beta_particles[p] = self.beta_particles[p] * 0.5
-            #     #print "Relaxa"
-            # elif ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.001:
-            #     self.beta_particles[p] = self.beta_particles[p] * 1.5
-            #     #print "Prende 1"
-            # elif ee_list[p][0] > mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.001:
-            #     self.beta_particles[p] = self.beta_particles[p] * 2
-            #     #print "Prende 2"
+            #print "EE = ", ee_list[p][0]-mean_ee
+            if ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) < 0.001:
+                self.beta_particles[p] = self.beta_particles[p] * 0.5
+                #print "Relaxa"
+            elif ee_list[p][0] < mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.001:
+                self.beta_particles[p] = self.beta_particles[p] * 1.5
+                #print "Prende 1"
+            elif ee_list[p][0] > mean_ee and (ee_std_particle[p]/ee_list[p][0]) > 0.001:
+                self.beta_particles[p] = self.beta_particles[p] * 2
+                #print "Prende 2"
  
-            # print "Data = ", self.datarate_constraint_particles[p][0]-mean_constrait
-            # if self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) < 0.001:
-            #     self.lambda_particles[p] = self.lambda_particles[p] * 0.9
-            #     #print "Relaxa"
-            # elif self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.001:
-            #     self.lambda_particles[p] = self.lambda_particles[p] * 10
-            #     #print "Prende 1"
-            # elif self.datarate_constraint_particles[p][0] > mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.001:
-            #     self.lambda_particles[p] = self.lambda_particles[p] * 20
-            #     #print "Prende 2"
+            #print "Data = ", self.datarate_constraint_particles[p][0]-mean_constrait
+            if self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) < 0.001:
+                self.lambda_particles[p] = self.lambda_particles[p] * 0.9
+                #print "Relaxa"
+            elif self.datarate_constraint_particles[p][0] < mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.001:
+                self.lambda_particles[p] = self.lambda_particles[p] * 10
+                #print "Prende 1"
+            elif self.datarate_constraint_particles[p][0] > mean_constrait and (constrait_std_particle[p]/self.datarate_constraint_particles[p][0]) > 0.001:
+                self.lambda_particles[p] = self.lambda_particles[p] * 20
+                #print "Prende 2"
 
+
+            if self.fairness_constraint_particles[p][0] < mean_fairness and (fairness_std_particle[p]/self.fairness_constraint_particles[p][0]) < 0.001:
+                self.upsilon_particles[p] = self.upsilon_particles[p] * 0.5
+                #print "Relaxa"
+            elif self.fairness_constraint_particles[p][0] < mean_fairness and (fairness_std_particle[p]/self.fairness_constraint_particles[p][0]) > 0.001:
+                self.upsilon_particles[p] = self.upsilon_particles[p] * 1.5
+                #print "Prende 1"
+            elif self.fairness_constraint_particles[p][0] > mean_fairness and (fairness_std_particle[p]/self.fairness_constraint_particles[p][0]) > 0.001:
+                self.upsilon_particles[p] = self.upsilon_particles[p] * 2
         #TODO: Fazer os ifs
 
         #self.L_BETA = self.L_BETA * 1.2
@@ -253,7 +271,7 @@ class Mc(object):
             return 1
 
         r = x1/(x2*n)
-        return r
+        return r - 1
 
     def ee_calc(self, particle, grid):
         self.data_rate_and_power_consumption_calc(particle, grid)
@@ -272,9 +290,10 @@ class Mc(object):
                 else:
                     self.meet_user_particles[particle] += 1
 
-        self.datarate_constraint_particles[particle] = self.list_append(self.datarate_constraint_particles[particle], datarate_constraint_particle)            
+        self.datarate_constraint_particles[particle] = self.list_append(self.datarate_constraint_particles[particle], datarate_constraint_particle) 
+        self.fairness_constraint_particles[particle] = self.list_append(self.fairness_constraint_particles[particle], self.fairness_calc(particle,grid))            
         #print "EE = ", (self.datarate_particles[particle]*2000/1048576), "/", self.consumption_particles[particle], "+", (self.datarate_constraint_particles[particle]*2000/1048576)
-        particle_ee = self.L_BETA * ((self.datarate_particles[particle][0]*2000/1048576) / self.consumption_particles[particle][0]) + (self.L_LAMBDA) * (self.datarate_constraint_particles[particle][0]*2000/1048576)
+        particle_ee = self.L_BETA * ((self.datarate_particles[particle][0]*2000/1048576) / self.consumption_particles[particle][0]) + (self.L_LAMBDA) * (self.datarate_constraint_particles[particle][0]*2000/1048576) + (self.L_UPSILON) * (self.fairness_constraint_particles[particle][0])
 
         #print "EE = ", particle_ee
         return particle_ee
@@ -304,16 +323,17 @@ class Mc(object):
 
 
     def define_best_particles(self, grid):
-        for i in range(0, int(self.NPARTICLES*self.HISTORY_LENGTH)):
-            self.history_datarate_constraint_particles[i][0] = 0
-            for ue in range(0, len(grid.users)):
-                if grid.users[ue]._type == User.HIGH_RATE_USER: 
-                    if(self.history_datarate_user_particles[i, ue]  < Antenna.NR):
-                        self.history_datarate_constraint_particles[i][0] += (self.history_datarate_user_particles[i, ue] - Antenna.NR)
-                else:
-                    if(self.history_datarate_user_particles[i, ue]  < Antenna.NER):
-                        self.history_datarate_constraint_particles[i][0] += (self.history_datarate_user_particles[i, ue] - Antenna.NER)
-            self.history_ee_particles[i,0] = self.L_BETA * ((self.history_datarate_particles[i][0]*2000/1048576) / self.history_consumption_particles[i][0]) + (self.L_LAMBDA) *(self.history_datarate_constraint_particles[i][0]*2000/1048576)#RECALCULAR A EE BASEADO NO NOVO BETA
+        # DESCOMENTAR EM CASO DE ATUALIZACAO DINAMICA DOS L_BETA OU L_LAMBDA
+        # for i in range(0, int(self.NPARTICLES*self.HISTORY_LENGTH)):
+        #     self.history_datarate_constraint_particles[i][0] = 0
+        #     for ue in range(0, len(grid.users)):
+        #         if grid.users[ue]._type == User.HIGH_RATE_USER: 
+        #             if(self.history_datarate_user_particles[i, ue]  < Antenna.NR):
+        #                 self.history_datarate_constraint_particles[i][0] += (self.history_datarate_user_particles[i, ue] - Antenna.NR)
+        #         else:
+        #             if(self.history_datarate_user_particles[i, ue]  < Antenna.NER):
+        #                 self.history_datarate_constraint_particles[i][0] += (self.history_datarate_user_particles[i, ue] - Antenna.NER)
+        #     self.history_ee_particles[i,0] = self.L_BETA * ((self.history_datarate_particles[i][0]*2000/1048576) / self.history_consumption_particles[i][0]) + (self.L_LAMBDA) *(self.history_datarate_constraint_particles[i][0]*2000/1048576)#RECALCULAR A EE BASEADO NO NOVO BETA
         
         for i in range(0, int(self.NPARTICLES*self.HISTORY_LENGTH)):
             index = numpy.argmin(self.ee_particles[:,0])
@@ -326,9 +346,11 @@ class Mc(object):
                 self.datarate_particles[index]  = self.history_datarate_particles[i].copy()
                 self.consumption_particles[index]  = self.history_consumption_particles[i].copy()
                 self.datarate_constraint_particles[index] = self.history_datarate_constraint_particles[i].copy()
+                self.fairness_constraint_particles[index] = self.history_fairness_constraint_particles[i].copy()
                 self.datarate_user_particles[index] = self.history_datarate_user_particles[i].copy()
                 self.lambda_particles[index] = self.history_lambda_particles[i].copy()
                 self.beta_particles[index] = self.history_beta_particles[i].copy()
+                self.upsilon_particles[index] = self.history_upsilon_particles[i].copy()
 
 
 
@@ -345,9 +367,11 @@ class Mc(object):
             self.history_datarate_particles[i]  = self.datarate_particles[part].copy()
             self.history_consumption_particles[i]  = self.consumption_particles[part].copy()
             self.history_datarate_constraint_particles[i] = self.datarate_constraint_particles[part].copy()
+            self.history_fairness_constraint_particles[i] = self.fairness_constraint_particles[part].copy()
             self.history_datarate_user_particles[i] = self.datarate_user_particles[part].copy()
             self.history_lambda_particles[i] = self.lambda_particles[part].copy()
             self.history_beta_particles[i] = self.beta_particles[part].copy()
+            self.history_upsilon_particles[i] = self.upsilon_particles[part].copy()
 
 
     def is_stable(self, lst):
@@ -423,7 +447,7 @@ class Mc(object):
         #return 0
 
 
-    def exp_ee_calc(self, particle, new_ee, old_ee, new_constraint, old_constraint):
+    def exp_ee_calc(self, particle, new_ee, old_ee, new_constraint, old_constraint, new_fairness, old_fairness):
         #prob = math.exp(self.L_BETA*(new_ee-old_ee))
         prob1 = 1
         prob2 = 1
@@ -442,7 +466,13 @@ class Mc(object):
             prob2 = math.exp((self.lambda_particles[particle])*delta_constraint)
             #prob2 = math.exp((self.L_BETA)*delta_constraint)
 
-        prob = prob1 * prob2
+        if new_fairness >= old_fairness:
+            prob3 = 1
+        else:
+            delta_fairness = new_fairness-old_fairness
+            prob3 = math.exp((self.upsilon_particles[particle])*delta_fairness)
+
+        prob = prob1 * prob2 * prob3
         #print prob, prob1, prob2
         return prob
 
@@ -456,11 +486,14 @@ class Mc(object):
         self.history_datarate_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH),10))
         self.history_consumption_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH),10))
         self.history_datarate_constraint_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH),10))
+        self.history_fairness_constraint_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH),10))
         self.history_datarate_user_particles = numpy.zeros(shape=(int(self.NPARTICLES*self.HISTORY_LENGTH), len(grid.users)))
         self.lambda_particles = numpy.ones(shape=(self.NPARTICLES))
+        self.upsilon_particles = numpy.ones(shape=(self.NPARTICLES))
         self.beta_particles = numpy.ones(shape=(self.NPARTICLES))
         self.history_lambda_particles = numpy.ones(shape=(self.NPARTICLES))
         self.history_beta_particles = numpy.ones(shape=(self.NPARTICLES))
+        self.history_upsilon_particles = numpy.ones(shape=(self.NPARTICLES))
         self.i_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.a_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
         self.p_particles = numpy.zeros(shape=(self.NPARTICLES,len(grid.users), Antenna.TOTAL_RBS*len(grid.antennas)))
@@ -473,6 +506,7 @@ class Mc(object):
         self.datarate_particles = numpy.zeros(shape=(self.NPARTICLES,10))
         self.consumption_particles = numpy.zeros(shape=(self.NPARTICLES,10))
         self.datarate_constraint_particles = numpy.zeros(shape=(self.NPARTICLES,10))
+        self.fairness_constraint_particles = numpy.zeros(shape=(self.NPARTICLES,10))
  
         grid = associate_user_in_antennas(grid)
 
@@ -530,6 +564,7 @@ class Mc(object):
 
                     current_ee_particle = self.ee_particles[p,0]
                     current_datarate_constraint = self.datarate_constraint_particles[p][0]
+                    current_fairness_constraint = self.fairness_constraint_particles[p][0]
                     for stepezinho in range(0, Antenna.TOTAL_RBS*len(grid.antennas)):
                         random_arb = random.randint(0, Antenna.TOTAL_RBS*len(grid.antennas)-1)
                         antenna_index = int(random_arb/Antenna.TOTAL_RBS)
@@ -568,7 +603,8 @@ class Mc(object):
                         
                         new_ee_particle = self.ee_calc(p, grid)
                         new_datarate_constraint = self.datarate_constraint_particles[p][0]
-                        prob = self.exp_ee_calc(p, new_ee_particle, current_ee_particle, new_datarate_constraint, current_datarate_constraint)
+                        new_fairness_constraint = self.fairness_constraint_particles[p][0]
+                        prob = self.exp_ee_calc(p, new_ee_particle, current_ee_particle, new_datarate_constraint, current_datarate_constraint, new_fairness_constraint, current_fairness_constraint)
                         rand = random.uniform(0.0, 1.0)
                         if rand <= prob:
                             current_ee_particle = new_ee_particle
