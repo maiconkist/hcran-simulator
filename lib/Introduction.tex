@@ -1,0 +1,120 @@
+\section{Introduction}
+
+
+% attracting significative interest to solutions that enhance the overall Spectral Efficiency (SE) of the HetNet.
+%In this context, an optimal RB allocation algorithm is essential to maximize the Spectral Efficiency (SE).
+%However, the increase of the radios transmissions by the deployment of LPN and the individual RBs assignment per UE turn the efficient management of the radio resources a complex challenge to determine the optimal UE association with LPN/HPN and RBs assigning with minimal interference. 
+
+
+%The efficient radio resource allocation can be done mainly focusing on the exploration of the radio spectrum or to reduce the energy consumption of the network \cite{Xiong2011}.
+
+%The Heterogeneous Networks (HetNets) deploys Low-Power Nodes (LPN) (\eg small cells) at the coverage area of High-Power Nodes (HPN) (\eg macro base stations) to increase the Spectral Efficiency (SE) and Energy Efficiency (EE) due to shorter distances between users and antennas \cite{Chen2011}.
+%LPNs and HPNs much likely will utilize the Orthogonal Frequency Division Multiple Access (OFDMA) modulation scheme due to its better spectrum utilization and interference resiliency.
+%Arguably, in OFDMA the transmission capacity of an user equipment (UE) is directly related with the Resource Blocks (RBs) allocated to him \cite{Xiong2011}.
+%However, the severe inter-tier interference among dense LPNs and inter-tier interference between LPNs and HPNs are challenging deployments of HetNets with significative gains in SE and EE.
+
+%Enhancing the SE in HetNets encompasses optimizations in the association between UE and LPN/HPN \cite{Xiong2012} with the optimal RBs allocation \cite{Xiong2012}.
+%Similarly, enhancing EE encompasses optimizations in LPN/HPN transmission power and dynamicaly select LPNs that can be turned off \cite{Shi2014}.
+%Regardless of the already high computational complexity of such optimizations, the forecasts for mobile networks beyond 2020 point that HetNets must increase the coverage area in 10 times and provide connectivity to 100 times more UEs, making the global network optimization infeasible due the size of the scenario \cite{Andrews2014}.
+
+% considering the scale of the small cells.
+
+
+The dense deployment of small cells was proposed in the last few years as a solution to the challenges for the next generation of cellular network. For beyond 2020, the cellular network will need to raise the coverage area in 10 times and support the growth to a 100 times of the users equipment (UE) in correlation with the current cellular network.
+Due to the dense deployment of small cells, in theory, high bit rates can be provided to the UE in short distances and with low cost deployment.
+However, the implement of small cells can raise the energy cost of the network infrastructure through the massive deployment of new radio equipments. The massive insertion of new radio transmissions also brings a larger spectral interference between the small cells.
+To minimize the energy cost and the spectral interference due to the dense deployment of small cells, the orchestration of the radio resources should be investigated considering the scalar growth of UEs and small cells. 
+% (infrastructure and spectrum)
+
+The energy cost and the spectral interference can be orchestrated through the allocation algorithm, which controls the transmission power of the radios and manages the spectral partitions, respectively.
+Despite that, the transmission power control and the interference management are a complex assignment, due to the impact on the service provided to the different UEs.
+For example, low transmission powers can leave the UE without connection, as well as high transmission powers can improve the network interference. Both cases can decrease the service quality provided to the users.
+Considering the dense deployment expectatives for the network beyond 2020, an algorithmic solution to control the transmission power, manage the spectral partitions, and ensure the service to the users is essential. 
+
+%This solution should be able to allocate infrastructure and spectrum resources considering the scalability proportions demands by expected growth of the cellular network. 
+
+
+To address the resource allocation problem, existing solutions separate the problem into stages.
+The authors of \cite{Xiong2012} consider a two-stage algorithm.
+In the first stage, the spectrum assignment is optimized with the objective of reducing inter and intra-tier interference. In the second stage, the transmission power of the cell tower was adjusted so that the minimum traffic demand of users is satisfied.
+Similarly, the authors of \cite{Amin2013} consider a two-stage algorithm in a heterogeneous network with small cells, considering the existence of a centralized controller.
+The centralized controller can manage the resources of several different autonomous wireless systems considering the knowledge of all network system. 
+Recently the resource allocation problem has also been investigated for the cloud-based network architectures.
+%The problem was studied first in cloud radio access networks (C-RAN) architecture, adding the possibility to dynamically switch on/off the small cells according to the traffic demand, through the use of reconfigurable radios \cite{Tang2014} \cite{Lim2014}.
+The problem was studied first in cloud radio access networks (C-RAN) architecture and subsequently, has also been investigated in a heterogeneous cloud radio access networks (H-CRAN) \cite{Peng2015}. 
+% by separating data and control plans 
+%However, the problem is studied and modeled for single cells or a little scenario without proper scalability planning to implement the solution in a realistic situation.
+%For example, the evaluation proposed in \cite{Peng2015} consider only one HPN and one LPN as an H-CRAN scenario, and in \cite{Shi2014}  the proposed scenario consider 10 HPN/LPN and just 15 UEs in an area of 2000 square meters.
+However, the problem is studied and modeled for single cells or a little scenario without proper cooperation between cells to rearrange the resources. \red{In this sense, the current proposed solutions are not able to releasing part of the allocated spectrum or assigning higher power for fair users, decreasing the local cell efficiency, if necessary to increase the overall efficiency}. 
+Therefore, although the proposed solutions represent a step forward, such proposals are unable to achieve high efficiency for the dense deployment and high connectivity expected for wireless networks beyond 2020.
+
+
+\red {In this paper, we propose a to solve the resource allocation problem in a global model to maximal the eficicity on the use of the resources, considering growth of UEs and small cells expected for the next generation.
+Our study is primarily based on Energy Eficiencity (EE) objetive function and "sujeita as" constraints of Cloud-based netowrks. As the problem model has hard complexy, we propose a Monte Carlo based solution to find the best eficient allocation of the resources in a iteractive way.  
+Our solution is evaluated in a scenario defined by the 3rd Generation Partnership Project (3GPP). 
+The results show that the global model allocation are able to better explore the radio resources when compared to the local and distribuited solutions. 
+} 
+
+%The present results also show that the proposed solution can minimize the resources reallocations caused by the high variability of a realistic scenario.
+
+% In this paper, we propose a scalable solution to solve the resource allocation problem in H-CRANs considering the growth of the cellular system expected for the next generation.
+% Our solution is primarily based on recursively applying a three-stage optimization algorithm: (i) clusterization, (ii) energy-optimization, and (iii) spectral-optimization.
+% In the clusterization step, UEs and small cells are clustered and considered as a single UE or cell in the following steps.
+% In the energy-optimization step, clusters of UEs are assigned to clusters of cells with minimal small cells utilization and minimum power transmission.
+% In the spectral-optimization step, spectral partitions are distributed among the clusters defined previously to avoid the interference in the spectral allocation process.
+% In all mentioned levels the minimal traffic restrictions are applied to guarantee the minimum demand requested by the UEs. 
+% Our solution is evaluated in a scenario defined by the 3rd Generation Partnership Project (3GPP). 
+% The results show that the global model allocation reduce the energy cost of the network and reduce the overall process time of the problem when compared to the state-of-art solutions. 
+% The present results also show that the proposed solution can minimize the resources reallocations caused by the high variability of a realistic scenario.
+
+
+The remainder of this paper is organized as follows. The problem under study is presented in Section 2 while our proposed solution is studied in Section 3. Our solution is then evaluated in Section 4. Finally, conclusions remarks and future works are presented in Section 5.
+
+
+%The adopted scenario also consider the high variability of the mobile network especially given by the UE mobility.
+%to maximize the EE it is necessary control the transmission power of the LPN and HPN and further dynamic select and turn off unnecessary LPNs.
+
+%the forecasts for the next generation of mobile network \ie fifth-generation (5G), point to a growth of 10 to 100 times at the coverage area and at the number of devices on the mobile network, making the global network optimization infeasible due the largeness of the scenario.
+% Delimitar cada paragrafo (Pricipalmente separar trabalhos relacionados)
+
+
+%The correlation between SE and EE was investigated in many resources and it is common sense that in most cases the relationship between them is inversely proportional \ie it is not possible to increase both EE and SE simultaneously.
+% the user and HPN/LPN association with transmission power control and RBs assignment.
+
+%Energy efficiency (EE) \ie the transmission bits capacity per watts, is one of the greatest currents and future challenges.
+%The exponential growth of energy consumption of cellular networks has become a critical economic and environmental issue \cite{Lim2014}.
+%The high energy consumption is causing severe environmental impact due the emissions of CO2 and also increase the operating costs of the mobile operators \cite{Xiong2012}.
+%Some surveys carried out in 2007 have reported that the communication technology sector was responsible for roughly 2\% of global CO2 emission, and recent forecasts suggest that the energy consumption of mobile networks could almost triple until 2020 \cite{Liu2014}.
+%As previously investigated, the radio access network (RAN) of mobile networks is identified as responsible for more than 70\% of total energy consumed by mobile operators \cite{Chen2011}.
+
+%Transmission conditions and strategies, such as the transmission distance and antenna transmission power have a significant impact on the Energy Efficiency (EE) of the RAN \ie the energy waste by the base stations (BS) to provide the connection with the user equipment (UEs) \cite{Chen2011}.
+%Some research efforts were performed to increase the EE through the transmission power control and dynamic switch on/off BSs according to the traffic demand of UEs on the mobile network \cite{Shi2014}.
+%Furthermore, in orthogonal frequency division multiple access (OFDMA) systems the association of UEs and BSs also needs to consider the resource blocks (RBs) assignment to guarantee the minimum quality of service (QoS) requested by UEs \cite{Lim2014}.
+%Due the multiple existing resources to optimize the BS and UE association with transmission power control and RBs assignment, the existing solutions in the literature separate the problem into stages.
+
+%The radio resource allocation problem was initially addressed by dividing it into two phases: first, the RBs assignment is optimized and then the transmission power is minimized with QoS restrictions in a homogeneous network with a single BS \cite{Xiong2012}.
+%Subsequently, the same problem was also solved and optimized to balance QoS and EE in a heterogeneous network considering the existence of a centralized controller \cite{Amin2013}.
+%In sequence, the problem was investigated in cloud radio access networks (C-RAN) architecture considering the possibility to dynamically switch on/off the BSs according to the traffic demand. \cite{Tang2014} \cite{Lim2014}.
+%Recently the problem has also been investigated by separating data and control user plans in a heterogeneous cloud radio access networks (H-CRAN) \cite{Peng2015}.
+%However, the proposed solutions of the radio resources allocation problem are investigated and evaluated in a single cell or a small scenario without proper scalability planning to implement the solution in a realistic scenario.
+
+
+%To reduce the energy waste and increase the EE some radio resource allocation algorithms are proposed to control the power transmission and dynamically switch on/off BSs \cite{Shi2014} \cite{Peng2015}.
+%At the same time, the association of UEs with BSs and resource blocks (RBs), in orthogonal frequency division multiple access (OFDMA) systems, assignment was optimized to guarantee the minimum quality of service (QoS) requested by UEs \cite{Lim2014} \cite{Peng2015}.
+
+
+
+%Many research efforts proposed algorithms that find the best transmission power of Base Stations (BS) given that all User Equipments (UEs) must have a minimum SE satisfied \cite{Shi2014}.
+%Other research explored optimization algorithms that select the best association of UEs with BSs and the Resource Blocks (RBs) assignment to guarantee minimum Quality-of-Service (QoS) requirements \cite{Lim2014} \cite{Peng2015}. 
+
+%To deal with this problem, research efforts proposed algorithms ... [6]. Other research venue explored .. [1][7] 
+
+%, \ie nondeterministic polynomial time
+
+
+
+
+
+%The main contribution of this paper is to provide and evaluate a scalable solution to implement the proposed mentioned solutions in a realistic scenario defined by the 3rd generation partnership project (3GPP) also considering the high variability of the scenario especially given by the UE mobility. The proposed solution is primarily based on clustering UEs and BSs and sequentially application of solutions at different levels. In the first level, the UEs and Small-BSs are clustered by density per square meter and then dealt with as a single UE or a single BS. Then on the second level, an EE maximization solution is applied to the clusters to connect UEs and BSs with minimal BSs utilization and minimum power transmission. In the third level, the clusters of small-BSs, with their respective associated groups of UEs are separately opened and reclustered recursively, until the possible UEs have been individually associated with a small-BSs and all surpluses small-BS are turned off. Next, in the fourth level, the UEs that do not have a connection with small-BSs have held its association with the macro-BSs optimized by a power control minimization solution. Finally, on the fifth level, a third solution is adopted to distribute the RBs in an efficiently way between the associations defined to maximize the SE and avoid the interference in the RBs allocation process. In all mentioned levels the QoS restrictions are applied to guarantee the minimum demand requested by the UEs. Simulations results show that the proposed approach improves the EE of the network and reduce the overall complexity of the problem as compared to individual and not scalable proposes.
+
+%to implement the proposed mentioned solutions

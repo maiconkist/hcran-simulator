@@ -1,35 +1,52 @@
-#########################################################
-# @file     energy_efficient_n_bs.py
-# @author   Gustavo de Araujo
-# @date     17 Mar 2016
-#########################################################
-
-from ra_peng import *
-from antenna import *
+import math
+import scipy.spatial
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from antenna import * 
 from user import *
 from bbu import *
 from controller import *
 from util import *
 from grid import *
 from cluster import *
-from antenna_peng import *
 from antenna_mc import *
-from ra_mc import *
-from ra_greedy import *
-from ra_fixedpower import *
-from multiprocessing import Process, Queue
-from joblib import Parallel, delayed
-import csv
 import random
 import numpy
 import scipy
-import multiprocessing
-import gc
+
+#VARIABLE CONSTANTS
+RRH_RADIUS  = 50
+BS_RADIUS   = 710
+POWER_BS    = 46
+POWER_RRH   = 23
+TARGET_SINR = 14.5 #[db]
+HPN_T_GAIN  = 5                       #transmission antenna gain
+LPN_T_GAIN  = 17                       #transmission antenna gain
+UE_R_GAIN   = 0                       #receptor antenna gain
+WAVELENTH   = (3/19.0)                #Comprimento de onda considerando uma frequencia de 1.9 GHz
+TOTAL_RBS   = 100
+CHANNEL     = 20000000 #Hz
+RB_BIT_CAPACITY = 406.499955591 #bits/0.5 ms with a SINR  18.8
+B0          = 180000
+N0          = -17
+DRN         = 1         
+HRN         = 1         
+DMN         = 450
+HMN         = 1
+PRC         = 6.8
+PBH         = 3.85
+PMC         = 10
+PMBH        = 3.85
+EFF         = 2
+MEFF        = 4 
+NR          = 5242880/2000 #High Rate Constraint
+NER         = 5242880/2000 #Low Rate Constraint
+#NR          = 1000000/2000 #High Rate Constraint
+#NER         = 1000000/2000 #Low Rate Constraint
 
 ###############################
 #Grid definitions
 ###############################
-DEBUG                   = True
 DMACROMACRO             = 500
 DMACROUE                = 30    #35
 DMACROCLUSTER           = 90    #105
@@ -40,29 +57,10 @@ DROPRADIUS_SC           = 500
 DROPRADIUS_SC_CLUSTER   = 70
 DROPRADIUS_UE_CLUSTER   = 70
 DSMALLUE                = 5
-MAX_DELTA               = 1
-MAX_REP                 = 1
-MAX_I                   = 50
-
-###############################
-#Test Variables
-###############################
-n_sites      = 7
-n_ues        = 60
-uesindoor    = 0.2
-uessmallcell = 2/3
 
 ###################################
 #Functions
 ###################################
-
-DEBUG = True
-
-def debug_printf(string):
-    if DEBUG:
-        print(string)
-
-########################################
 def build_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
     grid1 = Grid(size=(2000,2000))
     grid2 = Grid(size=(2000,2000))
@@ -97,7 +95,96 @@ def build_scenario(n_bbu, n_bs, n_clusters, n_rrh, n_ue):
 
     users(grids, macrocells_center, n_bs, n_clusters, n_ue)
 
+    associate_user_in_antennas(grids[0].users, grids[0].antennas)
+    associate_user_in_antennas(grids[1].users, grids[1].antennas)
+    associate_user_in_antennas(grids[2].users, grids[2].antennas)
+
     return grids
+
+##########################
+def associate_user_in_antennas(ues, antennas):
+    #######################
+    # Associa usuario na 
+    # antena mais proxima
+    ########################
+    for ue in ues:
+        distance = 10000
+        near = antennas[0]
+        for antenna in antennas:
+            d = dist( ue, antenna ) 
+            if antenna.type == Antenna.BS_ID:
+                if d < distance and d<BS_RADIUS:
+                    distance = d
+                    near = antenna
+            elif antenna.type == Antenna.RRH_ID:
+                if d < distance and  d<RRH_RADIUS:
+                    distance = d
+                    near = antenna
+
+        ue._connected_antenna = near
+        near.connected_ues.append(ue)
+
+##########################
+
+def build_fixed_scenario():
+    grid = Grid(size=(2000,2000))
+    grid2 = Grid(size=(2000,2000))
+    macrocells_center = list()
+
+    cntrl = Controller(grid, control_network=False)
+    grid.add_controller(cntrl)
+    cntrl2 = Controller(grid2, control_network=False)
+    grid2.add_controller(cntrl2)
+
+    n_bbu = 2
+    for i in range(n_bbu):
+        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid)
+        grid.add_bbu(bbu)
+        bbu2 = BBU(pos=grid.random_pos(), controller=cntrl2, grid=grid2)
+        grid2.add_bbu(bbu2)
+
+    #Center Antenna
+    center = numpy.array([grid.size[0]/2, grid.size[1]/2])
+    #BS
+    bs = Antenna(0, Antenna.BS_ID, center, None, grid)
+    grid.add_antenna(bs)
+    #bs2 = AntennaMc(0, Antenna.BS_ID, center, None, grid)
+    bs2 = Antenna(0, Antenna.BS_ID, center, None, grid2)
+    grid2.add_antenna(bs2)
+
+    #Cluster
+    cluster = Cluster(1, [1050, 1050], grid)
+    grid.add_cluster(cluster)
+    cluster2 = Cluster(1, [1050, 1050], grid2)
+    grid2.add_cluster(cluster2)
+
+    #RRHs
+    rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid)
+    grid.add_antenna(rrh)
+    #rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
+    rrh2 = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
+    grid2.add_antenna(rrh2)
+
+    #Users
+    u1 = User(0, [880, 880], None, grid, User.HIGH_RATE_USER)
+    grid.add_user(u1)
+
+    u2 = User(1, [1045, 1045], None, grid, User.LOW_RATE_USER)
+    grid.add_user(u2)
+
+    u1 = User(0, [880, 880], None, grid2, User.HIGH_RATE_USER)
+    grid2.add_user(u1)
+
+    u2 = User(1, [1045, 1045], None, grid2, User.LOW_RATE_USER)
+    grid2.add_user(u2)
+
+#    do_fixedpower(1, grid2)
+
+ #   do_greedy(1, grid2)
+
+  #  do_mc(1, grid, 1, 1)
+
+    return grid
 
 ##########################
 def users(grids, macrocells_center, n_bs, n_clusters, n_ue):
@@ -259,8 +346,7 @@ def macrocells(grids, radius, n_bs, macrocells_center):
 
     #Center Antenna
     macrocells_center.append((grids[0].size[0]/2, grids[0].size[1]/2))
-    #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
-    #bs = Antenna(0, Antenna.BS_ID, center, None, grid)
+
     bs1 = Antenna(0, Antenna.BS_ID, center, None, grids[0])
     grids[0].add_antenna(bs1)
 
@@ -290,209 +376,4 @@ def macrocells(grids, radius, n_bs, macrocells_center):
         grids[2].add_antenna(bs3)
 
 ########################################
-
-def associate_user_in_antennas(ues, antennas):
-    #######################
-    # Associa usuario na 
-    # antena mais proxima
-    ########################
-    for ue in ues:
-        distance = 10000
-        near = antennas[0]
-        for antenna in antennas:
-            d = dist( ue, antenna ) 
-            if antenna.type == Antenna.BS_ID:
-                if d < distance and d<Antenna.BS_RADIUS:
-                    distance = d
-                    near = antenna
-            elif antenna.type == Antenna.RRH_ID:
-                if d < distance and  d<Antenna.RRH_RADIUS:
-                    distance = d
-                    near = antenna
-
-        ue._connected_antenna = near
-        near.connected_ues.append(ue)  
-
-def build_fixed_scenario():
-    grid = Grid(size=(2000,2000))
-    grid2 = Grid(size=(2000,2000))
-    macrocells_center = list()
-
-    cntrl = Controller(grid, control_network=False)
-    grid.add_controller(cntrl)
-    cntrl2 = Controller(grid2, control_network=False)
-    grid2.add_controller(cntrl2)
-
-    n_bbu = 2
-    for i in range(n_bbu):
-        bbu = BBU(pos=grid.random_pos(), controller=cntrl, grid=grid)
-        grid.add_bbu(bbu)
-        bbu2 = BBU(pos=grid.random_pos(), controller=cntrl2, grid=grid2)
-        grid2.add_bbu(bbu2)
-
-    #Center Antenna
-    center = numpy.array([grid.size[0]/2, grid.size[1]/2])
-    #BS
-    bs = Antenna(0, Antenna.BS_ID, center, None, grid)
-    grid.add_antenna(bs)
-    #bs2 = AntennaMc(0, Antenna.BS_ID, center, None, grid)
-    bs2 = Antenna(0, Antenna.BS_ID, center, None, grid2)
-    grid2.add_antenna(bs2)
-
-    #Cluster
-    cluster = Cluster(1, [1050, 1050], grid)
-    grid.add_cluster(cluster)
-    cluster2 = Cluster(1, [1050, 1050], grid2)
-    grid2.add_cluster(cluster2)
-
-    #RRHs
-    rrh = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid)
-    grid.add_antenna(rrh)
-    #rrh = AntennaMc(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
-    rrh2 = Antenna(1, Antenna.RRH_ID, [1040, 1040], None, grid2)
-    grid2.add_antenna(rrh2)
-
-    #Users
-    u1 = User(0, [880, 880], None, grid, User.HIGH_RATE_USER)
-    grid.add_user(u1)
-
-    u2 = User(1, [1045, 1045], None, grid, User.LOW_RATE_USER)
-    grid.add_user(u2)
-
-    u1 = User(0, [880, 880], None, grid2, User.HIGH_RATE_USER)
-    grid2.add_user(u1)
-
-    u2 = User(1, [1045, 1045], None, grid2, User.LOW_RATE_USER)
-    grid2.add_user(u2)
-
-    do_fixedpower(1, grid2)
-
-    do_greedy(1, grid2)
-
-    do_mc(1, grid, 1, 1)
-
-    #do_peng(1, grid2)
-
-    #associate_user_in_antennas(grid._user, grid._antennas)
-
-    #bs.init_mc(grid._antennas, len(grid._antennas))
-    #rrh.init_mc(grid._antennas, len(grid._antennas))
-
-
-    #bs.a = numpy.ones(shape=(len(bs.connected_ues), bs.TOTAL_RBS))
-
-    #rrh.a = numpy.ones(shape=(len(rrh.connected_ues), rrh.TOTAL_RBS))
-
-
-
-    #bs.obtain_interference_and_power(grid)
-    #rrh.obtain_interference_and_power(grid)
-    
-    #debug_printf("----- BS -----")
-    #debug_printf("Alloc = \n" + str(numpy.matrix(bs.a)))
-    #debug_printf("Power = \n" + str(numpy.matrix(bs.p)))
-    #debug_printf("Noise = \n" + str(numpy.matrix(bs.i)))
-    #bs.obtain_energy_efficient()
-    #debug_printf("Data Rate = \n" + str(bs.data_rate))
-    #debug_printf("Power Consumition = \n" + str(bs.power_consumition))
-    #debug_printf("Energy Efficient = \n" + str(bs.energy_efficient))
-
-
-    #debug_printf("----- RRH -----")
-    #debug_printf("Alloc = \n" + str(numpy.matrix(rrh.a)))
-    #debug_printf("Power = \n" + str(numpy.matrix(rrh.p)))
-    #debug_printf("Noise = \n" + str(numpy.matrix(rrh.i)))
-    #rrh.obtain_energy_efficient()
-    #debug_printf("Data Rate = \n" + str(rrh.data_rate))
-    #debug_printf("Power Consumition = \n" + str(rrh.power_consumition))
-    #debug_printf("Energy Efficient = \n" + str(rrh.energy_efficient))
-
-    return grid
-
-def do_mc(rep, grid, delta1, delta2):
-    print "Starting scenario", rep, "with", len(grid.bs_list), "macros for MC!"
-    mc = Mc(rep, delta1, delta2)
-    mc.run(grid);
-
-def do_peng(rep, grid):
-    print "Starting scenario", rep, "with", len(grid.bs_list), "macros for Peng!"
-    peng = Peng(rep)
-    peng.run(grid);
-
-def do_greedy(rep, grid):
-    print "Starting scenario", rep, "with", len(grid.bs_list), "macros for Greedy!"
-    greedy = Greedy(rep)
-    greedy.run(grid, MAX_I);
-
-def do_fixedpower(rep, grid):
-    print "Starting scenario", rep, "with", len(grid.bs_list), "macros for Fixed Power!"
-    fixedpower = FixedPower(rep)
-    fixedpower.run(grid, MAX_I);
-
-def processInput(nbs, nues):
-    bbu = 2 
-    cluster = 1
-    rrh = 4
-    ue = nues
-
-    #delta1 = (nbs%MAX_DELTA)+1
-    #delta2 = 10 - (nbs%MAX_DELTA)
-    bs = 1
-    rep = (nbs%MAX_REP)+1
-
-    #print "Starting scenario", rep, "with", bs, "macros for MC!"
-
-    grids = build_scenario(bbu, bs, cluster, rrh, ue) 
-    #util.plot_grid(grids[0])
-    
-    do_greedy(rep, grids[1])
-
-    #do_fixedpower(rep, grids[2])
-
-    do_mc(rep, grids[0], 1, 1)
-    
-#    do_peng(rep, grids[1])
-
-    
-    
-    del grids
-    gc.collect()
-    
-
-########################################
-# Main
-########################################
-if __name__ == "__main__":
-
-    # Trying to create a new file or open one
-    f = open('resumo.csv','w')
-    f.write('ALG,CASE,M,S,U,R,I,C,P,EE,MU,FS,T\n')
-    f.close()
-
-
-    #Parametros do Bob
-    #bs = 2
-    #bbu = 2 
-    #cluster = 2
-    #rrh = 3
-    #ue = 10
-
-    #grids = build_scenario(bbu, bs, cluster, rrh, ue)
-    #util.plot_grid(grids[0])
-
-#    ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
-    #ues = [15]
-    ues = [60]
-    #processInput(1, 60)
-
-    num_cores = multiprocessing.cpu_count()
-    for nues in ues:
-        Parallel(n_jobs=num_cores)(delayed(processInput)(nbs, nues) for nbs in range(0, MAX_REP))
-
-    #grid = build_fixed_scenario()
-    #util.plot_grid(grid)
-    
-            
-
-
 

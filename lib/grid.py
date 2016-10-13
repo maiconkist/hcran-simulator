@@ -5,6 +5,8 @@ import re
 import time
 import math
 from antenna import Antenna
+import Calculations as calc
+import threeGPP
 
 class Log():
     """
@@ -88,9 +90,13 @@ class Grid(object):
         self._initialized = 0
         self._matrix_resources = None #Matrix [Antenna, RB] = id user
         self._bandwidth = 20
-        self.TOTAL_RBS = 100            
-        self.TOTAL_RBS_RRH = 20
-        self.TOTAL_RBS_BS = 80
+
+        self.energy_efficient          = None 
+        self.consumition               = None 
+        self.datarate                  = None
+        self.fairness                  = None
+        self.meet_users                = None
+        self.history_weighted_efficient= None
 
 
     def set_bandwidth(self, band):
@@ -231,39 +237,39 @@ class Grid(object):
             cntrl.update()
 
 
-    def write_to_resume(self, solucao, repeticao, iteracao, init):
-        tused_rbs = 0
-        isum = 0
-        data_rate = 0
-        consumption = 0
-        ee = 0
-        meet_user = 0
-        x1 = 0
-        x2 = 0
-        n = len(self.users)
-        for antenna in self._antennas:
-            if antenna.a != None:
-                antenna.obtain_energy_efficient()
-                for ue in range(0, len(antenna.connected_ues)):
-                    for rb in range(0, antenna.TOTAL_RBS):
-                        if antenna.a[ue][rb] != 0:
-                            tused_rbs += 1
-                            antenna.i[ue][rb] = interference(antenna.connected_ues[ue], rb, self._antennas)
-                            #print antenna.i[ue][rb]
-                            isum += antenna.i[ue][rb]
-                    x1 += antenna.user_data_rate[ue]
-                    x2 += math.pow(antenna.user_data_rate[ue], 2)
-                data_rate += antenna.data_rate
-                consumption += antenna.power_consumition
-                ee = 0
-                meet_user += antenna.users_meet
-            
-        x1 = math.pow(x1, 2)
-        fairness = x1/(x2*n)
+    def write_to_resume(self, solucao, repeticao, iteracao, init, particle = 0):
+        calc.griddatarate(self, particle)
+        calc.gridconsumption(self, particle)
+        calc.gridefficiency(self, particle)
+        calc.gridfairness(self, particle)
 
-       #print isum, "/", tused_rbs
-        #print iteracao, "-", solucao, 'TotalRbs:', str(Antenna.TOTAL_RBS*len(self.antennas)), "UsedRbs:", str(tused_rbs), "Imean", str(isum/tused_rbs), "MU:",  str(meet_user)
+        isum = 0
+        asum = 0
+        for antenna in self.antennas:
+            isum += numpy.sum(antenna.i[particle])
+            asum += numpy.sum(antenna.a[particle])
+
+
+        #print isum, "/", tused_rbs
+        print iteracao, "-", solucao, 'TotalRbs:', str(threeGPP.TOTAL_RBS*len(self.antennas)), "UsedRBS:", str(asum), "IMean:", str(isum/asum), "MU:", str(self.meet_users[particle]), "Fairness:", str(self.fairness[particle])
 
         f = open('resumo.csv','a')
-        f.write(solucao+','+solucao+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self.users))+'],'+str(len(self.bs_list))+','+str(len(self.rrh_list))+','+str(len(self.users))+','+str(repeticao)+','+str(iteracao)+','+str(data_rate)+','+str(consumption)+','+str(ee)+','+str(meet_user)+','+str(fairness)+','+str(time.time()-init)+'\n')
+        f.write(solucao+','+solucao+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self.users))+'],'+str(len(self.bs_list))+','+str(len(self.rrh_list))+','+str(len(self.users))+','+str(repeticao)+','+str(iteracao)+','+str(self.datarate[particle])+','+str(self.consumition[particle])+','+str(self.energy_efficient[particle])+','+str(self.meet_users[particle])+','+str(self.fairness[particle])+','+str(time.time()-init)+'\n')
         f.close()
+
+    def backup_best_particles(self, weighted_efficient, history_legth):
+        for history in range(0, history_legth):
+            particle = numpy.argmax(weighted_efficient[:])
+            self.history_weighted_efficient[history] = weighted_efficient[particle]
+            weighted_efficient[particle] = -999999999999999999999999
+            for antenna in self.antennas: 
+                antenna.backup_best_particle(particle, history)
+                
+
+    def restore_best_particles(self, weighted_efficient, history_legth):
+        for history in range(0, history_legth):
+            particle = numpy.argmin(weighted_efficient[:])
+            if (weighted_efficient[particle] < self.history_weighted_efficient[history]):
+                weighted_efficient[particle] = 999999999999999999999999
+                for antenna in self.antennas: 
+                    antenna.restore_best_particle(particle, history)

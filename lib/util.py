@@ -5,8 +5,19 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from antenna import * 
 
+DEBUG = True
 
+def debug_printf(string):
+    if DEBUG:
+        print(string)
 
+def wait():
+    raw_input("Press Enter to continue.")
+
+def list_append(lista, value):
+    lista = np.delete(lista, -1)
+    lista = np.append(value, lista)
+    return lista
 
 def shannon(B, SINR):
     #Shannon Calc
@@ -18,38 +29,17 @@ def friis(Pt, Gt, Gr, R, Wl):
    Pr = Pt + Gt + Gr + (20 * math.log(Wl/(4*math.pi*R), 10))
    return Pr
 
-def p_friis(antenna, I, N, Gt, Gr, R, Wl):
-    Pt = antenna.TARGET_SINR + (abs(I)+N) - Gt - Gr - (20 * math.log(Wl/(4*math.pi*R), 10))
-    if (antenna.type == antenna.BS_ID):
-        if Pt > antenna.POWER_BS:
-            Pt = antenna.POWER_BS
-    else:
-        if Pt > antenna.POWER_RRH:
-            Pt = antenna.POWER_RRH
-    return Pt
-
 def sinr(P, I, N):
     sinr = P - (abs(I)+N) #dB
     return abs(sinr)
-
-def interference(ue, rb, antennas):
-    interference = 0
-    for ant in antennas:
-        if (ue._connected_antenna._id != ant._id and ant.a != None and sum(ant.a[:,rb])>0):
-            index = numpy.argmax(ant.a[:,rb])
-            R  =  dist(ue, ant)
-            interference += abs(friis(ant.p[index,rb], ant.T_GAIN, ant.R_GAIN, R, ant.WAVELENTH))#dBm
-    return interference
-
 
 def noise():
     #fixed noise in dBm
     return -90 
 
 def dBm_to_watts(dBm):
-    watts = dBm * 0.001258925
+    watts = abs(dBm * 0.001258925)
     return watts
-
 
 def nearest(p1, p_list, idx=0):
     """ Return the closest point to p1 in p_list
@@ -74,12 +64,6 @@ def dist(p1, p2):
     else:
         return dist
 
-#calculate bandwidth required to meet user
-def calculate_necessary_rbs( user, antenna ):
-    bits = snr_to_bit(snr( user, antenna ))
-    rbs = int( math.ceil( math.ceil( ( user.demand/1000 )/( 12*7*bits ) )/2.0 ) ) #demanda em ms
-    #print rbs
-    return rbs
 
 #def friis( user, antenna ):
 #    WAVE_LENGTH = (3/19.0)  #Comprimento de onda considerando uma frequencia de 1.9 GHz
@@ -91,53 +75,12 @@ def calculate_necessary_rbs( user, antenna ):
 #    return power_received
 
 
-def snr(ue, antenna, power_interfering=0):
-    """
-    """
-    NOISE_FLOOR = -90.0
-
-    # 23 is the antenna tx power in dbm
-    power = received_power(ue, antenna)
-    if power_interfering != 0:
-        #print  'SNR:', dbm_to_mw(power), dbm_to_mw(NOISE_FLOOR), dbm_to_mw(power_interfering)
-        snr = dbm_to_mw(power) / (dbm_to_mw(NOISE_FLOOR) + dbm_to_mw(power_interfering))
-    else:
-        #print  'SNR:', dbm_to_mw(power), dbm_to_mw(NOISE_FLOOR), '0'
-        snr = dbm_to_mw(power) / (dbm_to_mw(NOISE_FLOOR))
-
-    return snr
-
 def sum_coll(lista, x):
     soma = 0
     for y in range (0,len(lista)):
         soma += lista[y][x]
 
     return soma
-
-def received_power(ue, antenna, rb):
-    CENTER_FREQ = 700  # in MHz
-    #total_power = sum_coll(antenna.p, rb)
-    #TODO: Informar frequencia do RB
-    power = total_power - (20 * math.log(dist(ue, antenna),10) + 20*math.log(CENTER_FREQ,10) - 27.55)
-    if power < 0:
-        power = 0
-    return power
-
-    return power
-
-
-def peng_power_interfering(ue, rb, antennas):
-    interference = 0
-    #path_loss = 0
-    for ant in antennas:
-        if (ue._connected_antenna._id != ant._id):
-            interference += received_power(ue, ant, rb)
-            #print "Interference: ", received_power(ue, ant, rb)
-        else:
-            interference += path_loss(ue, ant)
-            #print "Path loss: ", path_loss(ue, ant)
-
-    return interference
 
 def path_loss(ue, antenna):
     result = 0
@@ -147,29 +90,8 @@ def path_loss(ue, antenna):
         result = 31.5 + 35.0 * math.log(dist(ue, antenna))
     return result
 
-#0,0000063095734448
-def power_interfering(ue, rb, grid):
-    """
-    """
-    #print 'POWER INTERFERING'
-    power_interfering = 0
-    lista = []  #monta uma lista de pares: antena, usuario para o RB
-    for rrh in range( 0, len( ue.antenna_in_range ) ):
-        #print 'P1', ue.antenna_in_range[rrh]._id, ue._connected_antenna._id
-        if grid.matrix_resources[ue.antenna_in_range[rrh]._id][rb] != None and ue.antenna_in_range[rrh]._id != ue._connected_antenna._id:
-            power_interfering += dbm_to_mw(received_power(ue, ue.antenna_in_range[rrh]))
-            #print 'P2', power_interfering, ue.antenna_in_range[rrh]._id
-
-    if power_interfering > 0:
-        return mw_to_dbm(power_interfering) + path_loss(d)
-
-    else:
-        return 0
-
-
 def dbm_to_mw(dbm):
     return 1.0 * math.pow(10,dbm/10.0)
-
 
 def mw_to_dbm(mw):
     return 10.0 * math.log(mw,10)
@@ -252,97 +174,6 @@ def build_traffic_user( user_list ):
         ue.request = data[ pos ]
         total_request_ue += ue.request
 
-def calculate_energy_efficient( antenna_list, vazao_total ):
-    # cl = data rate C(a, p)
-    # pl = power consumption C(a, p)
-    # L = numero de RRHs
-    # cm = data rate Cm(a, p)
-    # pm = power consumption Cm(a, p)
-    # M = numero de RRHs
-    cl = 0
-    pl = 0
-    #L = len(grid.rrh_list)
-    cm = 0
-    pm = 0
-    #for i, rrh in enumerate( grid.antenna_list ):
-    #    if rrh.type == Grid.BS_ID:
-    #    for t in range(1, T):
-    #            for m in range(1, M):
-    #        pm += 0
-        #    elif rrh.type == Grid.RRH_ID:
-    #        for t in range(1, T):
-    #            for m in range(1, M):
-    #        pl += 0
-    #M = len(grid.bs_list)
-    #return (L * cl + M * cm)/(L * pl + M * pm)
-    eff = 2
-    Meff = 4
-    PcM = 10
-    PMbh = 0.2
-    PcR = 0.1
-    Pbh = 0.2
-    for i, rrh in enumerate( antenna_list ):
-        if rrh.type == rrh.BS_ID:
-            pm += rrh.power + PcM +PMbh
-        elif rrh.type == rrh.RRH_ID:
-            pl += rrh.power + PcR + Pbh
-    if pm == 0:
-        pm = 1
-
-    if pl == 0:
-        pl = 1
-
-    pm = Meff * pm
-    pl = eff * pl
-
-    if vazao_total == 0:
-        vazao_total = 1
-
-    return vazao_total/ 20000000 / pm + pl
-
-###################
-# \brief Calculate de total power consumition
-#
-#
-def p_peng(antennas):
-    result = 0
-    PcR = 0.1
-    Pbh = 0.2
-    eff = 2
-    p = 0
-
-    for i, rrh in enumerate (antennas):
-        power_consumition += rrh.power + PcR + Pbh
-
-    result = eff * p
-
-
-def calculate_worst_energy_efficient( antenna_list, vazao_total ):
-    cl = 0
-    pl = 0
-
-    cm = 0
-    pm = 0
-
-    eff = 2
-    Meff = 4
-    PcM = 10
-    PMbh = 0.2
-    PcR = 0.1
-    Pbh = 0.2
-    for i, rrh in enumerate( antenna_list ):
-        if rrh.type == rrh.BS_ID:
-            power_received = 0
-            pm += power + PcM +PMbh
-        elif rrh.type == rrh.RRH_ID:
-            distance = 50
-            #Friis
-            power_received = 0
-            pl += power + PcR + Pbh
-    pm = Meff * pm
-    pl = eff * pl
-
-    return vazao_total/ 20000000 / pm + pl
 
 def plot_grid( grid ):
 

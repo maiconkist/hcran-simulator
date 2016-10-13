@@ -3,62 +3,12 @@ import numpy
 import util
 import controller
 from user import *
-
-
-DEBUG = True
-
-def debug_printf(string):
-    if DEBUG:
-        print(string)
-
-def wait():
-    raw_input("Press Enter to continue.")
+import threeGPP
 
 class Antenna(object):
     BS_ID       = 1
     RRH_ID      = 2
-    RRH_RADIUS  = 50
-    BS_RADIUS   = 710
     
-    #VARIABLE CONSTANTS
-    POWER_BS    = 46
-    POWER_RRH   = 23
-    TARGET_SINR = 14.5 #[db]
-    T_GAIN      = 0                       #transmission antenna gain
-    R_GAIN      = 0                       #receptor antenna gain
-    WAVELENTH   = (3/19.0)                #Comprimento de onda considerando uma frequencia de 1.9 GHz
-    TOTAL_RBS   = 100
-    CHANNEL     = 20000000 #Hz
-    RB_BIT_CAPACITY = 406.499955591 #bits/0.5 ms with a SINR  18.8
-
-    ################
-    # Peng and MC constants
-    B0           = 180000
-    N0           = -17
-    DRN          = 1         
-    HRN          = 1         
-    DMN          = 450
-    HMN          = 1
-    Pmax         = 23        
-    PMmax        = 46
-    PRmax        = 1
-    PRC          = 6.8
-    PBH          = 3.85
-    PMC          = 10
-    PMBH         = 3.85
-    EFF          = 2
-    MEFF         = 4
-    DR2M         = 125       
-    HR2M         = 1 
-    NR           = 5242880/2000 #High Rate Constraint
-    NER          = 5242880/2000 #Low Rate Constraint
-    #NR           = 1000000/2000 #High Rate Constraint
-    #NER          = 1000000/2000 #Low Rate Constraint
-    E_BETA       = 0.1
-    E_LAMBDA     = 0.1
-    E_UPSILON    = 0.1
-    D_0          = 1
-
     # 1.4  channel has 6  RBs in frequency domain
     # 3.0  channel has 15 RBs in frequency domain
     # 5.0  channel has 25 RBs in frequency domain
@@ -80,11 +30,11 @@ class Antenna(object):
         self.type = type
         #BS or RRH
         if type == self.BS_ID:
-            self.power = self.POWER_BS
-            self._radius = self.BS_RADIUS
+            self.power = threeGPP.POWER_BS
+            self._radius = threeGPP.BS_RADIUS
         else:
-            self.power = self.POWER_RRH
-            self._radius = self.RRH_RADIUS
+            self.power = threeGPP.POWER_RRH
+            self._radius = threeGPP.RRH_RADIUS
         self.antenna_in_range = []
         self.user_in_range = []
         # List of connected UEs
@@ -109,19 +59,34 @@ class Antenna(object):
         self._bbu = util.nearest(self, grid.bbus)
         self._bbu.register(self)
         
-        #################################
-        #Used by peng and monte carlo
-        #################################
-        self.i                          = None
-        self.a                          = None
-        self.p                          = None
-        self.h                          = None
-        self.energy_efficient           = 0 
-        self.power_consumition          = 0 
-        self.data_rate                  = 0
-        self.user_data_rate             = None
-        self.users_meet                 = 0
-        self.p_energy_efficient        = []
+        self.i                         = None
+        self.a                         = None
+        self.p                         = None
+        self.energy_efficient          = None 
+        self.consumition               = None 
+        self.datarate                  = None
+        self.user_datarate             = None
+        self.fairness                  = None
+        self.meet_users                = None
+        self.datarate_constraint       = None
+        self.backup_i                  = None
+        self.backup_a                  = None
+        self.backup_p                  = None
+        self.backup_energy_efficient   = None 
+        self.backup_consumition        = None 
+        self.backup_datarate           = None
+        self.backup_user_datarate      = None
+        self.backup_fairness           = None
+        self.backup_meet_users         = None
+        self.history_i                 = None
+        self.history_a                 = None
+        self.history_p                 = None
+        self.history_energy_efficient  = None
+        self.history_consumition       = None
+        self.history_datarate          = None
+        self.history_user_datarate     = None
+        self.history_fairness          = None
+        self.history_meet_users        = None
 
     @property
     def x( self ):
@@ -282,8 +247,6 @@ class Antenna(object):
                               ", nconnected_ues:" + str(len(self.connected_ues))
             )
 
-
-
         # Notify BBU that this antenna requires more bandwidth
         self._ch_bw_required = self.rb_demand_to_ch_bw(total_rb_demand)
         if self._ch_bw_required != self._cur_ch_bw:
@@ -302,7 +265,7 @@ class Antenna(object):
         else: 
             debug_printf("\n\n----- RRH -----")
         debug_printf("Users (Meet/Total) = "+ str(self.users_meet) +"/"+str(len(self.connected_ues)))
-        debug_printf("Resource Block (Used/Total) = " + str(self.a.sum()) +"/"+ str(self.TOTAL_RBS))
+        debug_printf("Resource Block (Used/Total) = " + str(self.a.sum()) +"/"+ str(threeGPP.TOTAL_RBS))
         debug_printf("Data Rate = " + str(self.data_rate))
         debug_printf("Power Consumition = " + str(self.power_consumition))
         debug_printf("Energy Efficient = " + str(self.energy_efficient))
@@ -325,92 +288,48 @@ class Antenna(object):
     def get_users_in_coverage( self ):
         return self.user_in_range
 
-    ##########################
-    # Calculo da EE
-    #########################
-    def obtain_data_rate(self):
-        #Shannon Calc
-        self.data_rate = 0
-        self.users_meet = 0
-        if self.connected_ues != None:
-            self.user_data_rate = numpy.zeros(shape=(len(self.connected_ues)))
-            for n in range(0, len(self.connected_ues)):
-                for k in range (0, self.TOTAL_RBS):
-                    data_bits = (util.shannon((self.a[n][k] * Antenna.B0), util.sinr(self.p[n][k], self.i[n][k], util.noise())))/2000#Qnt de bits em 0,5 ms
-                    self.data_rate += data_bits
-                    self.user_data_rate[n] += data_bits
-                if self.connected_ues[n]._type == User.HIGH_RATE_USER:
-                    if self.user_data_rate[n] >= Antenna.NR:
-                        self.users_meet += 1
-                else:
-                    if self.user_data_rate[n] >= Antenna.NER:
-                        self.users_meet += 1
+    def backup_state(self, particle = 0):
+        self.backup_i[particle]                = self.i[particle].copy()
+        self.backup_a[particle]                = self.a[particle].copy()
+        self.backup_p[particle]                = self.p[particle].copy()
+        self.backup_energy_efficient[particle] = self.energy_efficient[particle].copy() 
+        self.backup_consumition[particle]      = self.consumition[particle].copy() 
+        self.backup_datarate[particle]         = self.datarate[particle].copy()
+        self.backup_user_datarate[particle]    = self.user_datarate[particle].copy()
+        self.backup_fairness[particle]         = self.fairness[particle].copy()
+        self.backup_meet_users[particle]       = self.meet_users[particle].copy()
 
-    
-    def obtain_power_consumition(self):
-        self.power_consumition = 0
-        result = 0
-        for n in range(0, len(self.connected_ues)):
-            for k in range(0, self.TOTAL_RBS):
-                result += util.dBm_to_watts(self.a[n][k] * self.p[n][k])   
-        if (self.type == Antenna.BS_ID):
-            self.power_consumition = (self.MEFF * result) + self.PMC + self.PMBH
-        else:
-            self.power_consumition = (self.EFF * result) + self.PMC + self.PMBH
-        #debug_printf('Consumo atual:' + self.power_consumition)
-        #if self.power_consumition > 14692223.0241:
-            #debug_printf("Data Rate = \n" + str(self.data_rate))
-            #debug_printf("Power Consumition = \n" + str(self.power_consumition))
-            #debug_printf("Energy Efficient = \n" + str(self.energy_efficient))
-            #debug_printf("Alloc = \n" + str(numpy.matrix(self.a)))
-            #debug_printf("Power = \n" + str(numpy.matrix(self.p)))
-            #debug_printf("Noise = \n" + str(numpy.matrix(self.i)))
-            #wait()
-                                
-    def obtain_energy_efficient(self):
-        self.obtain_data_rate()
-        self.obtain_power_consumition()
-        self.energy_efficient = self.data_rate/self.CHANNEL/self.power_consumition
-        #debug_printf("Data Rate = \n" + str(self.data_rate))
-        #debug_printf("Power Consumition = \n" + str(self.power_consumition))
-        #debug_printf("Energy Efficient = \n" + str(self.energy_efficient))
-        #debug_printf(numpy.matrix(self.energy_efficient))
-
-    ##########################
-    # Peng and MC Calcs
-    #########################
-    def list_antennas_in_antennas(self, antennas, nAnt):
-        for ant in antennas:
-            if ant._id != antennas[nAnt]._id:
-                antennas[nAnt]._others_ant.append(antennas[nAnt])
-
-            #ant.init_ee(grid.TOTAL_RBS, antennas[nAnt]._others_ant, i)  
-
-    def obtain_interference_and_power(self, grid):
-        for ue in range (0, len(self.connected_ues)):
-            for rb in range (0, self.TOTAL_RBS):
-                self.i[ue][rb] = util.interference(self.connected_ues[ue], rb, grid._antennas) #dBm
-                R  =  util.dist(self.connected_ues[ue], self)
-                self.p[ue][rb] = self.p_friis(self.i[ue][rb], self.noise(), self.T_GAIN, self.R_GAIN, R, self.WAVELENTH) #dBm
+    def restore_state(self, particle = 0):
+        self.i[particle]                = self.backup_i[particle].copy()
+        self.a[particle]                = self.backup_a[particle].copy()
+        self.p[particle]                = self.backup_p[particle].copy()
+        self.energy_efficient[particle] = self.backup_energy_efficient[particle].copy() 
+        self.consumition[particle]      = self.backup_consumition[particle].copy() 
+        self.datarate[particle]         = self.backup_datarate[particle].copy()
+        self.user_datarate[particle]    = self.backup_user_datarate[particle].copy()
+        self.fairness[particle]         = self.backup_fairness[particle].copy()
+        self.meet_users[particle]       = self.backup_meet_users[particle].copy()
 
 
+    def backup_best_particle(self, particle, history):
+        self.history_i[history]                = self.i[particle].copy()
+        self.history_a[history]                = self.a[particle].copy()
+        self.history_p[history]                = self.p[particle].copy()
+        self.history_energy_efficient[history] = self.energy_efficient[particle].copy() 
+        self.history_consumition[history]      = self.consumition[particle].copy() 
+        self.history_datarate[history]         = self.datarate[particle].copy()
+        self.history_user_datarate[history]    = self.user_datarate[particle].copy()
+        self.history_fairness[history]         = self.fairness[particle].copy()
+        self.history_meet_users[history]       = self.meet_users[particle].copy()
 
-    def demand_in_rbs(self, ue, ue_index):
-        demanda_bits = 0
-        if ue._type == User.HIGH_RATE_USER:
-            demanda_bits = self.NR
-        else:
-            demanda_bits = self.NER
-        if self.user_data_rate != None:
-            demanda_bits = demanda_bits - self.user_data_rate[ue_index]
-
-        if demanda_bits < 0:
-            demanda_bits = 1
-
-        r = int(math.ceil(demanda_bits/self.RB_BIT_CAPACITY))
-
-        if r < 1:
-            r = 1
-
-        return r
+    def restore_best_particle(self, particle, history):
+        self.i[particle]                = self.history_i[history].copy()
+        self.a[particle]                = self.history_a[history].copy()
+        self.p[particle]                = self.history_p[history].copy()
+        self.energy_efficient[particle] = self.history_energy_efficient[history].copy() 
+        self.consumition[particle]      = self.history_consumition[history].copy() 
+        self.datarate[particle]         = self.history_datarate[history].copy()
+        self.user_datarate[particle]    = self.history_user_datarate[history].copy()
+        self.fairness[particle]         = self.history_fairness[history].copy()
+        self.meet_users[particle]       = self.history_meet_users[history].copy()
 
