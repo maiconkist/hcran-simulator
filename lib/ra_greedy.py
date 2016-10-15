@@ -4,8 +4,11 @@ from util import *
 import math
 import csv
 
+from pymobility.models.mobility import random_waypoint
+
+
 class Greedy( object ):
-    
+
     def __init__( self ):
         self.antenna_list = []
         self.user_list = []
@@ -16,7 +19,6 @@ class Greedy( object ):
         ues = grid._user
         rrhs_used = []
 
-        
 
         for ue in ues:
         #print 'UE' + str(ue.id)
@@ -74,7 +76,7 @@ class Greedy( object ):
         sh_capacity = 0
         vazao_total = 0
 
-    #print '#### Associacao ####'
+        #print '#### Associacao ####'
 
         for ue in ues:
             if ue._connected_antenna != None:

@@ -5,11 +5,12 @@ from bbu import *
 from controller import *
 from util import *
 from grid import *
-import csv
 import random
 
-TOTAL_BBU  = [2]
-TOTAL_BS  = [1]                #quantidade de macro cells
+from pymobility.models.mobility import random_waypoint
+
+TOTAL_BBU = [2]
+TOTAL_BS = [1]                #quantidade de macro cells
 TOTAL_RRH = [305, 310, 315, 320, 325, 330, 335, 340, 345, 350, 355, 360, 365, 370, 375, 380, 385, 390, 395, 400, 405, 410, 415, 420, 425, 430, 435, 440, 445, 450, 455, 460, 465, 470, 475, 480, 485, 490, 495, 500, 505, 510, 515, 520, 525, 530, 535, 540, 545, 550, 555, 560, 565, 570, 575, 580, 585, 590, 595, 600]               #quantidade de femto cells
 TOTAL_UE  = [200]			#quantidade de usuarios
 REPETICOES = 1000
@@ -20,6 +21,20 @@ REPETICOES = 1000
 
 #quantidade de usuarios inserida a cada iteracao
 #ITERATIONS_UE = {1:1, 5:1, 10:2, 50:5, 100:10, 500:20, 1000:30, 5000:40, 10000:50}
+
+rw = None
+positions = []
+
+def random_waypoint_strategy(id):
+    global positions
+    if id == 0:
+        positions = next(rw)
+
+#    line.set_data(positions[:,0],positions[:,1])
+#    plt.draw()
+
+    return positions[id]
+
 
 # define posicao de BSs, RRHs e UEs no cenario, bem como seu tipo
 def build_scenario(n_bbu, total_bs, total_rrhs, total_ues ):
@@ -40,14 +55,14 @@ def build_scenario(n_bbu, total_bs, total_rrhs, total_ues ):
         grid.add_bbu(
             BBU(pos=grid.random_pos(), controller=cntrl, grid=grid)
         )
-    
-    for i in range( total_bs ):
+
+    for i in range(total_bs):
         #insert bs
         bs = Antenna( 0, Antenna.BS_ID, ( grid.size[0]/2, grid.size[1]/2 ), None, grid )
         grid.add_antenna( bs )
-        
+
     #insert rrh
-    for j in range( total_rrhs ):
+    for j in range(total_rrhs):
         #if j == 0:
         #    pos_x = 670
         #    pos_y = 400
@@ -56,37 +71,34 @@ def build_scenario(n_bbu, total_bs, total_rrhs, total_ues ):
         #    pos_y = 400
         pos_x = random.randint( 0, grid.size[0] - 1 )
         pos_y = random.randint( 0, grid.size[1] - 1 )
-            
         while grid.add_antenna( Antenna( j+1, Antenna.RRH_ID, ( pos_x, pos_y ), None, grid ) ) == 0:
             pos_x = random.randint( 0, grid.size[0] - 1 )
             pos_y = random.randint( 0, grid.size[1] - 1 )
-                
+
     #insert ue
-    for j in range( total_ues ):
-        pos_x = random.randint( 0, grid.size[0] - 1 )
-        pos_y = random.randint( 0, grid.size[1] - 1 )
+    global rw
+    global positions
+    rw = random_waypoint(total_ues, dimensions=grid.size, velocity=(1.0, 40.0), wt_max=10.0)
+    positions = next(rw)
+
+    for j in range(total_ues):
         #if j == 0:
         #    pos_x = 660
         #    pos_y = 400
         #else:
         #    pos_x = 690
         #    pos_y = 400
-        
-        while grid.add_user( User( j, ( pos_x, pos_y ), None, grid ) ) == 0:
-            pos_x = random.randint( 0, grid.size[0] - 1 )
-            pos_y = random.randint( 0, grid.size[1] - 1 )
-
-                
+        grid.add_user(User(id=j, pos=positions[j], moving_strategy=random_waypoint_strategy, grid=grid))
     return grid
 
-if __name__ == "__main__":          
+if __name__ == "__main__":
     guloso = Greedy()
-    
+
     f = open('resumo.csv','w')   # Trying to create a new file or open one
     f.write('TOTAL_BS,TOTAL_RRH,TOTAL_UE,USED_RRH,USER_NOT_MEET,EE,SE\n')
     f.close()
     for qtd_bbu in TOTAL_BBU:
-        for qtd_bs in TOTAL_BS:        
+        for qtd_bs in TOTAL_BS:
             for qtd_rrh in TOTAL_RRH:
                 for qtd_ue in TOTAL_UE:
                     for cenario in range( REPETICOES ): #conbinacoes
@@ -100,5 +112,9 @@ if __name__ == "__main__":
 		                #grid.print_antennas()
 		                #grid.print_users()
                         print qtd_rrh, cenario
-                        guloso.run( grid )
-		
+                        guloso.run(grid)
+
+                        # movimenta usuarios
+                        #
+                        for ue in grid._user:
+                            ue.move(1)
