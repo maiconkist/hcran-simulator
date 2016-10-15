@@ -154,9 +154,3 @@ class Greedy(object):
             ant.obtain_energy_efficient()
             grid.write_to_resume('GREEDY', self.repeticao, iteracao, init)
             iteracao += 1
-
-
-
-
-        
-

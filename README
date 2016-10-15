@@ -9,7 +9,7 @@ git submodule update
 - PATH configurations: - 
 
 ROOT=<project directory>
-export PATH=$ROOT/lib
+export PATH=$ROOT/lib:$ROOT/submodules/pymobility/src
 
 
 
