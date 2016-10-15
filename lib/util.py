@@ -2,6 +2,44 @@ import math
 import scipy.spatial
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from antenna import * 
+
+DEBUG = True
+
+def debug_printf(string):
+    if DEBUG:
+        print(string)
+
+def wait():
+    raw_input("Press Enter to continue.")
+
+def list_append(lista, value):
+    lista = np.delete(lista, -1)
+    lista = np.append(value, lista)
+    return lista
+
+def shannon(B, SINR):
+    #Shannon Calc
+    # B is in hertz
+    # the signal and noise_plus_interference powers S and N are measured in watts or volts
+    return B * math.log(1 + SINR, 2)
+
+def friis(Pt, Gt, Gr, R, Wl):
+   Pr = Pt + Gt + Gr + (20 * math.log(Wl/(4*math.pi*R), 10))
+   return Pr
+
+def sinr(P, I, N):
+    sinr = P - (abs(I)+N) #dB
+    return abs(sinr)
+
+def noise():
+    #fixed noise in dBm
+    return -90 
+
+def dBm_to_watts(dBm):
+    watts = abs(dBm * 0.001258925)
+    return watts
 
 def nearest(p1, p_list, idx=0):
     """ Return the closest point to p1 in p_list
@@ -26,66 +64,34 @@ def dist(p1, p2):
     else:
         return dist
 
-#calculate bandwidth required to meet user
-def calculate_necessary_rbs( user, antenna ):
-    bits = snr_to_bit(snr( user, antenna ))
-    rbs = int( math.ceil( math.ceil( ( user.demand/1000 )/( 12*7*bits ) )/2.0 ) ) #demanda em ms
-    #print rbs
-    return rbs
 
-def friis( user, antenna ):
-    WAVE_LENGTH = (3/19.0)  #Comprimento de onda considerando uma frequencia de 1.9 GHz
-    GAIN = 0.1              #Representa o ganho das antenas = -5 dB
-    distance = dist( user, antenna )
-    #Friis -> power transmnited in watts
-    power_received = ( math.pow( 10, ( antenna.power/10.0 ) ) * GAIN * math.pow( ( WAVE_LENGTH/(4 * math.pi * distance ) ), 2 ) )
-
-    return power_received
+#def friis( user, antenna ):
+#    WAVE_LENGTH = (3/19.0)  #Comprimento de onda considerando uma frequencia de 1.9 GHz
+#    GAIN = 0.1              #Representa o ganho das antenas = -5 dB
+#    distance = dist( user, antenna )
+#    #Friis -> power transmnited in watts
+#    power_received = ( math.pow( 10, ( antenna.power/10.0 ) ) * GAIN * math.pow( ( WAVE_LENGTH/(4 * math.pi * distance ) ), 2 ) )
+#
+#    return power_received
 
 
-def snr(ue, antenna, power_interfering=0):
-    """
-    """
-    NOISE_FLOOR = -90.0
+def sum_coll(lista, x):
+    soma = 0
+    for y in range (0,len(lista)):
+        soma += lista[y][x]
 
-    # 23 is the antenna tx power in dbm
-    power = received_power(ue, antenna)
-    if power_interfering != 0:
-        #print  'SNR:', dbm_to_mw(power), dbm_to_mw(NOISE_FLOOR), dbm_to_mw(power_interfering)
-        snr = dbm_to_mw(power) / (dbm_to_mw(NOISE_FLOOR) + dbm_to_mw(power_interfering))
+    return soma
+
+def path_loss(ue, antenna):
+    result = 0
+    if (antenna.type == antenna.BS_ID):
+        result = 31.5 + 40.0 * math.log(dist(ue, antenna))
     else:
-        #print  'SNR:', dbm_to_mw(power), dbm_to_mw(NOISE_FLOOR), '0'
-        snr = dbm_to_mw(power) / (dbm_to_mw(NOISE_FLOOR))
-
-    return snr
-
-def received_power(ue, antenna):
-    CENTER_FREQ = 700  # in MHz
-#TODO: Informar frequencia do RB
-    power = antenna.power - (20 * math.log(dist(ue, antenna),10) + 20*math.log(CENTER_FREQ,10) - 27.55)
-    return power
-#0,0000063095734448
-def power_interfering(ue, rb, grid):
-    """
-    """
-    #print 'POWER INTERFERING'
-    power_interfering = 0
-    lista = []  #monta uma lista de pares: antena, usuario para o RB
-    for rrh in range( 0, len( ue.antenna_in_range ) ):
-        #print 'P1', ue.antenna_in_range[rrh]._id, ue._connected_antenna._id
-        if grid.matrix_resources[ue.antenna_in_range[rrh]._id][rb] != None and ue.antenna_in_range[rrh]._id != ue._connected_antenna._id:
-            power_interfering += dbm_to_mw(received_power(ue, ue.antenna_in_range[rrh]))
-            #print 'P2', power_interfering, ue.antenna_in_range[rrh]._id
-
-    if power_interfering > 0:
-        return mw_to_dbm(power_interfering)
-    else:
-        return 0
-
+        result = 31.5 + 35.0 * math.log(dist(ue, antenna))
+    return result
 
 def dbm_to_mw(dbm):
     return 1.0 * math.pow(10,dbm/10.0)
-
 
 def mw_to_dbm(mw):
     return 10.0 * math.log(mw,10)
@@ -168,83 +174,6 @@ def build_traffic_user( user_list ):
         ue.request = data[ pos ]
         total_request_ue += ue.request
 
-def calculate_energy_efficient( antenna_list, vazao_total ):
-    # cl = data rate C(a, p)
-    # pl = power consumption C(a, p)
-    # L = numero de RRHs
-    # cm = data rate Cm(a, p)
-    # pm = power consumption Cm(a, p)
-    # M = numero de RRHs
-    cl = 0
-    pl = 0
-    #L = len(grid.rrh_list)
-    cm = 0
-    pm = 0
-    #for i, rrh in enumerate( grid.antenna_list ):
-    #    if rrh.type == Grid.BS_ID:
-    #    for t in range(1, T):
-    #            for m in range(1, M):
-    #        pm += 0
-        #    elif rrh.type == Grid.RRH_ID:
-    #        for t in range(1, T):
-    #            for m in range(1, M):
-    #        pl += 0
-    #M = len(grid.bs_list)
-    #return (L * cl + M * cm)/(L * pl + M * pm)
-    eff = 2
-    Meff = 4
-    PcM = 10
-    PMbh = 0.2
-    PcR = 0.1
-    Pbh = 0.2
-    for i, rrh in enumerate( antenna_list ):
-        if rrh.type == rrh.BS_ID:
-            pm += rrh.power + PcM +PMbh
-        elif rrh.type == rrh.RRH_ID:
-            pl += rrh.power + PcR + Pbh
-    if pm == 0:
-        pm = 1
-
-    if pl == 0:
-        pl = 1
-
-    pm = Meff * pm
-    pl = eff * pl
-
-    if vazao_total == 0:
-        vazao_total = 1
-
-    return vazao_total/ 20000000 / pm + pl
-
-
-def calculate_worst_energy_efficient( antenna_list, vazao_total ):
-    cl = 0
-    pl = 0
-
-    cm = 0
-    pm = 0
-
-    eff = 2
-    Meff = 4
-    PcM = 10
-    PMbh = 0.2
-    PcR = 0.1
-    Pbh = 0.2
-    for i, rrh in enumerate( antenna_list ):
-        if rrh.type == rrh.BS_ID:
-            power_received = 0
-            pm += power + PcM +PMbh
-        elif rrh.type == rrh.RRH_ID:
-            distance = 50
-            #Friis
-            power_received = 0
-            pl += power + PcR + Pbh
-    pm = Meff * pm
-    pl = eff * pl
-
-    return vazao_total/ 20000000 / pm + pl
-
-#def calculate_energy_efficient( self ):
 
 def plot_grid( grid ):
 
@@ -255,28 +184,51 @@ def plot_grid( grid ):
     y = []
     colors = []
     area = []
+
     for i, ue in enumerate( grid._user ):
         x.append(ue.x)
         y.append(ue.y)
-        ax.text(ue.x-25, ue.y-35, 'UE'+str(ue._id))
+        #ax.text(ue.x-25, ue.y-35, 'UE'+str(ue._id))
         colors.append('#1214a9')
-        area.append(np.pi * 3**2)
+        area.append(np.pi * 1**2)
+
         if ue._connected_antenna != None:
             ax.arrow(ue.x, ue.y, ue._connected_antenna.x-ue.x, ue._connected_antenna.y-ue.y, head_width=10, head_length=10, fc='k', ec='k')
 
+    for i, cluster in enumerate(grid._clusters):
+        x.append(cluster.x)
+        y.append(cluster.y)
+        colors.append('#FF0000')
+        area.append(np.pi * 2**2)
+
     for i, rrh in enumerate( grid._antennas ):
-        x.append(rrh.x)
-        y.append(rrh.y)
         if rrh.type == rrh.BS_ID:
-            colors.append('#ee1313')
-            area.append(np.pi * 10**2)
-            ax.text(rrh.x-25, rrh.y-60, 'BS'+str(rrh._id))
+            #colors.append('#ee1313')
+            #area.append(np.pi * 7**2)
+            ax.add_patch(patches.RegularPolygon(
+                    (rrh.x,rrh.y),
+                    3,
+                    10,
+                    fill=False )
+                )
+
+            #Add Hexagon
+            ax.add_patch(patches.RegularPolygon(
+                    (rrh.x,rrh.y),
+                    6,
+                    290, #Chutei e funcinou! :D
+                    fill=False,
+                    orientation=math.pi/2)
+                )
+            #Add Text
+            #ax.text(rrh.x-25, rrh.y-60, 'BS'+str(rrh._id))
         elif rrh.type == rrh.RRH_ID:
-            colors.append('#7abf57')
-            area.append(np.pi * 21**2)
-            ax.text(rrh.x-35, rrh.y-12, 'RRH'+str(rrh._id))
-
-
+            x.append(rrh.x)
+            y.append(rrh.y)
+            #colors.append('#7abf57')
+            colors.append('#FFFFFF')
+            area.append(np.pi * 2**2)
+            #ax.text(rrh.x-35, rrh.y-12, 'RRH'+str(rrh._id))
 
     plt.scatter(x, y, s=area, c=colors, alpha=0.5)
     plt.ylim([0,grid.size[0]])

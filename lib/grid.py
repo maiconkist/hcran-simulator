@@ -2,7 +2,11 @@ import random
 import scipy.spatial
 from util import *
 import re
-
+import time
+import math
+from antenna import Antenna
+import Calculations as calc
+import threeGPP
 
 class Log():
     """
@@ -81,13 +85,18 @@ class Grid(object):
         self.rrh_list = []
         self._bbus = []
         self._controllers = []
+        self._clusters = []
         self._antenna_tree = None
         self._initialized = 0
         self._matrix_resources = None #Matrix [Antenna, RB] = id user
         self._bandwidth = 20
-        self.TOTAL_RBS = 100            
-        self.TOTAL_RBS_RRH = 20
-        self.TOTAL_RBS_BS = 80
+
+        self.energy_efficient          = None 
+        self.consumition               = None 
+        self.datarate                  = None
+        self.fairness                  = None
+        self.meet_users                = None
+        self.history_weighted_efficient= None
 
 
     def set_bandwidth(self, band):
@@ -114,6 +123,13 @@ class Grid(object):
         """
         self._user.append(user)
 
+    def remove_users(self):
+        """
+        """
+        #print self._user
+        self._user = []
+        #print self._user
+
     def add_antenna(self, antenna):
         """
         """
@@ -133,6 +149,11 @@ class Grid(object):
         """
         self._controllers.append(cntrl)
 
+    def add_cluster(self, cluster):
+        """
+        """
+        self._clusters.append(cluster)
+
     @property
     def bbus(self):
         """
@@ -144,6 +165,18 @@ class Grid(object):
         """
         """
         return self._user
+
+    @property
+    def antennas(self):
+        """
+        """
+        return self._antennas
+    
+    @property
+    def clusters(self):
+        """
+        """
+        return self._clusters
 
     @property
     def size(self):
@@ -202,3 +235,41 @@ class Grid(object):
         # update controllers
         for cntrl in self._controllers:
             cntrl.update()
+
+
+    def write_to_resume(self, solucao, repeticao, iteracao, init, particle = 0):
+        calc.griddatarate(self, particle)
+        calc.gridconsumption(self, particle)
+        calc.gridefficiency(self, particle)
+        calc.gridfairness(self, particle)
+
+        isum = 0
+        asum = 0
+        for antenna in self.antennas:
+            isum += numpy.sum(antenna.i[particle])
+            asum += numpy.sum(antenna.a[particle])
+
+
+        #print isum, "/", tused_rbs
+        print iteracao, "-", solucao, 'TotalRbs:', str(threeGPP.TOTAL_RBS*len(self.antennas)), "UsedRBS:", str(asum), "IMean:", str(isum/asum), "MU:", str(self.meet_users[particle]), "Fairness:", str(self.fairness[particle])
+
+        f = open('resumo.csv','a')
+        f.write(solucao+','+solucao+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self.users))+'],'+str(len(self.bs_list))+','+str(len(self.rrh_list))+','+str(len(self.users))+','+str(repeticao)+','+str(iteracao)+','+str(self.datarate[particle])+','+str(self.consumition[particle])+','+str(self.energy_efficient[particle])+','+str(self.meet_users[particle])+','+str(self.fairness[particle])+','+str(time.time()-init)+'\n')
+        f.close()
+
+    def backup_best_particles(self, weighted_efficient, history_legth):
+        for history in range(0, history_legth):
+            particle = numpy.argmax(weighted_efficient[:])
+            self.history_weighted_efficient[history] = weighted_efficient[particle]
+            weighted_efficient[particle] = -999999999999999999999999
+            for antenna in self.antennas: 
+                antenna.backup_best_particle(particle, history)
+                
+
+    def restore_best_particles(self, weighted_efficient, history_legth):
+        for history in range(0, history_legth):
+            particle = numpy.argmin(weighted_efficient[:])
+            if (weighted_efficient[particle] < self.history_weighted_efficient[history]):
+                weighted_efficient[particle] = 999999999999999999999999
+                for antenna in self.antennas: 
+                    antenna.restore_best_particle(particle, history)

@@ -1,0 +1,12 @@
+To run simulations:
+
+  1 - Install dependencies: 
+    sudo apt-get install python-numpy python-scipy python-matplotlib ipython python-notebook python-pandas python-sympy python-nose
+  2 - Init submodules:
+    git submodule init
+  3 - Set environment variables (and create cscope data base)
+    source setenv.sh
+  4 - Run your simulation
+    python src/<your_file.py>
+    
+

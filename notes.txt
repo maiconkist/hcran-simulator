@@ -1,0 +1,322 @@
+    ###############################################
+    # Roleta viciada
+    ##############################################
+    def init_monte_carlo(self):
+        self.N = len(self._ues)
+        self.C = numpy.zeros(shape=(self.M))
+        self.rol = numpy.zeros(shape=(self.M))
+        self.P = numpy.zeros(shape=(self.M))
+        self.Bn = numpy.zeros(shape=(self.M))
+        self.Bm = numpy.zeros(shape=(self.M))
+        self.L = numpy.zeros(shape=(self.M))
+        self.V = numpy.zeros(shape=(self.M))
+        self.EE = numpy.zeros(shape=(self.M))
+        self.a = numpy.zeros(shape=(self.M,self.N,self.K))
+        self.aAnt = numpy.zeros(shape=(self.M,self.N,self.K))
+        self.p = numpy.zeros(shape=(self.M,self.N,self.K))
+        self.i = numpy.zeros(shape=(self.M,self.N,self.K))
+        self.betan = numpy.zeros(shape=(self.M,len(self._ues)))
+        self.sub_bn = numpy.zeros(shape=(self.M,self.N))
+        self.sub_lambda_k = numpy.zeros(shape=(self.M,self.K))
+        self.lambdak = numpy.zeros(shape=(self.M, self.M))
+        self.upsilonl = numpy.zeros(shape=(self.M))
+        self.sub_upsilon = numpy.zeros(shape=(self.M))
+
+    def clean(self):
+        self.C = numpy.zeros(shape=(self.M))
+        self.P = numpy.zeros(shape=(self.M))
+        self.Bn = numpy.zeros(shape=(self.M))
+        self.Bm = numpy.zeros(shape=(self.M))
+        self.L = numpy.zeros(shape=(self.M))
+        self.V = numpy.zeros(shape=(self.M))
+        self.EE = numpy.zeros(shape=(self.M))
+        self.a = numpy.zeros(shape=(self.M,self.N,self.K))
+        self.p = numpy.zeros(shape=(self.M,self.N,self.K))
+        self.i = numpy.zeros(shape=(self.M,self.N,self.K))
+
+    def doPartialCalc(self,z,r,y):
+        #Calculos
+        self.C[z] += (self.a[z,r,y] * self._b0 * math.log(1+(self.i[z,r,y] * self.p[z,r,y])))
+        self.P[z] += (self.a[z,r,y] * self.p[z,r,y])
+       
+        #if usuario de alta demanda:
+        if self._ues[r]._type == User.HIGH_RATE_USER:
+            self.Bn[z] += (self.a[z,r,y] * self._b0 * math.log(1+(self.i[z,r,y] * self.p[z,r,y])) - self._nr)
+        else: 
+        #if usuario de baixa demanda:
+            self.Bm[z] += (self.a[z,r,y] * self._b0 * math.log(1+(self.i[z,r,y] * self.p[z,r,y])) - self._ner)
+
+        self.L[z] += (self.a[z,r,y] * self.p[z,r,y] * self.dkr2m * self.pHmax)
+        self.V[z] += self.a[z,r,y] * self.p[z,r,y]
+
+    def doFinalCalc(self,z, r):
+        self.P[z] = self._eff * self.P[z] + self._prc + self._pbh
+        self.L[z] = self.s0 - self.L[z]
+        
+        if self.type == Antenna.BS_ID:
+            self.V[z] = self.pHmax - self.V[z]
+        else:        
+            self.V[z] = self.pRmax - self.V[z]
+        #aux = (self.betan[z][r]*self.Bn[z]) + (self.betan[z][r]*self.Bm[z]) + (lambdak[z][r]*self.L[z]) + (self.upsilonl[z]*self.V[z])
+        aux = (self.betan[z][r]*self.Bn[z]) + (self.upsilonl[z]*self.V[z])
+        print 'capacidade: ', self.C[z]
+        print 'restricoes: ', aux
+        print 'custo: ', self.P[z]
+        aux = self.C[z] + aux
+        if aux < 0:
+            aux = 0.01
+        self.EE[z] = aux/self.P[z]
+        print 'EE: ', self.EE[z] 
+
+    def mt_calculate_data_rate_n(self,z,n):
+        result = 0
+        for k in range(0, self.K):
+            log = (self.i[z][n][k]* self.p[z][n][k])
+            if log <= 0:
+                log = 1
+            result += (self.a[z][n][k] * self._b0 * math.log(1+math.log(log)))
+        return result
+
+    def mt_calculate_subgradient_beta(self,n,z):
+        result = 0
+        c = self.mt_calculate_data_rate_n(z,n)
+        if ((n > 0) and (n < len(self._ues))):
+            result = c - self._nr
+        else:
+            result = c - self._ner
+        return result            
+
+    def mt_calculate_subgradient_lambda(self,z,k):
+        result = 0
+        soma = 0
+        if (len(self._ues) > 0):
+            for n in range (0, len(self._ues)):
+                soma += self.a[z][n][k] * self.p[z][n][k] * self._dr2m * self._hr2m
+            result = self._delta_0 - soma
+        return result
+
+    def mt_calculate_subgradient_upsilon(self,z):
+        soma = 0
+        for n in range(0, len(self._ues)):
+            for k in range(0, self.K):
+                soma += self.a[z][n][k] * self.p[z][n][k]
+        return self._pm - soma
+
+    def mt_calculate_beta_n_l1(self,n,z):
+        result = self.betan[z][n] - (self._epsilon_beta * self.sub_bn[z][n])
+        if result > 0:
+            return result
+        else:
+            return 1
+
+    def mt_calculate_lamdak_l1(self,k,z):
+        result = self.lambdak[z][k] - (self._epsilon_lambda * self.sub_lambda_k[z][k])
+        if result > 0:
+            return result
+        else:
+            return 1
+
+    def mt_calculate_upsilon_l1(self,z):
+        result = self.upsilonl[z] - (self._epsilon_upsilon * self.sub_upsilon[z])
+        if result > 0:
+            return result
+        else:
+            return 1
+
+    def mt_update_l(self,z):
+        for n in range(0,len(self._ues)):
+            self.sub_bn[z][n] = self.mt_calculate_subgradient_beta(n,z)
+            self.betan[z][n] = self.mt_calculate_beta_n_l1(n,z)
+        print n
+
+        for k in range(0, self._K):
+            self.sub_lambda_k[z][k] = self.mt_calculate_subgradient_lambda(z,k)
+            self.lambdak[z][k] = self.mt_calculate_lamdak_l1(k,z)
+
+        print ("z" + str(z))
+        self.sub_upsilon[z] = self.mt_calculate_subgradient_upsilon(z)
+        self.upsilonl[z] = self.mt_calculate_upsilon_l1(z)
+
+    ##########################
+    # Calculo do EE
+    #########################
+    def mt_data_rate(self, best_a, best_i, best_p):
+        result = 0
+        for n in range(0, len(self._ues)): 
+            result += self.mt_data_rate_n(n,best_a,best_i, best_p) 
+
+        return result
+
+    def mt_data_rate_n(self, n, best_a, best_i, best_p):
+        result = 0
+        for k in range(0, self.K):
+            log = 1+(best_i[n][k]* best_p[n][k])
+            if log < 0:
+                log = 1
+            result += (best_a[n][k] * self._b0 * math.log(log))
+
+        return result
+
+    #P (3)
+    def mt_power_consumition(self,best_a, best_p):
+        result = 0
+        for n in range(0, len(self._ues)):
+            for k in range(0, self._K):
+                result += (best_a[n][k] * best_p[n][k])           
+
+            return (self._eff * result) + self._prc + self._pbh
+                               
+
+
+     def roleta(EE, nJogadas):
+        nArea = len(EE)
+        area = numpy.zeros(shape=(nArea))
+        result = numpy.zeros(shape=(nJogadas))
+        total = sum(EE)
+        ant = 0;
+        for q in range(0, len(EE)):
+            area[q] = ant + EE[q]
+            ant = area[q]
+
+        print EE
+        print area
+
+        for q in range(0, nJogadas):
+            rd = random.uniform(0.0, total)
+            for t in range(0, len(area)):
+                if rd < area[t]:
+                    result[q] = t
+                    break
+
+        return result
+     
+#########################################################################
+
+
+
+
+    def roleta(EE, nJogadas):
+        nArea = len(EE)
+        area = np.zeros(shape=(nArea))
+        result = np.zeros(shape=(nJogadas))
+        total = sum(EE)
+        ant = 0;
+        for q in range(0, len(EE)):
+            area[q] = ant + EE[q]
+            ant = area[q]
+
+        print EE
+        print area
+
+        for q in range(0, nJogadas):
+            rd = random.uniform(0.0, total)
+            for t in range(0, len(area)):
+                if rd < area[t]:
+                    result[q] = t
+                    break
+
+        return result
+
+    def run_monte_carlo(self, grid):
+        iMax = 10
+        rrhs = len(grid._antennas)
+        antennas = grid._antennas    
+        ues = grid._user
+        
+        #######################
+        # Associa usuario na 
+        # antena mais proxima
+        # Repliquei o codigo
+        # e uma PESSIMA PRATICA
+        ########################
+        for ue in ues:
+            distance = 10000
+            near = antennas[0]
+            for antenna in antennas:
+                d = dist( ue, antenna ) 
+                if antenna.type == Antenna.BS_ID:
+                    if d < distance and d<Antenna.BS_RADIUS:
+                        distance = d
+                        near = antenna
+                elif antenna.type == Antenna.RRH_ID:
+                    if d < distance and  d<Antenna.RRH_RADIUS:
+                        distance = d
+                        near = antenna
+
+            ue._connected_antenna = near
+            near._ues.append(ue)        
+       
+
+        for i in range(0, iMax):
+            init = time.time()
+            for rrh in range(0, rrhs):
+                antennas[rrh].init_monte_carlo()
+                #CALCULAR O A ZUADO DA INTERFERENCIA BASEADA NA MELHOR MATRIZ DE CADA RRH
+                for rr in antennas:
+                    if rr._id != antennas[rrh]._id:
+                        antennas[rrh]._others_ant.append(antennas[rrh])
+
+                    rr.init_peng(Peng.TOTAL_RBS, antennas[rrh]._others_ant, i)
+
+                for n in range (0, len(antennas[rrh]._ues)):
+                    for k in range (0, Peng.TOTAL_RBS):
+                        antennas[rrh]._cnir[n][k] = peng_power_interfering(antennas[rrh]._ues[n], k, antennas[rrh]._others_ant)
+                        antennas[rrh]._w[n][k]= antennas[rrh].mt_waterfilling_optimal(n, k, antennas[rrh].EE[i])
+
+                if(i == 0):
+                    # Generating the first M particles
+                    for z in range(0,antennas[rrh].M):
+                        for y in range(0,antennas[rrh].K): #RB
+                            r = random.randint(-(antennas[rrh].N/3), antennas[rrh].N)-1 #Usuario
+                            if r > 0:
+                                antennas[rrh].a[z,r,y] = 1
+                                antennas[rrh].p[z,r,y] = antennas[rrh].calculate_p_matrix_element(r, y) # aqui tu calcula p
+                                antennas[rrh].i[z,r,y] = antennas[rrh]._cnir[r][y]
+                                antennas[rrh].doPartialCalc(z,r,y)                                 
+                        antennas[rrh].doFinalCalc(z, rrh)
+                else:
+                    antennas[rrh].rol = roleta(antennas[rrh].EE, antennas[rrh].M)
+                    antennas[rrh].aAnt = antennas[rrh].a
+                    antennas[rrh].clean()
+                    # Raises the temperature
+                    antennas[rrh].Temp = antennas[rrh].Temp + 0.01
+                    for z in range(0,antennas[rrh].M):
+                        mSel = antennas[rrh].aAnt[antennas[rrh].rol[z]]
+                        for y in range(0,antennas[rrh].K):
+                            # como gerar a matriz a baseada na mSel?????
+                            if random.choice([True, False, False]): #30% de chance de trocar
+                                r = random.randint(-(antennas[rrh].N/3), antennas[rrh].N)-1
+                                if r > 0:        
+                                    antennas[rrh].a[z,r,y] = 1
+                                    antennas[rrh].p[z,r,y] =  antennas[rrh].calculate_p_matrix_element(r, y)# aqui tu calcula p
+                                    antennas[rrh].i[z,r,y] =  self._cnir[r][y]# matriz de interferencia ja deve existir
+                                    antennas[rrh].doPartialCalc(z,r,y)
+                            else:
+                                r = antennas[rrh].aAnt.index(max(antennas[rrh].aAnt[z,:,y]))
+                                antennas[rrh].a[z,r,y] = 1
+                                antennas[rrh].p[z,r,y] = antennas[rrh].calculate_p_matrix_element(r, y) ## aqui tu calcula p
+                                antennas[rrh].i[z,r,y] = self._cnir[r][y] # matriz de interferencia ja deve existir
+                                antennas[rrh].doPartialCalc(z,r,y)
+                        antennas[rrh].doFinalCalc(z,rrh)
+                        antennas[rrh].mt_update_l(z)
+
+
+                print "Max value element : ", max(antennas[rrh].EE)
+                index = numpy.argmax(antennas[rrh].EE)
+                antennas[rrh].best_a = antennas[rrh].a[index]
+                antennas[rrh].best_p = antennas[rrh].p[index]
+                antennas[rrh].best_i = antennas[rrh].i[index]
+                #PARA CADA RRH A ATUAL E O A DE MELHOR EE
+                #SENDO O P CORREPONDETE A A O P ATUAL
+
+                p = antennas[rrh].mt_power_consumition(antennas[rrh].best_a, antennas[rrh].best_p)
+                c = antennas[rrh].mt_data_rate(antennas[rrh].best_a, antennas[rrh].best_i,antennas[rrh].best_p)
+                print p
+                print c
+                ee = c / p
+                end = time.time()
+                string = "MT[H:" + str(self.macros) + ";S:2" + ";U:" +  str(self.users) + "]"
+                string2 = str(i) + "," + str(c) + "," + str(p) + "," + str(ee) + "," + str(end-init) + "\n"
+                print string2
+                wait()
+

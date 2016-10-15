@@ -1,0 +1,10 @@
+#cscope files
+cscope.*
+
+#Python
+*~
+*.pyc
+
+#others
+*.csv
+*.swp
