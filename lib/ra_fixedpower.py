@@ -4,152 +4,170 @@ from util import *
 import math
 import csv
 import time
-
-DEBUG = False
-
-def debug_printf(string):
-    if DEBUG:
-        print(string)
-
-def wait():
-    raw_input("Press Enter to continue.")
-
-def associate_user_in_antennas(ues, antennas):
-    #######################
-    # Associa usuario na 
-    # antena mais proxima
-    ########################
-    for ue in ues:
-        distance = 10000
-        near = antennas[0]
-        for antenna in antennas:
-            d = dist( ue, antenna ) 
-            if antenna.type == Antenna.BS_ID:
-                if d < distance and d<Antenna.BS_RADIUS:
-                    distance = d
-                    near = antenna
-            elif antenna.type == Antenna.RRH_ID:
-                if d < distance and  d<Antenna.RRH_RADIUS:
-                    distance = d
-                    near = antenna
-
-        ue._connected_antenna = near
-        near.connected_ues.append(ue)
+import threeGPP
+import Calculations as calc
 
 class FixedPower(object):
     
     def __init__(self, r):
         self.antennas = []
-        #self.small = s
-        #self.macros = m
-        #self.users = u * m
         self.repeticao = r
 
     def run(self, grid, max_i):
         antennas = grid._antennas    
         ues = grid._user
         init = time.time()
-        associate_user_in_antennas(ues, antennas)
         iteracao = 0
+
+        grid.energy_efficient          = numpy.zeros(shape=(1)) 
+        grid.consumition               = numpy.zeros(shape=(1))
+        grid.datarate                  = numpy.zeros(shape=(1))
+        grid.fairness                  = numpy.zeros(shape=(1))
+        grid.meet_users                = numpy.zeros(shape=(1))
 
         #Para as BS aloca de forma sequencial iniciando do RB zero
         for bs in grid.bs_list:
             used_rbs = 0
-            bs.i = numpy.zeros(shape=(len(bs.connected_ues), Antenna.TOTAL_RBS))
-            bs.a = numpy.zeros(shape=(len(bs.connected_ues), Antenna.TOTAL_RBS))
-            bs.p = numpy.zeros(shape=(len(bs.connected_ues), Antenna.TOTAL_RBS))
-            if(used_rbs<Antenna.TOTAL_RBS):
-                for ue in range(0,len(bs.connected_ues)):
-                    needed_rbs = bs.demand_in_rbs(bs.connected_ues[ue])
-                    for rb in range(used_rbs, used_rbs+needed_rbs):
-                        if(rb<Antenna.TOTAL_RBS):
-                            bs.i[ue][rb] = interference(bs.connected_ues[ue], rb, grid._antennas) #dBm
-                            bs.p[ue][rb] = Antenna.POWER_BS
-                            bs.a[ue][rb] = 1
+            bs.i                = numpy.zeros(shape=(1, len(bs.connected_ues), threeGPP.TOTAL_RBS))
+            bs.a                = numpy.zeros(shape=(1, len(bs.connected_ues), threeGPP.TOTAL_RBS))
+            bs.p                = numpy.zeros(shape=(1, len(bs.connected_ues), threeGPP.TOTAL_RBS))
+            bs.energy_efficient = numpy.zeros(shape=(1)) 
+            bs.consumition      = numpy.zeros(shape=(1)) 
+            bs.datarate         = numpy.zeros(shape=(1))
+            bs.datarate_constraint = numpy.zeros(shape=(1))
+            bs.user_datarate    = numpy.zeros(shape=(1,len(bs.connected_ues)))
+            bs.fairness         = numpy.zeros(shape=(1))
+            bs.meet_users       = numpy.zeros(shape=(1))
 
+            if(used_rbs<threeGPP.TOTAL_RBS):
+                for ue in range(0,len(bs.connected_ues)):
+                    needed_rbs = calc.demand_in_rbs(bs, ue)
+                    for rb in range(used_rbs, used_rbs+needed_rbs):
+                        if(rb<threeGPP.TOTAL_RBS):
+                            bs.i[0][ue][rb] = calc.power_interference(ue, rb, bs, grid) #dBm
+                            bs.p[0][ue][rb] = bs.fixed_power()#calc.transmission_power(bs, bs.connected_ues[ue], bs.i[0,ue,rb], noise(), threeGPP.TARGET_SINR)
+                            if bs.p[0][ue][rb] != None and math.isnan(bs.p[0][ue][rb]) == False:
+                                bs.a[0][ue][rb] = 1
+                            else:
+                                bs.a[0][ue][rb] = 0
+                                bs.i[0][ue][rb] = None
+                                bs.p[0][ue][rb] = None
                     used_rbs = used_rbs+needed_rbs
-            bs.obtain_energy_efficient()
-            grid.write_to_resume('FIXED POWER', self.repeticao, iteracao, init)
-            iteracao += 1
-            debug_printf("----- BS -----")
-            debug_printf("Alloc = \n" + str(numpy.matrix(bs.a)))
-            debug_printf("Power = \n" + str(numpy.matrix(bs.p)))
-            debug_printf("Noise = \n" + str(numpy.matrix(bs.i)))
+
+            calc.datarate(bs, grid)
+            calc.consumption(bs)
+            calc.efficiency(bs)
+            calc.fairness(bs)
+            #bs.toString()
 
         #Para as RRHs aloca o RB de menor interferencia
         for rrh in grid.rrh_list:
-            rrh.i = numpy.zeros(shape=(len(rrh.connected_ues), Antenna.TOTAL_RBS))
-            rrh.a = numpy.zeros(shape=(len(rrh.connected_ues), Antenna.TOTAL_RBS))
-            rrh.p = numpy.zeros(shape=(len(rrh.connected_ues), Antenna.TOTAL_RBS))
-            auxi = numpy.zeros(shape=(len(rrh.connected_ues), Antenna.TOTAL_RBS))
+            rrh.i                = numpy.zeros(shape=(1, len(rrh.connected_ues), threeGPP.TOTAL_RBS))
+            rrh.a                = numpy.zeros(shape=(1, len(rrh.connected_ues), threeGPP.TOTAL_RBS))
+            rrh.p                = numpy.zeros(shape=(1, len(rrh.connected_ues), threeGPP.TOTAL_RBS))
+            rrh.energy_efficient = numpy.zeros(shape=(1)) 
+            rrh.consumition      = numpy.zeros(shape=(1)) 
+            rrh.datarate         = numpy.zeros(shape=(1))
+            rrh.datarate_constraint = numpy.zeros(shape=(1))
+            rrh.user_datarate    = numpy.zeros(shape=(1,len(rrh.connected_ues)))
+            rrh.fairness         = numpy.zeros(shape=(1))
+            rrh.meet_users       = numpy.zeros(shape=(1))
+            auxi                 = numpy.zeros(shape=(1, len(rrh.connected_ues), threeGPP.TOTAL_RBS))
             for ue in range(0, len(rrh.connected_ues)):
-                needed_rbs = rrh.demand_in_rbs(rrh.connected_ues[ue])
-                for rb in range(0, Antenna.TOTAL_RBS):
-                    i = interference(rrh.connected_ues[ue], rb, grid._antennas) #dBm
-                    rrh.i[ue][rb] = i 
-                    auxi[ue][rb] = i    
+                needed_rbs = calc.demand_in_rbs(rrh, ue)
+                for rb in range(0, threeGPP.TOTAL_RBS):
+                    i = calc.power_interference(ue, rb, rrh, grid) 
+                    rrh.i[0][ue][rb] = i 
+                    if i == None or math.isnan(i) == True:
+                        auxi[0][ue][rb] = -9999999    
                 for k in range(0, needed_rbs):
-                    rb = numpy.argmin(auxi[ue,:])
-                    if auxi[ue,rb] < 9999999:
-                        auxi[:,rb] = 9999999 #NAO PODE USAR DUAS VEZES O MESMO RB - VERIFICAR SE OUTRO USUARIO JA NAO UTILIZOU
-                        rrh.p[ue][rb] = Antenna.POWER_RRH
-                        rrh.a[ue][rb] = 1
+                    rb = numpy.argmin(auxi[0,ue,:])
+                    mue = numpy.argmax(rrh.a[0,:,rb])
+                    while rrh.a[0, mue, rb] > 0 and auxi[0][ue,rb] < 9999999:
+                        auxi[0][:,rb] = 9999999 
+                        rb = numpy.argmin(auxi[0,ue,:])
+                        mue = numpy.argmax(rrh.a[0,:,rb])
+
+                    if auxi[0][ue,rb] < 9999999:
+                        auxi[0][:,rb] = 9999999 #NAO PODE USAR DUAS VEZES O MESMO RB - VERIFICAR SE OUTRO USUARIO JA NAO UTILIZOU
+                        rrh.p[0][ue][rb] = rrh.fixed_power()#calc.transmission_power(rrh, rrh.connected_ues[ue], rrh.i[0,ue,rb], noise(), threeGPP.TARGET_SINR)
+                        if rrh.p[0][ue][rb] != None and math.isnan(rrh.p[0][ue][rb]) == False:
+                            rrh.a[0][ue][rb] = 1
+                        else:
+                            rrh.a[0][ue][rb] = 0
+                            rrh.i[0][ue][rb] = None
+                            rrh.p[0][ue][rb] = None
                     else:
                         break
-            rrh.obtain_energy_efficient()
-            grid.write_to_resume('FIXED POWER', self.repeticao, iteracao, init)
-            iteracao += 1
-            debug_printf("----- RRH -----")
-            debug_printf("Alloc = \n" + str(numpy.matrix(rrh.a)))
-            debug_printf("Power = \n" + str(numpy.matrix(rrh.p)))
-            debug_printf("Noise = \n" + str(numpy.matrix(rrh.i)))
+            #rrh.toString()
 
+            calc.datarate(rrh, grid)
+            calc.consumption(rrh)
+            calc.efficiency(rrh)
+            calc.fairness(rrh)
+
+        grid.write_to_resume('Fixed Power', self.repeticao, iteracao, init)
+
+        iteracao += 1
         while iteracao < max_i:
-            #print "Nova I"
             ant = grid.antennas[0]
+            auxi = numpy.zeros(shape=(1, len(ant.connected_ues), threeGPP.TOTAL_RBS))
             ue = -1
             datarate = 9999999999999999999999
             for antena in grid.antennas:
-                if numpy.sum(antena.a) < Antenna.TOTAL_RBS:
-                    for user in range(0, len(antena.connected_ues)):
-                        if antena.user_data_rate[user] < datarate:
-                            ant = antena
-                            ue = user
-                            datarate = antena.user_data_rate[user]
-            
-            #print "User = ", ue
+                if numpy.sum(antena.a[0]) < threeGPP.TOTAL_RBS and len(antena.connected_ues) > 0:
+                    rest = antena.rest_power()
+                    if rest != None and math.isnan(rest) == False:
+                        for user in range(0, len(antena.connected_ues)):
+                            #print antena.user_datarate[0,user], datarate
+                            if antena.user_datarate[0,user] < datarate:
+                                ant = antena
+                                auxi = numpy.zeros(shape=(1, len(ant.connected_ues), threeGPP.TOTAL_RBS))
+                                ue = user
+                                datarate = antena.user_datarate[0,user]
+                                for rb in range(0, threeGPP.TOTAL_RBS):
+                                    ant.i[0][ue][rb] = calc.power_interference(ue, rb, ant, grid) #dBm
+                                    #print "None I", ant.i[0][ue][rb]
+                                    if ant.i[0][ue][rb] == None or math.isnan(ant.i[0][ue][rb]) == True:
+                                        #print "None I"
+                                        auxi[0][ue][rb] = -9999999  
 
-            auxi = numpy.copy(ant.i)
+            #print "Antena", ant.type
+            #auxi = numpy.copy(ant.i)
+            needed_rbs = calc.demand_in_rbs(ant, ue)
+            #print "Need RBs = ", needed_rbs
             tr = 0 #total de tentativas
-            while tr < Antenna.TOTAL_RBS: 
-                #print "while"
+            while tr < threeGPP.TOTAL_RBS and needed_rbs > 0: 
                 tr += 1
-                rb = numpy.argmin(auxi[ue,:])
-                mue = numpy.argmax(ant.a[:,rb])
+                rb = numpy.argmin(auxi[0,ue,:])
+                mue = numpy.argmax(ant.a[0,:,rb])
                 #print rb
-                if ant.a[ue][rb] == 0 and ant.a[mue][rb] == 0:
-                    if (ant.type == Antenna.BS_ID):
-                        ant.p[ue][rb] = Antenna.POWER_BS
+                if ant.a[0][ue][rb] == 0 and ant.a[0][mue][rb] == 0:
+                    ant.p[0][ue][rb] = ant.fixed_power()#calc.transmission_power(ant, ant.connected_ues[ue], ant.i[0,ue,rb], noise(), threeGPP.TARGET_SINR)
+                    if ant.p[0][ue][rb] != None and math.isnan(ant.p[0][ue][rb]) == False:
+                        ant.a[0][ue][rb] = 1
+                        #print "Need -1"
+                        needed_rbs = needed_rbs - 1
                     else:
-                        ant.p[ue][rb] = Antenna.POWER_RRH
-                    ant.a[ue][rb] = 1
+                        ant.a[0][ue][rb] = 0
+                        ant.i[0][ue][rb] = None
+                        ant.p[0][ue][rb] = None
+                        break;                    
 
                     for antena in grid.antennas:
                         if antena.a != None and len(antena.connected_ues) > 0:
-                            mue = numpy.argmax(antena.a[:,rb])
-                            if (antena.a[mue,rb] > 0):
-                                antena.i[mue][rb] = interference(antena.connected_ues[mue], rb, grid._antennas)
-                    #print "NOVO RB"
+                            mue = numpy.argmax(antena.a[0,:,rb])
+                            if (antena.a[0,mue,rb] > 0):
+                                antena.i[0][mue][rb] = calc.power_interference(mue, rb, antena, grid) #dBm
+                                antena.p[0][mue][rb] = antena.fixed_power()#calc.transmission_power(antena, antena.connected_ues[mue], antena.i[0][mue][rb], noise(), threeGPP.TARGET_SINR)
                     break
                 else:
-                    auxi[ue][rb] = 9999999
+                    auxi[0][ue][rb] = 9999999
 
-            ant.obtain_energy_efficient()
-            grid.write_to_resume('FIXED POWER', self.repeticao, iteracao, init)
+            calc.datarate(ant, grid)
+            calc.consumption(ant)
+            calc.efficiency(ant)
+            calc.fairness(ant)
+
+            grid.write_to_resume('Fixed Power', self.repeticao, iteracao, init)
             iteracao += 1
-
-
-
-
-        
-

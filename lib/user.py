@@ -35,6 +35,7 @@ class User(object):
         self._pos = pos
         self._moving_strategy = moving_strategy
         self._grid = grid
+        self.height = 1.5
 
         self._tx_rate = 0.0
         self._txs = []

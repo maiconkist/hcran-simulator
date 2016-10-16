@@ -28,13 +28,18 @@ class Antenna(object):
     def __init__(self, id, type, pos, radius, grid, bw = 1.4):
         self._id = id
         self.type = type
+        self.height = 25
+        self.frequency = 2.0
+
         #BS or RRH
         if type == self.BS_ID:
             self.power = threeGPP.POWER_BS
             self._radius = threeGPP.BS_RADIUS
+            self.height = 25
         else:
             self.power = threeGPP.POWER_RRH
             self._radius = threeGPP.RRH_RADIUS
+            self.height = 10
         self.antenna_in_range = []
         self.user_in_range = []
         # List of connected UEs
@@ -258,20 +263,23 @@ class Antenna(object):
         """
         return str(self.pos)
 
-    def toString(self):
+    def used_rbs(self, particle = 0):
+        return self.a[particle].sum()
+
+    def toString(self, particle = 0):
         numpy.set_printoptions(precision=2)
         if (self.type == Antenna.BS_ID):
-            debug_printf("\n\n----- BS -----")
+            util.debug_printf("\n\n----- BS -----")
         else: 
-            debug_printf("\n\n----- RRH -----")
-        debug_printf("Users (Meet/Total) = "+ str(self.users_meet) +"/"+str(len(self.connected_ues)))
-        debug_printf("Resource Block (Used/Total) = " + str(self.a.sum()) +"/"+ str(threeGPP.TOTAL_RBS))
-        debug_printf("Data Rate = " + str(self.data_rate))
-        debug_printf("Power Consumition = " + str(self.power_consumition))
-        debug_printf("Energy Efficient = " + str(self.energy_efficient))
-        debug_printf("Alloc = \n" + str(numpy.matrix(self.a)))
-        debug_printf("Power = \n" + str(numpy.matrix(self.p)))
-        debug_printf("Noise = \n" + str(numpy.matrix(self.i)))
+            util.debug_printf("\n\n----- RRH -----")
+        util.debug_printf("Users (Meet/Total) = "+ str(self.meet_users[particle]) +"/"+str(len(self.connected_ues)))
+        util.debug_printf("Resource Block (Used/Total) = " + str(self.a[particle].sum()) +"/"+ str(threeGPP.TOTAL_RBS))
+        util.debug_printf("Data Rate = " + str(self.datarate[particle]))
+        util.debug_printf("Power Consumition = " + str(self.consumition[particle]))
+        util.debug_printf("Energy Efficient = " + str(self.energy_efficient[particle]))
+        util.debug_printf("Alloc = \n" + str(numpy.matrix(self.a[particle])))
+        util.debug_printf("Power = \n" + str(numpy.matrix(self.p[particle])))
+        util.debug_printf("Noise = \n" + str(numpy.matrix(self.i[particle])))
 
 
     def add_antenna_in_range( self, antenna ):
@@ -332,4 +340,42 @@ class Antenna(object):
         self.user_datarate[particle]    = self.history_user_datarate[history].copy()
         self.fairness[particle]         = self.history_fairness[history].copy()
         self.meet_users[particle]       = self.history_meet_users[history].copy()
+
+    def rest_power(self, particle = 0):
+        psum = 0.0
+        for rb in range(0, threeGPP.TOTAL_RBS):
+            ue = numpy.argmax(self.a[particle,:,rb])
+            if self.a[particle,ue,rb] > 0 and math.isnan(self.p[particle,ue,rb]) == False:
+                #print "psum", self.p[particle,ue,rb]
+                psum += util.dbm_to_mw(self.p[particle,ue,rb])
+
+        if (self.type == self.BS_ID):
+            #print "BS", util.dbm_to_mw(threeGPP.POWER_BS), psum 
+            rest = util.dbm_to_mw(threeGPP.POWER_BS) - psum
+        else:
+            #print "RRH", util.dbm_to_mw(threeGPP.POWER_RRH), psum
+            rest = util.dbm_to_mw(threeGPP.POWER_RRH) - psum
+
+        #print "rest", rest
+        if (rest > 0):
+            #if (self.type != self.BS_ID):
+            #    print "rest", rest, util.mw_to_dbm(rest)
+            return util.mw_to_dbm(rest)
+        else:
+            #if (self.type != self.BS_ID):
+            #    print "rest", None
+            return None
+
+    def fixed_power(self):
+        power = -1
+        if (self.type == self.BS_ID):
+            power = util.dbm_to_mw(threeGPP.POWER_BS)/threeGPP.TOTAL_RBS
+        else:
+            power = util.dbm_to_mw(threeGPP.POWER_RRH)/threeGPP.TOTAL_RBS
+
+
+        if (power > 0):
+            return util.mw_to_dbm(power)
+        else:
+            return None
 

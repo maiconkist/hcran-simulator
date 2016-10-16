@@ -15,18 +15,20 @@ import numpy
 import scipy
 
 #VARIABLE CONSTANTS
+SYSTEM_TEMPERATURE = 660.7 #K
 RRH_RADIUS  = 50
 BS_RADIUS   = 710
 POWER_BS    = 46
 POWER_RRH   = 23
-TARGET_SINR = 14.5 #[db]
+TARGET_SINR = 18.5 #[db]
 HPN_T_GAIN  = 5                       #transmission antenna gain
 LPN_T_GAIN  = 17                       #transmission antenna gain
 UE_R_GAIN   = 0                       #receptor antenna gain
 WAVELENTH   = (3/19.0)                #Comprimento de onda considerando uma frequencia de 1.9 GHz
 TOTAL_RBS   = 100
 CHANNEL     = 20000000 #Hz
-RB_BIT_CAPACITY = 406.499955591 #bits/0.5 ms with a SINR  18.8
+#RB_BIT_CAPACITY = 387.668567267
+#RB_BIT_CAPACITY = 406.499955591 #bits/0.5 ms with a SINR  18.8
 B0          = 180000
 N0          = -17
 DRN         = 1         
@@ -39,10 +41,10 @@ PMC         = 10
 PMBH        = 3.85
 EFF         = 2
 MEFF        = 4 
-NR          = 5242880/2000 #High Rate Constraint
-NER         = 5242880/2000 #Low Rate Constraint
-#NR          = 1000000/2000 #High Rate Constraint
-#NER         = 1000000/2000 #Low Rate Constraint
+#NR          = 5242880/2000 #High Rate Constraint
+#NER         = 5242880/2000 #Low Rate Constraint
+NR          = 1000000/2000 #High Rate Constraint
+NER         = 1000000/2000 #Low Rate Constraint
 
 ###############################
 #Grid definitions

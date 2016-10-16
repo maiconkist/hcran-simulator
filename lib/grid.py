@@ -239,6 +239,8 @@ class Grid(object):
 
     def write_to_resume(self, solucao, repeticao, iteracao, init, particle = 0):
         calc.griddatarate(self, particle)
+        if particle < 0:
+            particle = 0
         calc.gridconsumption(self, particle)
         calc.gridefficiency(self, particle)
         calc.gridfairness(self, particle)
@@ -246,12 +248,16 @@ class Grid(object):
         isum = 0
         asum = 0
         for antenna in self.antennas:
-            isum += numpy.sum(antenna.i[particle])
+            for ue in range (0, len(antenna.connected_ues)):
+                for rb in range(0, threeGPP.TOTAL_RBS):
+                    i = antenna.a[particle, ue, rb] * antenna.i[particle, ue, rb]
+                    if math.isnan(i) == False:
+                        isum += dbm_to_mw(i)
             asum += numpy.sum(antenna.a[particle])
 
 
-        #print isum, "/", tused_rbs
-        print iteracao, "-", solucao, 'TotalRbs:', str(threeGPP.TOTAL_RBS*len(self.antennas)), "UsedRBS:", str(asum), "IMean:", str(isum/asum), "MU:", str(self.meet_users[particle]), "Fairness:", str(self.fairness[particle])
+        #print "Datarate p/ rbs", asum/self.datarate[particle]*2000
+        print iteracao, "-", solucao, 'TotalRbs:', str(threeGPP.TOTAL_RBS*len(self.antennas)), "UsedRBS:", str(asum), "IMean:", str(mw_to_dbm(isum)/asum), "MU:", str(self.meet_users[particle]), "Fairness:", str(self.fairness[particle])
 
         f = open('resumo.csv','a')
         f.write(solucao+','+solucao+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self.users))+'],'+str(len(self.bs_list))+','+str(len(self.rrh_list))+','+str(len(self.users))+','+str(repeticao)+','+str(iteracao)+','+str(self.datarate[particle])+','+str(self.consumition[particle])+','+str(self.energy_efficient[particle])+','+str(self.meet_users[particle])+','+str(self.fairness[particle])+','+str(time.time()-init)+'\n')

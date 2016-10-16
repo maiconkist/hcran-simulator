@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from antenna import * 
+import threeGPP
 
 DEBUG = True
 
@@ -20,26 +21,57 @@ def list_append(lista, value):
     return lista
 
 def shannon(B, SINR):
+    #print "SINR", SINR
     #Shannon Calc
     # B is in hertz
     # the signal and noise_plus_interference powers S and N are measured in watts or volts
-    return B * math.log(1 + SINR, 2)
+    bits = B * math.log(1 + SINR, 2)
+    #print "bits", bits/2000
+    return bits
 
-def friis(Pt, Gt, Gr, R, Wl):
-   Pr = Pt + Gt + Gr + (20 * math.log(Wl/(4*math.pi*R), 10))
-   return Pr
+# def friis(Pt, Gt, Gr, R, Wl):
+#    #Pr = Pt + Gt + Gr + (20 * math.log(Wl/(4*math.pi*R), 10))
+#    #Pr = (Gt*Gr*(Wl/(4*math.pi*R)))/dbm_to_mw(Pt)
+#    Pr = Pt - path_loss
+#    return Pr 
 
-def sinr(P, I, N):
-    sinr = P - (abs(I)+N) #dB
-    return abs(sinr)
+def friis_loss(Pt, user, antenna):
+    #Pr = Pt + Gt + Gr + (20 * math.log(Wl/(4*math.pi*R), 10))
+    #Pr = (Gt*Gr*(Wl/(4*math.pi*R)))/dbm_to_mw(Pt)
+    ptmw = dbm_to_mw(Pt)
+    plossmw = dbm_to_mw(path_loss(user, antenna))
+    if ptmw > plossmw:
+        Pr = ptmw - plossmw
+        return mw_to_dbm(Pr) 
+    else:
+        return None
+
+def path_loss(user, antenna):
+    #Calculating the path loss for macrocell NLOS - 3GPP TR 36.814 
+    # UMa NLOS - Table B.1.2.1-1
+    pl = 0
+    d = dist(user, antenna)*0.001
+    if (antenna.type == antenna.BS_ID):
+        pl = 161.04 - 7.1*math.log(20,10) + 7.5 * math.log(20,10) - (24.37 - 3.7*math.pow(2,20/antenna.height)) * math.log(antenna.height,10) + (43.42-3.1* math.log(antenna.height,10)) * ( math.log(d,10)-3) + 20* math.log(antenna.frequency,10) - (3.2*math.pow(2, math.log(11.75*user.height,10))-4.97)
+    else:
+    #Calculating the path loss for microcell NLOS - 3GPP TR 36.814 
+    # UMi NLOS - Table B.1.2.1-1
+        pl = 36.7*math.log(d,10) + 22.7 + 26*math.log(antenna.frequency,10)       
+    #print "LOSS", pl 
+    return pl        
+    
+#def sinr(P, I, N):
+#    sinr = P/(I+N) #dB
+#    return sinr
+
+def mw_to_watts(mw):
+    return mw*1000
 
 def noise():
     #fixed noise in dBm
-    return -90 
-
-def dBm_to_watts(dBm):
-    watts = abs(dBm * 0.001258925)
-    return watts
+    #return -90 
+    n = threeGPP.B0 * 1.38064852e-23 * threeGPP.SYSTEM_TEMPERATURE *1000
+    return n
 
 def nearest(p1, p_list, idx=0):
     """ Return the closest point to p1 in p_list
@@ -82,19 +114,26 @@ def sum_coll(lista, x):
 
     return soma
 
-def path_loss(ue, antenna):
-    result = 0
-    if (antenna.type == antenna.BS_ID):
-        result = 31.5 + 40.0 * math.log(dist(ue, antenna))
-    else:
-        result = 31.5 + 35.0 * math.log(dist(ue, antenna))
-    return result
+# def path_loss(user, antenna):
+#     d = dist(user, antenna)
+#     result = 0
+#     if (antenna.type == antenna.BS_ID):
+#         result = 31.5 + 40.0 * math.log(d)
+#     else:
+#         result = 31.5 + 35.0 * math.log(d)
+#     return result
 
 def dbm_to_mw(dbm):
-    return 1.0 * math.pow(10,dbm/10.0)
+    if (dbm != 0):
+        return 1.0 * math.pow(10,dbm/10.0)
+    else:
+        return 0
 
 def mw_to_dbm(mw):
-    return 10.0 * math.log(mw,10)
+    if (mw != 0):
+        return 10.0 * math.log(mw,10)
+    else:
+        return 0
 
 def snr_to_bit(snr):
     if snr <= 6.0:
