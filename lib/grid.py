@@ -257,7 +257,7 @@ class Grid(object):
 
 
         #print "Datarate p/ rbs", asum/self.datarate[particle]*2000
-        print iteracao, "-", solucao, 'TotalRbs:', str(threeGPP.TOTAL_RBS*len(self.antennas)), "UsedRBS:", str(asum), "IMean:", str(mw_to_dbm(isum)/asum), "MU:", str(self.meet_users[particle]), "Fairness:", str(self.fairness[particle])
+        #print iteracao, "-", solucao, 'TotalRbs:', str(threeGPP.TOTAL_RBS*len(self.antennas)), "UsedRBS:", str(asum), "IMean:", str(mw_to_dbm(isum)/asum), "MU:", str(self.meet_users[particle]), "Fairness:", str(self.fairness[particle])
 
         f = open('resumo.csv','a')
         f.write(solucao+','+solucao+'['+str(len(self.bs_list))+'-'+str(len(self.rrh_list))+'-'+str(len(self.users))+'],'+str(len(self.bs_list))+','+str(len(self.rrh_list))+','+str(len(self.users))+','+str(repeticao)+','+str(iteracao)+','+str(self.datarate[particle])+','+str(self.consumition[particle])+','+str(self.energy_efficient[particle])+','+str(self.meet_users[particle])+','+str(self.fairness[particle])+','+str(time.time()-init)+'\n')

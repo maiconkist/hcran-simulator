@@ -15,7 +15,7 @@ import util
 import threeGPP
 import Calculations as calc
 
-NPARTICLES   = 20
+NPARTICLES   = 2
 STABLE_STEPS_LENGTH = 2
 HISTORY_LENGTH = 1
 #RESETRATE    = 0.01
@@ -96,7 +96,7 @@ class NewMc(object):
         # Loop maximo de itaracoes
         #while stabilized_particles < self.NPARTICLES and step < self.MC_STEPS:
         for step in range (0, self.MC_STEPS):
-            print "REP: ", self.REPETICAO, " I:", step
+            #print "REP: ", self.REPETICAO, " I:", step
             init = time.time()
             gc.collect() #Liberar memoria
             if(step == 0):
@@ -162,7 +162,7 @@ class NewMc(object):
                         ue = self.rand_user(p, antenna)
                         rb = self.rand_rb(p, antenna, ue, grid)
                         rest = antenna.rest_power(p)
-                        if rest != None and math.isnan(rest) == False and antenna.datarate_constraint[p] != 0:
+                        if rest != None and math.isnan(rest) == False and antenna.datarate_constraint[p] != 0.0:
                             mue = numpy.argmax(antenna.a[p, :, rb])
                             if(antenna.a[p, mue, rb] > 0):
                                 antenna.a[p][mue][rb] = 0
@@ -236,7 +236,11 @@ class NewMc(object):
 
         mean_particles_ee = numpy.mean(self.steps_energy_efficient[:,0])
         mean_particles_datarate = numpy.mean(self.steps_datarate_constraint[:,0])
-        mean_particles_fairness = numpy.mean(self.steps_fairness_constraint[:,0])
+        mean_particles_fairness = numpy.mean(1 + self.steps_fairness_constraint[:,0])
+
+        #print "Mean EE", mean_particles_ee
+        #print "Mean Data", mean_particles_datarate
+        #print "Mean Fair", mean_particles_fairness
 
         for p in range(0, NPARTICLES):
             #if self.beta_particles[p] == 0:
@@ -248,10 +252,12 @@ class NewMc(object):
 
 
             particle_std_datarate = numpy.std(self.steps_datarate_constraint[p,:])
-            particle_std_fairness = numpy.std(self.steps_fairness_constraint[p,:])
-            particle_std_ee       = numpy.std(self.steps_energy_efficient[p,:])
+            particle_std_fairness = numpy.std(1 +self.steps_fairness_constraint[p,:])
+            particle_std_ee       = numpy.std(abs(self.steps_energy_efficient[p,:]))
 
-            #print particle_std_ee/self.steps_energy_efficient[p,0]
+            #print "EE", particle_std_ee/self.steps_energy_efficient[p,0]
+            #print "Data", particle_std_datarate/abs(self.steps_datarate_constraint[p, 0])
+            #print "Fair", particle_std_fairness/(1+self.steps_fairness_constraint[p, 0])
             #print self.steps_energy_efficient[p,0]
             #print mean_particles_ee
 
@@ -262,18 +268,18 @@ class NewMc(object):
             elif self.steps_energy_efficient[p,0] > mean_particles_ee and (particle_std_ee/self.steps_energy_efficient[p,0]) > TX_FLUTUATION:
                 self.beta_particles[p] = self.beta_particles[p] * 2
 
-            if self.steps_datarate_constraint[p][0] < mean_particles_datarate and (particle_std_datarate/self.steps_datarate_constraint[p, 0]) < TX_FLUTUATION:
-                self.lambda_particles[p] = self.lambda_particles[p] * 0.9
-            elif self.steps_datarate_constraint[p][0] < mean_particles_datarate and (particle_std_datarate/self.steps_datarate_constraint[p, 0]) > TX_FLUTUATION:
+            if self.steps_datarate_constraint[p][0] < mean_particles_datarate and (particle_std_datarate/abs(self.steps_datarate_constraint[p, 0])) < TX_FLUTUATION:
+                self.lambda_particles[p] = self.lambda_particles[p] * 0.5
+            elif self.steps_datarate_constraint[p][0] < mean_particles_datarate and (particle_std_datarate/abs(self.steps_datarate_constraint[p, 0])) > TX_FLUTUATION:
                 self.lambda_particles[p] = self.lambda_particles[p] * 10
-            elif self.steps_datarate_constraint[p][0] > mean_particles_datarate and (particle_std_datarate/self.steps_datarate_constraint[p, 0]) > TX_FLUTUATION:
+            elif self.steps_datarate_constraint[p][0] > mean_particles_datarate and (particle_std_datarate/abs(self.steps_datarate_constraint[p, 0])) > TX_FLUTUATION:
                 self.lambda_particles[p] = self.lambda_particles[p] * 20
 
-            if self.steps_fairness_constraint[p][0] < mean_particles_fairness and (particle_std_fairness/self.steps_fairness_constraint[p, 0]) < TX_FLUTUATION:
+            if self.steps_fairness_constraint[p][0] < mean_particles_fairness and (particle_std_fairness/(1+self.steps_fairness_constraint[p, 0])) < TX_FLUTUATION:
                 self.upsilon_particles[p] = self.upsilon_particles[p] * 0.5
-            elif self.steps_fairness_constraint[p][0] < mean_particles_fairness and (particle_std_fairness/self.steps_fairness_constraint[p, 0]) > TX_FLUTUATION:
+            elif self.steps_fairness_constraint[p][0] < mean_particles_fairness and (particle_std_fairness/(1+self.steps_fairness_constraint[p, 0])) > TX_FLUTUATION:
                 self.upsilon_particles[p] = self.upsilon_particles[p] * 1.5
-            elif self.steps_fairness_constraint[p][0] > mean_particles_fairness and (particle_std_fairness/self.steps_fairness_constraint[p, 0]) > TX_FLUTUATION:
+            elif self.steps_fairness_constraint[p][0] > mean_particles_fairness and (particle_std_fairness/(1+self.steps_fairness_constraint[p, 0])) > TX_FLUTUATION:
                 self.upsilon_particles[p] = self.upsilon_particles[p] * 2
 
 
@@ -351,7 +357,7 @@ class NewMc(object):
         accumulated = 0
         probMinimum = 1
         rest = antenna.rest_power(particle)
-        if rest != None and math.isnan(rest) == False and antenna.datarate_constraint[particle] != 0:
+        if rest != None and math.isnan(rest) == False and antenna.datarate_constraint[particle] != 0.0:
             max_user_datarate = numpy.max(antenna.user_datarate[particle,:])
             for ue in range(0, len(antenna.connected_ues)):
                 #TODO: pensar em uma forma quando a demanda for dinamica 
@@ -388,22 +394,28 @@ class NewMc(object):
         accumulated = 0
         probMinimum = 10
         rest = antenna.rest_power(particle)
-        if rest != None and math.isnan(rest) == False and antenna.datarate_constraint[particle] != 0:
+        if rest != None and math.isnan(rest) == False and antenna.datarate_constraint[particle] != 0.0:
             #print "if"
             for rb in range(0, threeGPP.TOTAL_RBS):
                 #print "loop", rb
-                i = calc.power_interference(ue, rb, antenna, grid, particle)
-                power = calc.transmission_power(antenna, antenna.connected_ues[ue], i, util.noise(), threeGPP.TARGET_SINR, particle)
-                #print "Power", power 
-                if power != None and math.isnan(power) == False:    
-                    data = (util.shannon(threeGPP.B0, calc.gaussian_sinr(power, util.path_loss(antenna.connected_ues[ue],antenna), i, util.noise())))
-                    #print "power", transmission_power                  
-                    prob = (data/2000)/util.dbm_to_mw(power)
-                    #print "EE prob", prob
-                    if prob > probMinimum:
-                        accumulated = accumulated + prob
+                mue = numpy.argmax(antenna.a[particle, :, rb])
+                #print "MUE", antenna.a[p, mue, rb]
+                if(antenna.a[particle, mue, rb] == 0 and antenna.a[particle, ue, rb] == 0):
+                    i = calc.power_interference(ue, rb, antenna, grid, particle)
+                    power = calc.transmission_power(antenna, antenna.connected_ues[ue], i, util.noise(), threeGPP.TARGET_SINR, particle)
+                    #print "Power", power 
+                    if power != None and math.isnan(power) == False:    
+                        data = (util.shannon(threeGPP.B0, calc.gaussian_sinr(power, util.path_loss(antenna.connected_ues[ue],antenna), i, util.noise())))
+                        #print "power", transmission_power                  
+                        prob = (data/2000)/util.dbm_to_mw(power)
+                        #print "EE prob", prob
+                        if prob > probMinimum:
+                            accumulated = accumulated + prob
+                        else:
+                            accumulated = accumulated + probMinimum
                     else:
-                        accumulated = accumulated + probMinimum
+                        prob = 0
+                        accumulated = accumulated + prob
                 else:
                     prob = 0
                     accumulated = accumulated + prob
@@ -411,14 +423,19 @@ class NewMc(object):
         else:
             #print "else"
             for rb in range(0, threeGPP.TOTAL_RBS):
-                i = calc.power_interference(ue, rb, antenna, grid, particle)
-                power = calc.transmission_power(antenna, antenna.connected_ues[ue], i, util.noise(), threeGPP.TARGET_SINR, particle)
-                if power != None and math.isnan(power) == False:
-                    #print "Power prob", power
-                    if power > probMinimum:
-                        accumulated = accumulated + power
-                    else:
-                        accumulated = accumulated + probMinimum
+                mue = numpy.argmax(antenna.a[particle, :, rb])
+                if(antenna.a[particle, mue, rb] > 0):
+                    i = calc.power_interference(ue, rb, antenna, grid, particle)
+                    power = calc.transmission_power(antenna, antenna.connected_ues[ue], i, util.noise(), threeGPP.TARGET_SINR, particle)
+                    if power != None and math.isnan(power) == False:
+                        #print "Power prob", power
+                        if power > probMinimum:
+                            accumulated = accumulated + power
+                        else:
+                            accumulated = accumulated + probMinimum
+                else:
+                    prob = 0
+                    accumulated = accumulated + prob
                 roulette[rb] = accumulated
 
         #print "Roulette", roulette

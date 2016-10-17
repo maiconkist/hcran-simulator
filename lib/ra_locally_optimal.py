@@ -135,35 +135,36 @@ class LocallyOptimal(object):
 
             #print "Antena", ant.type
             #auxi = numpy.copy(ant.i)
-            needed_rbs = calc.demand_in_rbs(ant, ue)
-            #print "Need RBs = ", needed_rbs
-            tr = 0 #total de tentativas
-            while tr < threeGPP.TOTAL_RBS and needed_rbs > 0: 
-                tr += 1
-                rb = numpy.argmin(auxi[0,ue,:])
-                mue = numpy.argmax(ant.a[0,:,rb])
-                #print rb
-                if ant.a[0][ue][rb] == 0 and ant.a[0][mue][rb] == 0:
-                    ant.p[0][ue][rb] = calc.transmission_power(ant, ant.connected_ues[ue], ant.i[0,ue,rb], noise(), threeGPP.TARGET_SINR)
-                    if ant.p[0][ue][rb] != None and math.isnan(ant.p[0][ue][rb]) == False:
-                        ant.a[0][ue][rb] = 1
-                        #print "Need -1"
-                        needed_rbs = needed_rbs - 1
-                    else:
-                        ant.a[0][ue][rb] = 0
-                        ant.i[0][ue][rb] = None
-                        ant.p[0][ue][rb] = None
-                        break;                    
+            if ue > 0:
+                needed_rbs = calc.demand_in_rbs(ant, ue)
+                #print "Need RBs = ", needed_rbs
+                tr = 0 #total de tentativas
+                while tr < threeGPP.TOTAL_RBS and needed_rbs > 0: 
+                    tr += 1
+                    rb = numpy.argmin(auxi[0,ue,:])
+                    mue = numpy.argmax(ant.a[0,:,rb])
+                    #print rb
+                    if ant.a[0][ue][rb] == 0 and ant.a[0][mue][rb] == 0:
+                        ant.p[0][ue][rb] = calc.transmission_power(ant, ant.connected_ues[ue], ant.i[0,ue,rb], noise(), threeGPP.TARGET_SINR)
+                        if ant.p[0][ue][rb] != None and math.isnan(ant.p[0][ue][rb]) == False:
+                            ant.a[0][ue][rb] = 1
+                            #print "Need -1"
+                            needed_rbs = needed_rbs - 1
+                        else:
+                            ant.a[0][ue][rb] = 0
+                            ant.i[0][ue][rb] = None
+                            ant.p[0][ue][rb] = None
+                            break;                    
 
-                    for antena in grid.antennas:
-                        if antena.a != None and len(antena.connected_ues) > 0:
-                            mue = numpy.argmax(antena.a[0,:,rb])
-                            if (antena.a[0,mue,rb] > 0):
-                                antena.i[0][mue][rb] = calc.power_interference(mue, rb, antena, grid) #dBm
-                                antena.p[0][mue][rb] = calc.transmission_power(antena, antena.connected_ues[mue], antena.i[0][mue][rb], noise(), threeGPP.TARGET_SINR)
-                    break
-                else:
-                    auxi[0][ue][rb] = 9999999
+                        for antena in grid.antennas:
+                            if antena.a != None and len(antena.connected_ues) > 0:
+                                mue = numpy.argmax(antena.a[0,:,rb])
+                                if (antena.a[0,mue,rb] > 0):
+                                    antena.i[0][mue][rb] = calc.power_interference(mue, rb, antena, grid) #dBm
+                                    antena.p[0][mue][rb] = calc.transmission_power(antena, antena.connected_ues[mue], antena.i[0][mue][rb], noise(), threeGPP.TARGET_SINR)
+                        break
+                    else:
+                        auxi[0][ue][rb] = 9999999
 
             calc.datarate(ant, grid)
             calc.consumption(ant)
