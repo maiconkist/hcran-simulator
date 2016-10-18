@@ -15,13 +15,13 @@ import util
 import threeGPP
 import Calculations as calc
 
-NPARTICLES   = 20000
+NPARTICLES   = 20
 STABLE_STEPS_LENGTH = 10
-HISTORY_LENGTH = 100
+HISTORY_LENGTH = 10
 #RESETRATE    = 0.01
 L_BETA       = 1  #EE
 L_LAMBDA     = 20 #DATARATE
-L_UPSILON    = 1  #FAIRNESS
+L_UPSILON    = 2  #FAIRNESS
 TX_FLUTUATION = 0.001
 
 class RandonMc(object): 
@@ -46,6 +46,16 @@ class RandonMc(object):
         #self.history_upsilon_particles = None
         #self.history_ee_particles = None
 
+    def is_stable(self, data_list):
+        std_list = numpy.std(data_list)
+
+        dif = std_list/data_list[0]
+        #print dif 
+        if math.isnan(dif) == False and abs(dif) > TX_FLUTUATION:
+            #print "Not Stable"
+            return False
+        #print "Stable"    
+        return True
 
     def run(self, grid):
         grid.energy_efficient           = numpy.zeros(shape=(NPARTICLES)) 
@@ -55,9 +65,9 @@ class RandonMc(object):
         grid.meet_users                 = numpy.zeros(shape=(NPARTICLES))
         grid.history_weighted_efficient = numpy.zeros(shape=(HISTORY_LENGTH))
 
-        self.lambda_particles           = numpy.zeros(shape=(NPARTICLES))
-        self.upsilon_particles          = numpy.zeros(shape=(NPARTICLES))
-        self.beta_particles             = numpy.zeros(shape=(NPARTICLES))
+        self.lambda_particles           = numpy.ones(shape=(NPARTICLES))
+        self.upsilon_particles          = numpy.ones(shape=(NPARTICLES))
+        self.beta_particles             = numpy.ones(shape=(NPARTICLES))
         self.steps_energy_efficient     = numpy.zeros(shape=(NPARTICLES,STABLE_STEPS_LENGTH))
         self.steps_weighted_efficient   = numpy.zeros(shape=(NPARTICLES,STABLE_STEPS_LENGTH))
         self.steps_datarate_constraint  = numpy.zeros(shape=(NPARTICLES,STABLE_STEPS_LENGTH))
@@ -96,7 +106,7 @@ class RandonMc(object):
         # Loop maximo de itaracoes
         #while stabilized_particles < self.NPARTICLES and step < self.MC_STEPS:
         for step in range (0, self.MC_STEPS*10 + 1):
-            print "REP: ", self.REPETICAO, " I:", step
+            #print "REP: ", self.REPETICAO, " I:", step
             init = time.time()
             gc.collect() #Liberar memoria
             if(step == 0):
@@ -159,7 +169,7 @@ class RandonMc(object):
                         ue = self.rand_user(p, antenna)
                         rb = self.rand_rb(p, antenna, ue, grid)
                         rest = antenna.rest_power(p)
-                        if rest != None and math.isnan(rest) == False and antenna.datarate_constraint[p] != 0:
+                        if rest != None and math.isnan(rest) == False and antenna.a[p][ue][rb] == 0:
                             mue = numpy.argmax(antenna.a[p, :, rb])
                             if(antenna.a[p, mue, rb] > 0):
                                 antenna.a[p][mue][rb] = 0
@@ -203,31 +213,34 @@ class RandonMc(object):
                         #print rand, prob
                         if rand <= prob:
                             #print "Aceitou!!!"
-                            if(first_in):
-                                self.steps_datarate_constraint[p] = util.list_append(self.steps_datarate_constraint[p], current_datarate_constraint)
-                                self.steps_fairness_constraint[p] = util.list_append(self.steps_fairness_constraint[p], current_fairness_constraint)
-                                self.steps_energy_efficient[p]  = util.list_append(self.steps_energy_efficient[p], grid.energy_efficient[p])
-                                self.steps_weighted_efficient[p]  = util.list_append(self.steps_weighted_efficient[p], current_weighted_efficient)
-                                first_in = False
-                            else:
-                                self.steps_datarate_constraint[p,0] = current_datarate_constraint
-                                self.steps_fairness_constraint[p,0] = current_fairness_constraint
-                                self.steps_energy_efficient[p,0]    = grid.energy_efficient[p]
-                                self.steps_weighted_efficient[p,0]  = current_weighted_efficient
+                            #if(first_in):
+                            self.steps_datarate_constraint[p] = util.list_append(self.steps_datarate_constraint[p], current_datarate_constraint)
+                            self.steps_fairness_constraint[p] = util.list_append(self.steps_fairness_constraint[p], current_fairness_constraint)
+                            self.steps_energy_efficient[p]  = util.list_append(self.steps_energy_efficient[p], grid.energy_efficient[p])
+                            self.steps_weighted_efficient[p]  = util.list_append(self.steps_weighted_efficient[p], current_weighted_efficient)
+                            #first_in = False
+                            #else:
+                            #    self.steps_datarate_constraint[p,0] = current_datarate_constraint
+                            #    self.steps_fairness_constraint[p,0] = current_fairness_constraint
+                            #    self.steps_energy_efficient[p,0]    = grid.energy_efficient[p]
+                            #    self.steps_weighted_efficient[p,0]  = current_weighted_efficient
                         else:
                             #print "Nao aceitou..."
                             for antenna_aux in grid.antennas:
                                 antenna_aux.restore_state(p)
 
-                grid.restore_best_particles(self.steps_weighted_efficient[:,0].copy(), HISTORY_LENGTH)
-            self.raises_temperature()
+                        if stepezinho % self.MC_STEPS == 0:
+                            self.raises_temperature(p)
 
-            if step % 10 == 0:
+                grid.restore_best_particles(self.steps_weighted_efficient[:,0].copy(), HISTORY_LENGTH)
+
+
+            if step % self.MC_STEPS == 0:
                 best_particle = numpy.argmax(self.steps_weighted_efficient[:,0])
                 grid.write_to_resume('Random Monte Carlo', self.REPETICAO, step/10, init, best_particle)
 
 
-    def raises_temperature(self):          
+    def raises_temperature(self, p):          
 
         mean_particles_ee = numpy.mean(self.steps_energy_efficient[:,0])
         mean_particles_datarate = numpy.mean(self.steps_datarate_constraint[:,0])
@@ -237,45 +250,37 @@ class RandonMc(object):
         #print "Mean Data", mean_particles_datarate
         #print "Mean Fair", mean_particles_fairness
 
-        for p in range(0, NPARTICLES):
-            #if self.beta_particles[p] == 0:
-            #    self.beta_particles[p] = 0.1
-            #if self.lambda_particles[p] == 0:
-            #    self.lambda_particles[p] = 0.1
-            #if self.upsilon_particles[p] == 0:
-            #    self.upsilon_particles[p] = 0.1
+        #for p in range(0, NPARTICLES):
 
+        if self.steps_energy_efficient[p,0] < mean_particles_ee and self.is_stable(self.steps_energy_efficient[p]):
+            self.beta_particles[p] = self.beta_particles[p] * 0.5
+            #print "relaxa ee"
+        elif self.steps_energy_efficient[p,0] < mean_particles_ee and self.is_stable(self.steps_energy_efficient[p]) == False:
+            self.beta_particles[p] = self.beta_particles[p] * 1.5
+            #print "restringe ee"
+        elif self.steps_energy_efficient[p,0] > mean_particles_ee and self.is_stable(self.steps_energy_efficient[p]) == False:
+            #print "restringe muito ee"
+            self.beta_particles[p] = self.beta_particles[p] * 2
 
-            particle_std_datarate = numpy.std(self.steps_datarate_constraint[p,:])
-            particle_std_fairness = numpy.std(1 +self.steps_fairness_constraint[p,:])
-            particle_std_ee       = numpy.std(abs(self.steps_energy_efficient[p,:]))
+        if self.steps_datarate_constraint[p][0] < mean_particles_datarate and self.is_stable(self.steps_datarate_constraint[p]):
+            self.lambda_particles[p] = self.lambda_particles[p] * 0.9
+            #print "relaxa data"
+        elif self.steps_datarate_constraint[p][0] < mean_particles_datarate and self.is_stable(self.steps_datarate_constraint[p]) == False:
+            self.lambda_particles[p] = self.lambda_particles[p] * 10
+            #print "restringe data"
+        elif self.steps_datarate_constraint[p][0] > mean_particles_datarate and self.is_stable(self.steps_datarate_constraint[p]) == False:
+            #print "restringe muito data"
+            self.lambda_particles[p] = self.lambda_particles[p] * 20
 
-            #print "EE", particle_std_ee/self.steps_energy_efficient[p,0]
-            #print "Data", particle_std_datarate/abs(self.steps_datarate_constraint[p, 0])
-            #print "Fair", particle_std_fairness/(1+self.steps_fairness_constraint[p, 0])
-            #print self.steps_energy_efficient[p,0]
-            #print mean_particles_ee
-
-            if self.steps_energy_efficient[p,0] < mean_particles_ee and (particle_std_ee/self.steps_energy_efficient[p,0]) < TX_FLUTUATION:
-                self.beta_particles[p] = self.beta_particles[p] * 0.5
-            elif self.steps_energy_efficient[p,0] < mean_particles_ee and (particle_std_ee/self.steps_energy_efficient[p,0]) > TX_FLUTUATION:
-                self.beta_particles[p] = self.beta_particles[p] * 1.5
-            elif self.steps_energy_efficient[p,0] > mean_particles_ee and (particle_std_ee/self.steps_energy_efficient[p,0]) > TX_FLUTUATION:
-                self.beta_particles[p] = self.beta_particles[p] * 2
-
-            if self.steps_datarate_constraint[p][0] < mean_particles_datarate and (particle_std_datarate/abs(self.steps_datarate_constraint[p, 0])) < TX_FLUTUATION:
-                self.lambda_particles[p] = self.lambda_particles[p] * 0.5
-            elif self.steps_datarate_constraint[p][0] < mean_particles_datarate and (particle_std_datarate/abs(self.steps_datarate_constraint[p, 0])) > TX_FLUTUATION:
-                self.lambda_particles[p] = self.lambda_particles[p] * 10
-            elif self.steps_datarate_constraint[p][0] > mean_particles_datarate and (particle_std_datarate/abs(self.steps_datarate_constraint[p, 0])) > TX_FLUTUATION:
-                self.lambda_particles[p] = self.lambda_particles[p] * 20
-
-            if self.steps_fairness_constraint[p][0] < mean_particles_fairness and (particle_std_fairness/(1+self.steps_fairness_constraint[p, 0])) < TX_FLUTUATION:
-                self.upsilon_particles[p] = self.upsilon_particles[p] * 0.5
-            elif self.steps_fairness_constraint[p][0] < mean_particles_fairness and (particle_std_fairness/(1+self.steps_fairness_constraint[p, 0])) > TX_FLUTUATION:
-                self.upsilon_particles[p] = self.upsilon_particles[p] * 1.5
-            elif self.steps_fairness_constraint[p][0] > mean_particles_fairness and (particle_std_fairness/(1+self.steps_fairness_constraint[p, 0])) > TX_FLUTUATION:
-                self.upsilon_particles[p] = self.upsilon_particles[p] * 2
+        if self.steps_fairness_constraint[p][0] < mean_particles_fairness and self.is_stable(self.steps_fairness_constraint[p]):
+            self.upsilon_particles[p] = self.upsilon_particles[p] * 0.5
+            #print "relaxa fair"
+        elif self.steps_fairness_constraint[p][0] < mean_particles_fairness and self.is_stable(self.steps_fairness_constraint[p]) == False:
+            self.upsilon_particles[p] = self.upsilon_particles[p] * 1.5
+            #print "restringe fair"
+        elif self.steps_fairness_constraint[p][0] > mean_particles_fairness and self.is_stable(self.steps_fairness_constraint[p]) == False:
+            #print "restringe muito fair"
+            self.upsilon_particles[p] = self.upsilon_particles[p] * 2
 
 
     def acceptance_probability(self, particle, new_ee, old_ee, new_datarate, old_datarate, new_fairness, old_fairness):

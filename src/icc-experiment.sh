@@ -1,6 +1,6 @@
-MAXUE=10
+MAXUE=100
 STEPUE=10
-MAXREP=1
+MAXREP=5
 STEPREP=1
  
 for r in `seq 0 $STEPREP $(($MAXREP - 1))`; do
