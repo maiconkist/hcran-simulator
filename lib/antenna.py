@@ -71,6 +71,7 @@ class Antenna(object):
         self.consumition               = None 
         self.datarate                  = None
         self.user_datarate             = None
+        self.user_consumption          = None
         self.fairness                  = None
         self.meet_users                = None
         self.datarate_constraint       = None
@@ -81,6 +82,7 @@ class Antenna(object):
         self.backup_consumition        = None 
         self.backup_datarate           = None
         self.backup_user_datarate      = None
+        self.backup_user_consumption   = None
         self.backup_fairness           = None
         self.backup_meet_users         = None
         self.history_i                 = None
@@ -90,6 +92,7 @@ class Antenna(object):
         self.history_consumition       = None
         self.history_datarate          = None
         self.history_user_datarate     = None
+        self.history_user_consumption  = None
         self.history_fairness          = None
         self.history_meet_users        = None
 

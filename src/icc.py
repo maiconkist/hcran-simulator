@@ -71,14 +71,14 @@ def do_sequential(rep, grid):
 def processInput(rep, nues):
     bs = 1
     bbu = 2 
-    cluster = 2
-    rrh = 4
+    cluster = 1
+    rrh = 2
     ue = nues
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
     
-    #do_locally_optimal(rep, grids[0])
+    do_locally_optimal(rep, grids[0])
 
     #do_global_optimal(rep, grids[0])
 
@@ -88,10 +88,14 @@ def processInput(rep, nues):
 
     do_new_mc(rep, grids[2])
 
-    do_random_mc(rep, grids[2])
+    #do_random_mc(rep, grids[2])
     
     del grids
     gc.collect()
+
+def soma(nbs, ues):
+    ues[nbs] = 0
+    print nbs
     
 
 ########################################
@@ -120,10 +124,13 @@ if __name__ == "__main__":
     processInput(rep, ues)
     
     #print ues
+    #cont = 0
+    #ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
     #num_cores = multiprocessing.cpu_count()
-    #for nues in ues:
-    #    Parallel(n_jobs=num_cores)(delayed(processInput)(nbs, nues) for nbs in range(0, MAX_REP))
+    #Parallel(n_jobs=num_cores)(delayed(soma)(nbs, ues) for nbs in range(0, len(ues)))
 
+
+    #print ues
     #grid = build_fixed_scenario()
     #util.plot_grid(grid)
     

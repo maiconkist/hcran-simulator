@@ -36,6 +36,7 @@ class FixedPower(object):
             bs.datarate         = numpy.zeros(shape=(1))
             bs.datarate_constraint = numpy.zeros(shape=(1))
             bs.user_datarate    = numpy.zeros(shape=(1,len(bs.connected_ues)))
+            bs.user_consumption = numpy.zeros(shape=(1,len(bs.connected_ues)))
             bs.fairness         = numpy.zeros(shape=(1))
             bs.meet_users       = numpy.zeros(shape=(1))
 
@@ -70,6 +71,7 @@ class FixedPower(object):
             rrh.datarate         = numpy.zeros(shape=(1))
             rrh.datarate_constraint = numpy.zeros(shape=(1))
             rrh.user_datarate    = numpy.zeros(shape=(1,len(rrh.connected_ues)))
+            rrh.user_consumption = numpy.zeros(shape=(1,len(rrh.connected_ues)))
             rrh.fairness         = numpy.zeros(shape=(1))
             rrh.meet_users       = numpy.zeros(shape=(1))
             auxi                 = numpy.zeros(shape=(1, len(rrh.connected_ues), threeGPP.TOTAL_RBS))

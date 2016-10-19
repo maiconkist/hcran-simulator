@@ -65,7 +65,10 @@ def path_loss(user, antenna):
 #    return sinr
 
 def mw_to_watts(mw):
-    return mw*1000
+    return mw*0.001
+
+def watts_to_mw(watts):
+    return watts*1000
 
 def noise():
     #fixed noise in dBm

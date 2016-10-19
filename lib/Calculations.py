@@ -120,7 +120,7 @@ def datarate(antenna, grid, particle = 0):
                 for k in range (0, threeGPP.TOTAL_RBS):
                     if antenna.a[particle][n][k] > 0 and math.isnan(antenna.p[particle][n][k]) == False:
                         #print "Power", antenna.p[particle][n][k]
-                        antenna.i[particle][n][k] = power_interference(n, k, antenna, grid, particle)
+                        #antenna.i[particle][n][k] = power_interference(n, k, antenna, grid, particle)
                         data_bits = (util.shannon((antenna.a[particle][n][k] * threeGPP.B0), gaussian_sinr(antenna.p[particle][n][k], util.path_loss(antenna.connected_ues[n], antenna),antenna.i[particle][n][k], util.noise())))/2000#Qnt de bits em 0,5 ms
                         antenna.datarate[particle] += data_bits
                         antenna.user_datarate[particle][n] += data_bits
@@ -143,24 +143,27 @@ def consumption(antenna, particle = 0):
     antenna.consumition[particle] = 0
     result = 0
     for n in range(0, len(antenna.connected_ues)):
+        result_ue = 0
         for k in range(0, threeGPP.TOTAL_RBS):
             if antenna.a[particle][n][k] > 0:
-                old_power = antenna.p[particle][n][k]
-                antenna.p[particle][n][k] = None
-                new_power = transmission_power(antenna, antenna.connected_ues[n], antenna.i[particle,n,k], util.noise(), threeGPP.TARGET_SINR, particle)
-                if new_power != None:
-                    antenna.p[particle][n][k] = new_power
-                else:
-                    antenna.p[particle][n][k] = old_power
+                #old_power = antenna.p[particle][n][k]
+                #antenna.p[particle][n][k] = None
+                #new_power = transmission_power(antenna, antenna.connected_ues[n], antenna.i[particle,n,k], util.noise(), threeGPP.TARGET_SINR, particle)
+                #if new_power != None:
+                #    antenna.p[particle][n][k] = new_power
+                #else:
+                #    antenna.p[particle][n][k] = old_power
                 if math.isnan(antenna.p[particle][n][k]) == False:
-                    result += util.dbm_to_mw(antenna.p[particle][n][k])   
+                    result_ue += util.dbm_to_mw(antenna.p[particle][n][k]) 
+        result += result_ue
+        antenna.user_consumption[particle, n] = result_ue 
     if (antenna.type == antenna.BS_ID):
-        antenna.consumition[particle] = (threeGPP.MEFF * result) + threeGPP.PMC + threeGPP.PMBH
+        antenna.consumition[particle] = (threeGPP.MEFF * result) + util.watts_to_mw(threeGPP.PMC) + util.watts_to_mw(threeGPP.PMBH)
     else:
-        antenna.consumition[particle] = (threeGPP.EFF * result) + threeGPP.PMC + threeGPP.PMBH
+        antenna.consumition[particle] = (threeGPP.EFF * result) + util.watts_to_mw(threeGPP.PMC) + util.watts_to_mw(threeGPP.PMBH)
 
 def efficiency(antenna, particle = 0):
-    antenna.energy_efficient[particle] = antenna.datarate[particle]/threeGPP.CHANNEL/antenna.consumition[particle]
+    antenna.energy_efficient[particle] = (antenna.datarate[particle]*2000/1048576)/(util.mw_to_watts(antenna.consumition[particle]))
 
 def fairness(antenna, particle = 0):
     x1 = 0
@@ -217,7 +220,7 @@ def gridconsumption(grid, particle = 0):
         grid.consumition[particle] += ant.consumition[particle]
 
 def gridefficiency(grid, particle = 0):
-    grid.energy_efficient[particle] = (grid.datarate[particle]*2000/1048576)/threeGPP.CHANNEL/grid.consumition[particle]
+    grid.energy_efficient[particle] = (grid.datarate[particle]*2000/1048576)/(util.mw_to_watts(grid.consumition[particle]))
 
 
 def datarate_constraint(grid, particle = 0):

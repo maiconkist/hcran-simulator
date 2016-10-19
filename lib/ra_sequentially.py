@@ -37,6 +37,7 @@ class Sequential(object):
             bs.datarate         = numpy.zeros(shape=(1))
             bs.datarate_constraint = numpy.zeros(shape=(1))
             bs.user_datarate    = numpy.zeros(shape=(1,len(bs.connected_ues)))
+            bs.user_consumption = numpy.zeros(shape=(1,len(bs.connected_ues)))
             bs.fairness         = numpy.zeros(shape=(1))
             bs.meet_users       = numpy.zeros(shape=(1))
 
