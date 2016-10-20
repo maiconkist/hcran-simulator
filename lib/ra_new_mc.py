@@ -1,4 +1,3 @@
-from antenna_mc import AntennaMc
 from antenna import Antenna
 from grid import Grid
 from user import *

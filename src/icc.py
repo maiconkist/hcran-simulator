@@ -72,7 +72,7 @@ def processInput(rep, nues):
     bs = 1
     bbu = 2 
     cluster = 1
-    rrh = 2
+    rrh = 4
     ue = nues
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
@@ -86,9 +86,9 @@ def processInput(rep, nues):
 
     #do_fixedpower(rep, grids[1])
 
-    do_new_mc(rep, grids[2])
+    #do_new_mc(rep, grids[2])
 
-    #do_random_mc(rep, grids[2])
+    do_random_mc(rep, grids[2])
     
     del grids
     gc.collect()
