@@ -72,7 +72,7 @@ def processInput(rep, nues):
     bs = 1
     bbu = 2 
     cluster = 1
-    rrh = 4
+    rrh = 2
     ue = nues
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
@@ -80,11 +80,11 @@ def processInput(rep, nues):
     
     do_locally_optimal(rep, grids[0])
 
-    #do_global_optimal(rep, grids[0])
+    do_global_optimal(rep, grids[0])
 
-    #do_sequential(rep, grids[1])
+    do_sequential(rep, grids[1])
 
-    #do_fixedpower(rep, grids[1])
+    do_fixedpower(rep, grids[1])
 
     #do_new_mc(rep, grids[2])
 
@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
     #ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
     #ues = [15]
-    ues = 15
+    ues = 30
     rep = 0
     if len(sys.argv) > 1:
         rep = int(sys.argv[1])
