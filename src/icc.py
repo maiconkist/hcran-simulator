@@ -71,8 +71,8 @@ def do_sequential(rep, grid):
 def processInput(rep, nues):
     bs = 1
     bbu = 2 
-    cluster = 1
-    rrh = 2
+    cluster = 2
+    rrh = 4
     ue = nues
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
