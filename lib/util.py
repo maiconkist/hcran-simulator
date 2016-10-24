@@ -1,8 +1,8 @@
 import math
 import scipy.spatial
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+#import matplotlib.pyplot as plt
+#import matplotlib.patches as patches
 from antenna import * 
 import threeGPP
 
@@ -217,63 +217,63 @@ def build_traffic_user( user_list ):
         total_request_ue += ue.request
 
 
-def plot_grid( grid ):
+# def plot_grid( grid ):
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    fig.subplots_adjust(top=0.85)
-    x = []
-    y = []
-    colors = []
-    area = []
+#     fig = plt.figure()
+#     ax = fig.add_subplot(111)
+#     fig.subplots_adjust(top=0.85)
+#     x = []
+#     y = []
+#     colors = []
+#     area = []
 
-    for i, ue in enumerate( grid._user ):
-        x.append(ue.x)
-        y.append(ue.y)
-        #ax.text(ue.x-25, ue.y-35, 'UE'+str(ue._id))
-        colors.append('#1214a9')
-        area.append(np.pi * 1**2)
+#     for i, ue in enumerate( grid._user ):
+#         x.append(ue.x)
+#         y.append(ue.y)
+#         #ax.text(ue.x-25, ue.y-35, 'UE'+str(ue._id))
+#         colors.append('#1214a9')
+#         area.append(np.pi * 1**2)
 
-        if ue._connected_antenna != None:
-            ax.arrow(ue.x, ue.y, ue._connected_antenna.x-ue.x, ue._connected_antenna.y-ue.y, head_width=10, head_length=10, fc='k', ec='k')
+#         if ue._connected_antenna != None:
+#             ax.arrow(ue.x, ue.y, ue._connected_antenna.x-ue.x, ue._connected_antenna.y-ue.y, head_width=10, head_length=10, fc='k', ec='k')
 
-    for i, cluster in enumerate(grid._clusters):
-        x.append(cluster.x)
-        y.append(cluster.y)
-        colors.append('#FF0000')
-        area.append(np.pi * 2**2)
+#     for i, cluster in enumerate(grid._clusters):
+#         x.append(cluster.x)
+#         y.append(cluster.y)
+#         colors.append('#FF0000')
+#         area.append(np.pi * 2**2)
 
-    for i, rrh in enumerate( grid._antennas ):
-        if rrh.type == rrh.BS_ID:
-            #colors.append('#ee1313')
-            #area.append(np.pi * 7**2)
-            ax.add_patch(patches.RegularPolygon(
-                    (rrh.x,rrh.y),
-                    3,
-                    10,
-                    fill=False )
-                )
+#     for i, rrh in enumerate( grid._antennas ):
+#         if rrh.type == rrh.BS_ID:
+#             #colors.append('#ee1313')
+#             #area.append(np.pi * 7**2)
+#             ax.add_patch(patches.RegularPolygon(
+#                     (rrh.x,rrh.y),
+#                     3,
+#                     10,
+#                     fill=False )
+#                 )
 
-            #Add Hexagon
-            ax.add_patch(patches.RegularPolygon(
-                    (rrh.x,rrh.y),
-                    6,
-                    290, #Chutei e funcinou! :D
-                    fill=False,
-                    orientation=math.pi/2)
-                )
-            #Add Text
-            #ax.text(rrh.x-25, rrh.y-60, 'BS'+str(rrh._id))
-        elif rrh.type == rrh.RRH_ID:
-            x.append(rrh.x)
-            y.append(rrh.y)
-            #colors.append('#7abf57')
-            colors.append('#FFFFFF')
-            area.append(np.pi * 2**2)
-            #ax.text(rrh.x-35, rrh.y-12, 'RRH'+str(rrh._id))
+#             #Add Hexagon
+#             ax.add_patch(patches.RegularPolygon(
+#                     (rrh.x,rrh.y),
+#                     6,
+#                     290, #Chutei e funcinou! :D
+#                     fill=False,
+#                     orientation=math.pi/2)
+#                 )
+#             #Add Text
+#             #ax.text(rrh.x-25, rrh.y-60, 'BS'+str(rrh._id))
+#         elif rrh.type == rrh.RRH_ID:
+#             x.append(rrh.x)
+#             y.append(rrh.y)
+#             #colors.append('#7abf57')
+#             colors.append('#FFFFFF')
+#             area.append(np.pi * 2**2)
+#             #ax.text(rrh.x-35, rrh.y-12, 'RRH'+str(rrh._id))
 
-    plt.scatter(x, y, s=area, c=colors, alpha=0.5)
-    plt.ylim([0,grid.size[0]])
-    plt.xlim([0,grid.size[1]])
-    plt.show()
+#     plt.scatter(x, y, s=area, c=colors, alpha=0.5)
+#     plt.ylim([0,grid.size[0]])
+#     plt.xlim([0,grid.size[1]])
+#     plt.show()
 

@@ -1,7 +1,5 @@
 import math
 import scipy.spatial
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 from antenna import * 
 from user import *
 from bbu import *

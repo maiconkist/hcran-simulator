@@ -1,8 +1,6 @@
 import math
 import scipy.spatial
 import numpy
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 import antenna as Antenna
 import util 
 import threeGPP
