@@ -128,7 +128,7 @@ if __name__ == "__main__":
     ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
     #for r in range(0, MAX_REP):  
     for ue in ues:
-        processInput(rep, ues)
+        processInput(rep, ue)
     #Parallel(n_jobs=num_cores)(delayed(soma)(nbs, ues) for nbs in range(0, len(ues)))
     #print ues
     #grid = build_fixed_scenario()
