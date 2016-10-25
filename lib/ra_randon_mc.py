@@ -14,16 +14,9 @@ import util
 import threeGPP
 import Calculations as calc
 
-#TODO:
-#Desalocar quando Objetivo estabilizado - OK
-#100 stepzinhos estaveis - OK
-#Atualizar numero de particulas antes de rodar - OK
-# Verificar random mc (crrgir as mesmas coisas e verificar se nao esta sorteandocoisas invalidas e possibilitar a desalocacao tambem)
-# Atualizar valores do link pelo peng
-
 #self.NPARTICLES   = 10000
-STABLE_STEPS_LENGTH = 50
-HISTORY_LENGTH = 1000
+#self.STABLE_STEPS_LENGTH = 50
+#self.HISTORY_LENGTH = 1000
 #RESETRATE    = 0.01
 L_BETA       = 2  #EE
 L_LAMBDA     = 20 #DATARATE
@@ -35,6 +28,9 @@ class RandonMc(object):
         self.REPETICAO = r
         self.MC_STEPS = imax
         self.NPARTICLES = 10000
+        self.HISTORY_LENGTH = 1000
+        self.STEPS_PER_PARTICLE = 500
+        self.STABLE_STEPS_LENGTH = 50
         self.lambda_particles = None
         self.beta_particles = None 
         self.upsilon_particles = None
@@ -67,20 +63,24 @@ class RandonMc(object):
 
     def run(self, grid):
         self.NPARTICLES = threeGPP.TOTAL_RBS*len(grid.users)
+        self.HISTORY_LENGTH = int(0.1 * self.NPARTICLES)
+        self.STEPS_PER_PARTICLE = threeGPP.TOTAL_RBS*len(grid.antennas)
+        self.STABLE_STEPS_LENGTH = int(0.1 * self.STEPS_PER_PARTICLE)
+
         grid.energy_efficient           = numpy.zeros(shape=(self.NPARTICLES)) 
         grid.consumition                = numpy.zeros(shape=(self.NPARTICLES))
         grid.datarate                   = numpy.zeros(shape=(self.NPARTICLES))
         grid.fairness                   = numpy.zeros(shape=(self.NPARTICLES))
         grid.meet_users                 = numpy.zeros(shape=(self.NPARTICLES))
-        grid.history_weighted_efficient = numpy.zeros(shape=(HISTORY_LENGTH))
+        grid.history_weighted_efficient = numpy.zeros(shape=(self.HISTORY_LENGTH))
 
         self.lambda_particles           = numpy.ones(shape=(self.NPARTICLES))
         self.upsilon_particles          = numpy.ones(shape=(self.NPARTICLES))
         self.beta_particles             = numpy.ones(shape=(self.NPARTICLES))
-        self.steps_energy_efficient     = numpy.zeros(shape=(self.NPARTICLES,STABLE_STEPS_LENGTH))
-        self.steps_weighted_efficient   = numpy.zeros(shape=(self.NPARTICLES,STABLE_STEPS_LENGTH))
-        self.steps_datarate_constraint  = numpy.zeros(shape=(self.NPARTICLES,STABLE_STEPS_LENGTH))
-        self.steps_fairness_constraint  = numpy.zeros(shape=(self.NPARTICLES,STABLE_STEPS_LENGTH))
+        self.steps_energy_efficient     = numpy.zeros(shape=(self.NPARTICLES,self.STABLE_STEPS_LENGTH))
+        self.steps_weighted_efficient   = numpy.zeros(shape=(self.NPARTICLES,self.STABLE_STEPS_LENGTH))
+        self.steps_datarate_constraint  = numpy.zeros(shape=(self.NPARTICLES,self.STABLE_STEPS_LENGTH))
+        self.steps_fairness_constraint  = numpy.zeros(shape=(self.NPARTICLES,self.STABLE_STEPS_LENGTH))
 
         for antenna in grid.antennas:
             antenna.i                        = numpy.zeros(shape=(self.NPARTICLES, len(antenna.connected_ues), threeGPP.TOTAL_RBS))
@@ -104,16 +104,16 @@ class RandonMc(object):
             antenna.backup_user_consumption  = numpy.zeros(shape=(self.NPARTICLES,len(antenna.connected_ues)))
             antenna.backup_fairness          = numpy.zeros(shape=(self.NPARTICLES))
             antenna.backup_meet_users        = numpy.zeros(shape=(self.NPARTICLES))
-            antenna.history_i                = numpy.zeros(shape=(HISTORY_LENGTH, len(antenna.connected_ues), threeGPP.TOTAL_RBS))
-            antenna.history_a                = numpy.zeros(shape=(HISTORY_LENGTH, len(antenna.connected_ues), threeGPP.TOTAL_RBS))
-            antenna.history_p                = numpy.zeros(shape=(HISTORY_LENGTH, len(antenna.connected_ues), threeGPP.TOTAL_RBS))
-            antenna.history_energy_efficient = numpy.zeros(shape=(HISTORY_LENGTH)) 
-            antenna.history_consumition      = numpy.zeros(shape=(HISTORY_LENGTH)) 
-            antenna.history_datarate         = numpy.zeros(shape=(HISTORY_LENGTH))
-            antenna.history_user_datarate    = numpy.zeros(shape=(HISTORY_LENGTH,len(antenna.connected_ues)))
-            antenna.history_user_consumption = numpy.zeros(shape=(HISTORY_LENGTH,len(antenna.connected_ues)))
-            antenna.history_fairness         = numpy.zeros(shape=(HISTORY_LENGTH))
-            antenna.history_meet_users       = numpy.zeros(shape=(HISTORY_LENGTH))
+            antenna.history_i                = numpy.zeros(shape=(self.HISTORY_LENGTH, len(antenna.connected_ues), threeGPP.TOTAL_RBS))
+            antenna.history_a                = numpy.zeros(shape=(self.HISTORY_LENGTH, len(antenna.connected_ues), threeGPP.TOTAL_RBS))
+            antenna.history_p                = numpy.zeros(shape=(self.HISTORY_LENGTH, len(antenna.connected_ues), threeGPP.TOTAL_RBS))
+            antenna.history_energy_efficient = numpy.zeros(shape=(self.HISTORY_LENGTH)) 
+            antenna.history_consumition      = numpy.zeros(shape=(self.HISTORY_LENGTH)) 
+            antenna.history_datarate         = numpy.zeros(shape=(self.HISTORY_LENGTH))
+            antenna.history_user_datarate    = numpy.zeros(shape=(self.HISTORY_LENGTH,len(antenna.connected_ues)))
+            antenna.history_user_consumption = numpy.zeros(shape=(self.HISTORY_LENGTH,len(antenna.connected_ues)))
+            antenna.history_fairness         = numpy.zeros(shape=(self.HISTORY_LENGTH))
+            antenna.history_meet_users       = numpy.zeros(shape=(self.HISTORY_LENGTH))
  
         # Loop maximo de itaracoes
         #while stabilized_particles < self.self.NPARTICLES and step < self.MC_STEPS:
@@ -123,7 +123,7 @@ class RandonMc(object):
             gc.collect() #Liberar memoria
 
             best_weighted_efficient = max(self.steps_weighted_efficient[:,0])
-            grid.backup_best_particles(self.steps_weighted_efficient[:,0].copy(), HISTORY_LENGTH)
+            grid.backup_best_particles(self.steps_weighted_efficient[:,0].copy(), self.HISTORY_LENGTH)
             for p in range(0, self.NPARTICLES):
                 print "I:", step, "P:", p
                 calc.griddatarate(grid, p)
@@ -138,7 +138,7 @@ class RandonMc(object):
                 #print  self.steps_datarate_constraint[p,0], self.steps_fairness_constraint[p,0], self.steps_energy_efficient[p,0], self.steps_weighted_efficient[p,0]
 
                 first_in = True
-                for stepezinho in range(0, threeGPP.TOTAL_RBS*len(grid.antennas)):#*len(grid.antennas)
+                for stepezinho in range(0, self.STEPS_PER_PARTICLE):#*len(grid.antennas)
                     ant = self.rand_antenna(p, grid)
                     antenna = grid.antennas[ant]
 
@@ -201,14 +201,14 @@ class RandonMc(object):
                     self.steps_weighted_efficient[p]  = util.list_append(self.steps_weighted_efficient[p], current_weighted_efficient)
                     if self.steps_weighted_efficient[p,0] > best_weighted_efficient:
                         best_weighted_efficient = self.steps_weighted_efficient[p,0]
-                        grid.backup_best_particles(self.steps_weighted_efficient[:,0].copy(), HISTORY_LENGTH)
+                        grid.backup_best_particles(self.steps_weighted_efficient[:,0].copy(), self.HISTORY_LENGTH)
 
-                    if stepezinho % STABLE_STEPS_LENGTH == 0:
+                    if stepezinho % self.STABLE_STEPS_LENGTH == 0:
                         self.raises_temperature(p)
 
                     #print "System wiegted EE", self.steps_weighted_efficient[p, 0]
                     #util.wait()
-                grid.restore_best_particles(self.steps_weighted_efficient[:,0].copy(), HISTORY_LENGTH)
+                grid.restore_best_particles(self.steps_weighted_efficient[:,0].copy(), self.HISTORY_LENGTH)
             
 
             best_particle = numpy.argmax(self.steps_weighted_efficient[:,0])

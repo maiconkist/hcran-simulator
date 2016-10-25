@@ -51,7 +51,7 @@ def transmission_power(antenna, user, interference, noise, Tsinr, particle = 0):
     else:
         Pt = (util.dbm_to_mw(noise)) * Tsinr + util.dbm_to_mw(path_loss)
     
-    #print "Power"
+    print "Noise = ", util.mw_to_dbm(noise)
     rest = antenna.rest_power(particle)
     if rest != None:
         rest = util.dbm_to_mw(rest)

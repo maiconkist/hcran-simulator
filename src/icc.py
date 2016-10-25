@@ -19,7 +19,7 @@ import time
 import sys
 
 MAX_DELTA               = 1
-MAX_REP                 = 60
+MAX_REP                 = 120
 MAX_I                   = 10
 
 
@@ -72,23 +72,23 @@ def processInput(rep, nues):
     bs = 1
     bbu = 2 
     cluster = 2
-    rrh = 4
-    ue = nues
+    rrh = nues
+    ue = 60
 
     grids = build_scenario(bbu, bs, cluster, rrh, ue) 
     #util.plot_grid(grids[0])
     
-    #do_locally_optimal(rep, grids[0])
+    do_locally_optimal(rep, grids[0])
 
-    #do_global_optimal(rep, grids[0])
+    do_global_optimal(rep, grids[0])
 
-    #do_sequential(rep, grids[1])
+    do_sequential(rep, grids[1])
 
-    #do_fixedpower(rep, grids[1])
+    do_fixedpower(rep, grids[1])
 
     #do_new_mc(rep, grids[2])
 
-    do_random_mc(rep, grids[2])
+    #do_random_mc(rep, grids[2])
     
     del grids
     gc.collect()
@@ -125,11 +125,12 @@ if __name__ == "__main__":
     
     #print ues
     #cont = 0
-    ues = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5]
+    #ues = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5]
     #ues = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
-    #for r in range(0, MAX_REP):  
-    for ue in ues:
-        processInput(rep, ue)
+    for r in range(0, MAX_REP):  
+        for ue in range(1, 11):
+            #print ue
+            processInput(rep, ue)
     #Parallel(n_jobs=num_cores)(delayed(soma)(nbs, ues) for nbs in range(0, len(ues)))
     #print ues
     #grid = build_fixed_scenario()
