@@ -3,7 +3,7 @@ import numpy as np
 import scipy.stats
 import subprocess
 
-# position of each element in the array
+# position of each element in the original file
 UE=0
 RRH=1
 IT=2
@@ -19,10 +19,13 @@ AVG_THROUGHPUT=11
 BAD_CONN=12
 BAD_CONN_SUM=13
 BAD_CONN_AVG=14
+NO_UES_TIME=15
+POWER_CONSUMED=16
 # always in the end
-LEN=15
+LEN=17
 
-
+# position of element in the PARSED file:
+# position in original file * 2 - 2
 
 def mean_confidence_interval(data, confidence=0.95):
     a = np.array(data) #pylint: disable=E1101
@@ -79,6 +82,7 @@ set key inside {key_pos} font "LiberationSansNarrow-regular,10" samplen 2  spaci
 
 
 R_SCRIPT_PIE= """
+data <- read.table("parsed_sdwn_results.txt", header=TRUE)
 pct <- round(slices/sum(slices)*100)
 title <- paste(title, pct) # add percents to labels
 title <- paste(title,"%",sep="") # ad % to labels
@@ -137,28 +141,17 @@ def summarize(filename):
             the_sum[cur_key][AVG_RBS_USED][-1] *= 100.0
 
     with open("parsed_" + filename, "w+") as fd:
-        fd.write("ue rrh conn conn_var dis dis_var bbu_ch bbu_ch_var")
+        fd.write("scenario ue rrh conn conn_var dis dis_var bbu_ch bbu_ch_var")
         fd.write(" bw_update bw_update_var bw_max bw_max_var good_cap bood_cap_var")
         fd.write(" bad_cap bad_cap_var avg_rbs_used avg_rbs_used_var avg_throughput avg_throughput_var")
-        fd.write(" bad_connection bad_connection_var\n")
+        fd.write(" bad_connection bad_connection_var avg_rrh_idle_time rrh_idle_time_var avg_power_consumed power_consumed_var\n")
 
         count = 0
         for ue in (100, 500, 1000, ):
             for rrh in (5, 15, 30, ):
                 fd.write(str(count) + " " + str(ue) + " " + str(rrh))
-                for it in range(3, LEN):
-                         avg, var = mean_confidence_interval(the_sum[ue, rrh][it])
-                         fd.write(" " + str(avg) + " " + str(var))
-                fd.write("\n")
-                count += 1
-
-    with open("R_parsed_" + filename, "w+") as fd:
-        count = 0
-        for ue in (100, 500, 1000, ):
-            for rrh in (5, 15, 30, ):
-                fd.write(str(count) + " " + str(ue) + " " + str(rrh))
-                for it in range(3, LEN):
-                         avg, var = mean_confidence_interval(the_sum[ue, rrh][it])
+                for col in range(3, LEN):
+                         avg, var = mean_confidence_interval(the_sum[ue, rrh][col])
                          fd.write(" " + str(avg) + " " + str(var))
                 fd.write("\n")
                 count += 1
@@ -274,14 +267,57 @@ if __name__ == '__main__':
                 'extra_opts': 'set format y "%.0s %c"; set ytics 1000;',
                 },
           },
+        'rrh_idle_time':{
+            'columns': [28, ],
+            'files': ['parsed_sdwn_results.txt', 'parsed_nosdwn_results.txt'],
+            'col_title': {
+                'parsed_sdwn_results.txt': {
+                    28: 'With SDWN'
+                },
+                'parsed_nosdwn_results.txt': {
+                    28: 'Without SDWN'
+                },
+            },
+            "outfile": "rrh_idle_time.pdf",
+            "configs": { 'label_x': "",
+                'label_x': "",
+                'label_y': "Total RRH Idle Time ",
+                'range_y': "set yrange [0:1000]",
+                'range_x': "",
+                'key_pos': "top right Right",
+                'extra_opts': 'set format y "%.0s %c"; set ytics 1000;',
+                },
+          },
+        'energy_consumed':{
+            'columns': [30, ],
+            'files': ['parsed_sdwn_results.txt', 'parsed_nosdwn_results.txt'],
+            'col_title': {
+                'parsed_sdwn_results.txt': {
+                    30: 'With SDWN'
+                },
+                'parsed_nosdwn_results.txt': {
+                    30: 'Without SDWN'
+                },
+            },
+            "outfile": "energy_consumed.pdf",
+            "configs": { 'label_x': "",
+                'label_x': "",
+                'label_y': "Energy Consumed [W] ",
+                'range_y': "set yrange [0:50]",
+                'range_x': "",
+                'key_pos': "top right Right",
+                'extra_opts': 'set format y "%.0s %c"; set ytics 1000;',
+                },
+          },
     }
 
 
-    for chart in ['message_bars', 'comparison_throughput', 'comparison_rb_used_per', 'bad_connections', 'thoughput_comparison' ]:
+    for chart in ['message_bars', 'comparison_throughput', 'comparison_rb_used_per', 'bad_connections', 'thoughput_comparison', 'rrh_idle_time', 'energy_consumed']:
         ls = 10
         plot_line = 'plot '
 
         shift = 0.2 + (0.20 * len(configs[chart]['files']) * len(configs[chart]['columns']))/-2
+
         #
         #if col == 4:
         #    shift=-0.30
@@ -306,20 +342,20 @@ if __name__ == '__main__':
 
 
     ### R plot
-    data = 'title <- c("Connections", "Disconnections", "BBU Change", "BW Update")\n'
-    for scenario in range(1, 10):
+    #data = 'title <- c("Connections", "Disconnections", "BBU Change", "BW Update")\n'
+    #for scenario in range(1, 10):
 
-        data += 'slices <- c('
-        for col in [3, 5, 7, 9]:
-            data += "data[%d,%d]" % (scenario, col)
-            if col < 9:
-                data += ","
-        data += ')\n'
+    #    data += 'slices <- c('
+    #    for col in [3, 5, 7, 9]:
+    #        data += "data[%d,%d]" % (scenario, col)
+    #        if col < 9:
+    #            data += ","
+    #    data += ')\n'
 
-        print "----- Plotting ",
-        proc = subprocess.Popen(['R --no-save'], shell = True, stdin = subprocess.PIPE)
-        proc.communicate(data + R_SCRIPT_PIE.format(
-            plot_line = 'pie(slices, title, main="Scenario ' + str(scenario) + '", col=gray.colors(4))',
-            outfile = "pie_scenario_" + str(scenario) + ".pdf"
-            )
-        )
+    #    print "----- Plotting ",
+    #    proc = subprocess.Popen(['R --no-save'], shell = True, stdin = subprocess.PIPE)
+    #    proc.communicate(data + R_SCRIPT_PIE.format(
+    #        plot_line = 'pie(slices, title, main="Scenario ' + str(scenario) + '", col=gray.colors(4))',
+    #        outfile = "pie_scenario_" + str(scenario) + ".pdf"
+    #        )
+    #    )

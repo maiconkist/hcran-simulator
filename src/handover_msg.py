@@ -8,10 +8,14 @@ from grid import *
 
 from pymobility.models.mobility import random_waypoint
 
-TEST_DURATION=600
+LOG_DUMP = "./results/rrh_{rrh}_ue_{ue}_it_{it}.txt"
 
 rw = None
 positions = []
+
+
+# set in the main source
+control_network = None
 
 #plt.ion()
 #ax = plt.subplot(111)
@@ -31,6 +35,8 @@ def random_waypoint_strategy(id):
 def build_simulation(n_user, n_rrh, n_bbu):
     global rw
     global positions
+    global control_network
+
 
     # Instantiation order. Must be respected
     # 1- Grid
@@ -41,7 +47,7 @@ def build_simulation(n_user, n_rrh, n_bbu):
 
     grid = Grid(size=(1000, 1000))
 
-    cntrl = Controller(grid, control_network=True)
+    cntrl = Controller(grid, control_network=control_network)
     grid.add_controller(cntrl)
 
     for b in range(n_bbu):
@@ -63,6 +69,8 @@ def build_simulation(n_user, n_rrh, n_bbu):
     for r in range(n_rrh):
         grid.add_antenna(
             Antenna(
+                id=r,
+                type=Antenna.RRH_ID,
                 pos=grid.random_pos(),
                 radius=30,
                 grid=grid,
@@ -74,9 +82,10 @@ def build_simulation(n_user, n_rrh, n_bbu):
 
 
 def dump_res():
+    global control_network
+
     import grid as G
     import re
-
     tmp_str = ''
 
     ## calculate good_cap
@@ -125,18 +134,44 @@ def dump_res():
     tmp_str += str(sum([ue.total_tx for ue in grid.users])/(len(grid.users)*TEST_DURATION)) + " "
     tmp_str += str(G.Log.mapper['bad_connection']) + " "
     tmp_str += str(G.Log.mapper['bad_connection_sum']) + " "
-    tmp_str += str((G.Log.mapper['bad_connection_sum'] / G.Log.mapper['bad_connection']) if G.Log.mapper['bad_connection'] > 0 else 0 ) + "\n"
+    tmp_str += str((G.Log.mapper['bad_connection_sum'] / G.Log.mapper['bad_connection']) if G.Log.mapper['bad_connection'] > 0 else 0 ) + " "
+
+    # calculate the number of the SUM OF ALL SECONDS IN WHICH RRHS HAD 0 USERS 
+    IDLE_PW = 4.3 / 3600.0 # energy consumed per second
+    FULL_PW = 6.8 / 3600.0 # energy consumed per second
+    if control_network:
+        g_list = [i for i in G.Log.logs if "nconnected_ues:" in i]
+        regex = re.compile("nconnected_ues:([-+]?\d+[\.]?\d*[eE]?[-+]?\d*)")
+        no_users = sum([1 for i in regex.findall("\n".join(g_list)) if int(i) == 0])
+        tmp_str += str(no_users) + " "
+
+        # sum energy consumed w/out users +  energy with users
+        # 600 is the total test duration
+        tmp_str += str(no_users * IDLE_PW + ((n_rrh * TEST_DURATION - no_users) * FULL_PW)) + "\n"
+    else:
+        # force no sdwn to have 0 as rrh idle time
+        # we do this because both of them dont actually have 'idle mode'. we are just counting from the log when rrh had 0 users
+        tmp_str += str(0) + " "
+        tmp_str += str(n_rrh * TEST_DURATION * FULL_PW) + "\n"
+
+
+    with open(LOG_DUMP.format(rrh=n_rrh, ue=n_ue, it=it), "w+") as fd:
+        fd.write("\n".join(G.Log.logs))
+
     # clear all logs
     G.Log.clear()
 
     return tmp_str
 
 if __name__ == '__main__':
+    res_str = "ue rrh it conn dis bbu_ch bw_update bw_max good_cap bad_cap avg_rbs_used avg_throughput bad_connection bad_connection_sum bad_connection_avg rrh_idle_time energy_consumed\n"
 
-    res_str = "ue rrh it conn dis bbu_ch bw_update bw_max good_cap bad_cap avg_rbs_used avg_throughput bad_connection bad_connection_sum bad_connection_avg\n"
     n_ue = 0
-    n_ue = 0
+    n_rrh = 0
     grid = None
+
+    TEST_DURATION=10
+    control_network = True
 
     try:
         for it in range(5):
@@ -149,11 +184,14 @@ if __name__ == '__main__':
                         grid.step(1)
 
                     res_str += dump_res()
+
+    # sdwn_results.txt -> use 'cntrl = Controller(grid, control_network=True)' in build_simulations
+    # nosdwn_results.txt -> use 'cntrl = Controller(grid, control_network=False)' in build_simulations
     except Exception as e:
         import traceback
         traceback.print_exc()
-        with open("sdwn_results.txt", "w+") as fd:
+        with open("sdwn_results.txt" if control_network else "nosdwn_results.txt", "w+") as fd:
             fd.write(res_str)
 
-    with open("sdwn_results.txt", "w+") as fd:
+    with open("sdwn_results.txt" if control_network else "nosdwn_results.txt", "w+") as fd:
         fd.write(res_str)

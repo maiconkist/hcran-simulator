@@ -74,7 +74,7 @@ class Log():
         Log.logs.append(m)
 
 class Grid(object):
-    
+
     def __init__(self, size=(1000, 1000)):
         """
         """
@@ -91,8 +91,8 @@ class Grid(object):
         self._matrix_resources = None #Matrix [Antenna, RB] = id user
         self._bandwidth = 20
 
-        self.energy_efficient          = None 
-        self.consumition               = None 
+        self.energy_efficient          = None
+        self.consumition               = None
         self.datarate                  = None
         self.fairness                  = None
         self.meet_users                = None
@@ -103,7 +103,7 @@ class Grid(object):
         """
         """
         self._bandwidth = band
-        self.TOTAL_RBS = bandwidth_to_rb(band)            
+        self.TOTAL_RBS = bandwidth_to_rb(band)
         self.TOTAL_RBS_RRH = int(self.TOTAL_RBS * 0.2)
         self.TOTAL_RBS_BS = int(self.TOTAL_RBS * 0.8)
         if self.TOTAL_RBS_RRH + self.TOTAL_RBS_BS < self.TOTAL_RBS:
@@ -171,7 +171,7 @@ class Grid(object):
         """
         """
         return self._antennas
-    
+
     @property
     def clusters(self):
         """
@@ -262,14 +262,14 @@ class Grid(object):
             particle = numpy.argmax(weighted_efficient[:])
             self.history_weighted_efficient[history] = weighted_efficient[particle]
             weighted_efficient[particle] = -999999999999999999999999
-            for antenna in self.antennas: 
+            for antenna in self.antennas:
                 antenna.backup_best_particle(particle, history)
-                
+
 
     def restore_best_particles(self, weighted_efficient, history_legth):
         for history in range(0, history_legth):
             particle = numpy.argmin(weighted_efficient[:])
             if (weighted_efficient[particle] < self.history_weighted_efficient[history]):
                 weighted_efficient[particle] = 999999999999999999999999
-                for antenna in self.antennas: 
+                for antenna in self.antennas:
                     antenna.restore_best_particle(particle, history)

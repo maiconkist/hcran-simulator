@@ -3,7 +3,7 @@ import scipy.spatial
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from antenna import * 
+from antenna import *
 
 DEBUG = True
 
@@ -74,6 +74,13 @@ def dist(p1, p2):
 #
 #    return power_received
 
+def received_power(ue, antenna):
+    CENTER_FREQ = 700  # in MHz
+    power = antenna.power - (20 * math.log(dist(ue, antenna),10) + 20*math.log(CENTER_FREQ,10) - 27.55)
+    if power < 0:
+        power = 0
+    return power
+
 
 def sum_coll(lista, x):
     soma = 0
@@ -105,6 +112,22 @@ def snr_to_bit(snr):
         return 4
     else:
         return 6
+
+def snr(ue, antenna, power_interfering=0):
+    """
+    """
+    NOISE_FLOOR = -90.0
+
+    # 23 is the antenna tx power in dbm
+    power = received_power(ue, antenna)
+    if power_interfering != 0:
+        #print  'SNR:', dbm_to_mw(power), dbm_to_mw(NOISE_FLOOR), dbm_to_mw(power_interfering)
+        snr = dbm_to_mw(power) / (dbm_to_mw(NOISE_FLOOR) + dbm_to_mw(power_interfering))
+    else:
+        #print  'SNR:', dbm_to_mw(power), dbm_to_mw(NOISE_FLOOR), '0'
+        snr = dbm_to_mw(power) / (dbm_to_mw(NOISE_FLOOR))
+
+    return snr
 
 def bandwidth_to_rb(band):
     if band == 1.4:
@@ -234,4 +257,3 @@ def plot_grid( grid ):
     plt.ylim([0,grid.size[0]])
     plt.xlim([0,grid.size[1]])
     plt.show()
-

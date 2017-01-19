@@ -1,4 +1,4 @@
-def connectability(ue, cur_antenna, next_antenna):
+def can_change_antenna(ue, cur_antenna, next_antenna):
     import math
 
     def dist(p1, p2):
@@ -9,21 +9,20 @@ def connectability(ue, cur_antenna, next_antenna):
         return math.pow(10.0, (1.0/10.0))*math.pow(4*math.pi*d, 2) if d < antenna.radius else 0
 
     if cur_antenna == next_antenna:
-        return None
+        return False
 
     p1 = power(ue, cur_antenna) if cur_antenna is not None else 0
     p2 = power(ue, next_antenna) if next_antenna is not None else 0
 
     if p1 > 0 and p1 > p2:
-        return None
+        return True
     elif p2 > 0 and p2 > p1:
-        return next_antenna
+        return True
     else:
-        return None
+        return False
 
 
 class User(object):
-
     HIGH_RATE_USER    = 0
     LOW_RATE_USER     = 1
 
@@ -45,19 +44,18 @@ class User(object):
         self.power_connected_antenna = 0
         #self.antenna = None
 
-
-    @property   
+    @property
     def x( self ):
         return self.pos[0]
-    
+
     @property
     def y( self ):
         return self.pos[1]
-    
+
     def add_antenna_in_range( self, antenna ):
         if not antenna in self.antenna_in_range:
             self.antenna_in_range.append( antenna )
-            
+
     def get_near_antennas( self ):
         return self.antenna_in_range
 
@@ -103,6 +101,11 @@ class User(object):
     def stablish_connection(self, new_antenna):
         """
         """
+
+        # Do nothing if trying to connect to same antenna
+        if self._connected_antenna == new_antenna:
+            return True
+
         # if connection to new antenna is ok
         if new_antenna.connect(self):
             # disconnect from actual antenna and update
@@ -123,7 +126,7 @@ class User(object):
         # for d, idx in zip(dist_list[0], idx_list[0]):
         for d, idx in zip(dist_list[0], idx_list[0]):
             # if antenna in question if better than the current one (and its NOT the current one)
-            if connectability(self,
+            if can_change_antenna(self,
                               self._connected_antenna,
                               self._grid._antennas[idx]):
                 # if could stablish connection to antenna in question, break

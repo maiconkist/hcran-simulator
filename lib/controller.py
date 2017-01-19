@@ -44,6 +44,7 @@ class Controller(object):
             else:
                 pass
 
+        self._pending = []
         if True in self._antenna_bw_update.values():
             self.antenna_update()
 

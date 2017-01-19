@@ -2,13 +2,13 @@ import math
 import numpy
 import util
 import controller
-from user import *
 import threeGPP
+from user import *
 
 class Antenna(object):
     BS_ID       = 1
     RRH_ID      = 2
-    
+
     # 1.4  channel has 6  RBs in frequency domain
     # 3.0  channel has 15 RBs in frequency domain
     # 5.0  channel has 25 RBs in frequency domain
