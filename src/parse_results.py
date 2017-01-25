@@ -21,8 +21,10 @@ BAD_CONN_SUM=13
 BAD_CONN_AVG=14
 NO_UES_TIME=15
 POWER_CONSUMED=16
+IDLE_MSG=17
+WAKE_UP_MSG=18
 # always in the end
-LEN=17
+LEN=19
 
 # position of element in the PARSED file:
 # position in original file * 2 - 2
@@ -144,7 +146,8 @@ def summarize(filename):
         fd.write("scenario ue rrh conn conn_var dis dis_var bbu_ch bbu_ch_var")
         fd.write(" bw_update bw_update_var bw_max bw_max_var good_cap bood_cap_var")
         fd.write(" bad_cap bad_cap_var avg_rbs_used avg_rbs_used_var avg_throughput avg_throughput_var")
-        fd.write(" bad_connection bad_connection_var avg_rrh_idle_time rrh_idle_time_var avg_power_consumed power_consumed_var\n")
+        fd.write(" bad_connection bad_connection_var bad_conn_sum bad_conn_sum_var bad_conn_avg_avg bad_conn_avg_var avg_rrh_idle_time rrh_idle_time_var avg_power_consumed power_consumed_var")
+        fd.write(" avg_idle_op idle_op_var avg_wake_op wake_op_var\n")
 
         count = 0
         for ue in (100, 500, 1000, ):
@@ -155,8 +158,7 @@ def summarize(filename):
                          if col not in [POWER_CONSUMED, NO_UES_TIME, ]:
                                 fd.write(" " + str(avg) + " " + str(var))
                          elif col == POWER_CONSUMED:
-                                pass
-                                fd.write(" " + str(avg * 360.0 / rrh) + " " + str(var/10.0))
+                                fd.write(" " + str(avg * 6 / rrh) + " " + str(var/10.0))
                          elif col == NO_UES_TIME:
                                 IDLE_PW = 4.3 / 3600.0 # energy consumed per second
                                 FULL_PW = 6.8 / 3600.0 # energy consumed per second
@@ -314,7 +316,6 @@ if __name__ == '__main__':
                 'label_x': "",
                 'label_y': "Avg. Energy Used per RRH [W] ",
                 'range_y': "set yrange[0:10]",
-                'range_y': "",
                 'range_x': "",
                 'key_pos': "top right Right",
                 'extra_opts': '',
@@ -353,20 +354,21 @@ if __name__ == '__main__':
 
 
     ### R plot
-    #data = 'title <- c("Connections", "Disconnections", "BBU Change", "BW Update")\n'
-    #for scenario in range(1, 10):
+    data = 'title <- c("Connections", "Disconnections", "BBU Change", "BW Update")\n'
+    for scenario in range(1, 10):
 
-    #    data += 'slices <- c('
-    #    for col in [3, 5, 7, 9]:
-    #        data += "data[%d,%d]" % (scenario, col)
-    #        if col < 9:
-    #            data += ","
-    #    data += ')\n'
+        data += 'slices <- c('
+        #for col in [3, 5, 7, 9]:
+        for col in [4, 6, 8, 10]:
+            data += "data[%d,%d]" % (scenario, col)
+            if col < 9:
+                data += ","
+        data += ')\n'
 
-    #    print "----- Plotting ",
-    #    proc = subprocess.Popen(['R --no-save'], shell = True, stdin = subprocess.PIPE)
-    #    proc.communicate(data + R_SCRIPT_PIE.format(
-    #        plot_line = 'pie(slices, title, main="Scenario ' + str(scenario) + '", col=gray.colors(4))',
-    #        outfile = "pie_scenario_" + str(scenario) + ".pdf"
-    #        )
-    #    )
+        print "----- Plotting ",
+        proc = subprocess.Popen(['R --no-save'], shell = True, stdin = subprocess.PIPE)
+        proc.communicate(data + R_SCRIPT_PIE.format(
+            plot_line = 'pie(slices, title, main="Scenario ' + str(scenario) + '", col=gray.colors(4))',
+            outfile = "pie_scenario_" + str(scenario) + ".pdf"
+            )
+        )

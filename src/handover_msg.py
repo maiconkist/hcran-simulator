@@ -147,12 +147,15 @@ def dump_res():
 
         # sum energy consumed w/out users +  energy with users
         # 600 is the total test duration
-        tmp_str += str(no_users * IDLE_PW + ((n_rrh * TEST_DURATION - no_users) * FULL_PW)) + "\n"
+        tmp_str += str(no_users * IDLE_PW + ((n_rrh * TEST_DURATION - no_users) * FULL_PW)) + " "
     else:
         # force no sdwn to have 0 as rrh idle time
         # we do this because both of them dont actually have 'idle mode'. we are just counting from the log when rrh had 0 users
         tmp_str += str(0) + " "
-        tmp_str += str(n_rrh * TEST_DURATION * FULL_PW) + "\n"
+        tmp_str += str(n_rrh * TEST_DURATION * FULL_PW) + " "
+
+    tmp_str += str(G.Log.mapper['op:antenna_idle']) + " "
+    tmp_str += str(G.Log.mapper['op:antenna_wake_up']) + "\n"
 
 
     with open(LOG_DUMP.format(rrh=n_rrh, ue=n_ue, it=it), "w+") as fd:
@@ -164,7 +167,7 @@ def dump_res():
     return tmp_str
 
 if __name__ == '__main__':
-    res_str = "ue rrh it conn dis bbu_ch bw_update bw_max good_cap bad_cap avg_rbs_used avg_throughput bad_connection bad_connection_sum bad_connection_avg rrh_idle_time energy_consumed\n"
+    res_str = "ue rrh it conn dis bbu_ch bw_update bw_max good_cap bad_cap avg_rbs_used avg_throughput bad_connection bad_connection_sum bad_connection_avg rrh_idle_time energy_consumed idle_msg wake_up_msg\n"
 
     n_ue = 0
     n_rrh = 0
