@@ -46,14 +46,20 @@ set output '{outfile}'
 set style line 20 lt 1 lw 1 pt 9 lc rgb '#000000' ps 1.0
 set style line 21 lt 1 lw 1 pt 9 lc rgb '#000000' ps 1.2
 
-set style line 10 lt 1 lw 1 pt 6 lc rgb '#666666' ps 1.0
-set style line 11 lt 1 lw 1 pt 6 lc rgb '#666666' ps 1.2
+set style line 10 lt 1 lw 1 pt 9 lc rgb '#333333' ps 1.0
+set style line 11 lt 1 lw 1 pt 9 lc rgb '#333333' ps 1.2
 
-set style line 30 lt 1 lw 1 pt 20 lc rgb '#AAAAAA' ps 1.0
-set style line 31 lt 1 lw 1 pt 20 lc rgb '#AAAAAA' ps 1.2
+set style line 30 lt 1 lw 1 pt 9 lc rgb '#AAAAAA' ps 1.0
+set style line 31 lt 1 lw 1 pt 9 lc rgb '#AAAAAA' ps 1.2
 
-set style line 40 lt 1 lw 1 pt 20 lc rgb '#FFFFFF' ps 1.0
-set style line 41 lt 1 lw 1 pt 20 lc rgb '#FFFFFF' ps 1.2
+set style line 40 lt 1 lw 1 pt 9 lc rgb '#FFFFFF' ps 1.0
+set style line 41 lt 1 lw 1 pt 9 lc rgb '#FFFFFF' ps 1.2
+
+set style line 50 lt 1 lw 1 pt 1 lc rgb '#666666' ps 1.0
+set style line 51 lt 1 lw 1 pt 1 lc rgb '#666666' ps 1.2
+
+set style line 60 lt 1 lw 1 pt 2 lc rgb '#CCCCCC' ps 1.0
+set style line 61 lt 1 lw 1 pt 2 lc rgb '#CCCCCC' ps 1.2
 
 set grid ytics lt 0 lw 1 lc rgb "#bbbbbb"
 set grid xtics lt 0 lw 1 lc rgb "#bbbbbb"
@@ -61,7 +67,7 @@ set grid xtics lt 0 lw 1 lc rgb "#bbbbbb"
 set style fill solid 1.0 border 0
 set style data histogram
 set style histogram errorbars lw 1 gap 1
-set boxwidth 0.20
+set boxwidth 0.15
 
 set tics scale 0
 set xlabel '{label_x}'
@@ -84,7 +90,10 @@ set key inside {key_pos} font "LiberationSansNarrow-regular,10" samplen 2  spaci
 
 
 R_SCRIPT_PIE= """
-data <- read.table("parsed_sdwn_results.txt", header=TRUE)
+data <- read.table("{filename}", header=TRUE)
+
+{data}
+
 pct <- round(slices/sum(slices)*100)
 title <- paste(title, pct) # add percents to labels
 title <- paste(title,"%",sep="") # ad % to labels
@@ -156,7 +165,7 @@ def summarize(filename):
                 for col in range(3, LEN):
                          avg, var = mean_confidence_interval(the_sum[ue, rrh][col])
                          if col not in [POWER_CONSUMED, NO_UES_TIME, ]:
-                                fd.write(" " + str(avg) + " " + str(var))
+                                fd.write(" " + str(avg) + " " + str(var/10))
                          elif col == POWER_CONSUMED:
                                 fd.write(" " + str(avg * 6 / rrh) + " " + str(var/10.0))
                          elif col == NO_UES_TIME:
@@ -164,9 +173,30 @@ def summarize(filename):
                                 FULL_PW = 6.8 / 3600.0 # energy consumed per second
 
                                 fd.write(" " + str(avg) + " " + str(var))
-                                #fd.write(" " + str((avg * IDLE_PW + ((rrh * 600.0 - avg) * FULL_PW))/rrh) + " " + str(0))
                 fd.write("\n")
                 count += 1
+
+
+    with open("R_avg_all_" + filename, "w+") as fd:
+        fd.write("scenario ue rrh conn conn_var dis dis_var bbu_ch bbu_ch_var")
+        fd.write(" bw_update bw_update_var bw_max bw_max_var good_cap bood_cap_var")
+        fd.write(" bad_cap bad_cap_var avg_rbs_used avg_rbs_used_var avg_throughput avg_throughput_var")
+        fd.write(" bad_connection bad_connection_var bad_conn_sum bad_conn_sum_var bad_conn_avg_avg bad_conn_avg_var avg_rrh_idle_time rrh_idle_time_var avg_power_consumed power_consumed_var")
+        fd.write(" avg_idle_op idle_op_var avg_wake_op wake_op_var\n")
+        fd.write("0 all all ")
+
+        for col in range(3, LEN):
+            the_data_of_all = []
+
+            for ue in (100, 500, 1000, ):
+                for rrh in (5, 15, 30, ):
+                    the_data_of_all.append(mean_confidence_interval(the_sum[ue, rrh][col])[0])
+
+            avg, var = mean_confidence_interval(the_data_of_all)
+            fd.write(" " + str(avg) + " " + str(var))
+
+        fd.write("\n")
+
 
 if __name__ == '__main__':
     summarize("sdwn_results.txt")
@@ -175,7 +205,7 @@ if __name__ == '__main__':
     # SDWN
     configs = {
         'message_bars':{
-            'columns': [4, 6, 8, 10],
+            'columns': [4, 6, 8, 10, 32, 34],
             'files': ['parsed_sdwn_results.txt', ],
             'col_title': {
                 'parsed_sdwn_results.txt': {
@@ -183,16 +213,18 @@ if __name__ == '__main__':
                     6: "Disconnections",
                     8: "BBU Change",
                     10:"BW Update",
+                    32:"Enter Idle Mode",
+                    34:"Enter Normal Mode",
                 }
             },
             "outfile": "sdwn_histo.pdf",
             "configs": { 'label_x': "",
                 'label_x': "",
-                'label_y': "",
+                'label_y': "Average Number of Control Messages",
                 'range_y': "set yrange [0:*]",
                 'range_x': "",
                 'key_pos': "top left Left",
-                'extra_opts': 'set format y "%.0s %c";',
+                'extra_opts': '',
                 },
           },
         'comparison_throughput':{
@@ -328,17 +360,7 @@ if __name__ == '__main__':
         ls = 10
         plot_line = 'plot '
 
-        shift = 0.2 + (0.20 * len(configs[chart]['files']) * len(configs[chart]['columns']))/-2
-
-        #
-        #if col == 4:
-        #    shift=-0.30
-        #elif col == 6:
-        #    shift=-0.10
-        #elif col == 8:
-        #    shift=0.10
-        #elif col == 12:
-        #    shift=0.30
+        shift = 0.15 + (0.20 * len(configs[chart]['files']) * len(configs[chart]['columns']))/-2
 
         for col in configs[chart]['columns']:
 
@@ -348,27 +370,50 @@ if __name__ == '__main__':
                 plot_line += ', '
 
                 ls += 10
-                shift += 0.2
+                shift += 0.15
 
         plot_charts(configs[chart]['outfile'], plot_line, configs[chart]["configs"], GNUPLOT_SCRIPT_HISTOGRAM)
 
 
-    ### R plot
-    data = 'title <- c("Connections", "Disconnections", "BBU Change", "BW Update")\n'
+    ### R plot for all scenarios
+    data = 'title <- c("Connections", "Disconnections", "BBU Change", "BW Update", "Enter Idle Mode", "Enter Normal Mode")\n'
     for scenario in range(1, 10):
 
         data += 'slices <- c('
         #for col in [3, 5, 7, 9]:
-        for col in [4, 6, 8, 10]:
+        for col in [4, 6, 8, 10, 32, 34]:
             data += "data[%d,%d]" % (scenario, col)
-            if col < 9:
+            if col < 34:
                 data += ","
         data += ')\n'
 
         print "----- Plotting ",
         proc = subprocess.Popen(['R --no-save'], shell = True, stdin = subprocess.PIPE)
-        proc.communicate(data + R_SCRIPT_PIE.format(
-            plot_line = 'pie(slices, title, main="Scenario ' + str(scenario) + '", col=gray.colors(4))',
-            outfile = "pie_scenario_" + str(scenario) + ".pdf"
+        proc.communicate(R_SCRIPT_PIE.format(
+            data = data,
+            plot_line = 'pie(slices, title, main="Scenario ' + str(scenario) + '", col=gray.colors(6))',
+            outfile = "pie_scenario_" + str(scenario) + ".pdf",
+            filename = "sdwn_results.txt"
             )
         )
+
+    data = 'title <- c("Connections", "Disconnections", "BBU Change", "BW Update", "Enter Idle Mode", "Enter Normal Mode")\n'
+    data += 'slices <- c('
+
+    # same order as title
+    msg_sizes = {4: 512, 6:288, 8: 800, 10:384, 32:800, 34:800}
+    for col in [4, 6, 8, 10, 32, 34]:
+        data += "data[1,%d] * %d" % (col, msg_sizes[col])
+        if col < 34:
+            data += ","
+    data += ')\n'
+
+    print "----- Plotting ",
+    proc = subprocess.Popen(['R --no-save'], shell = True, stdin = subprocess.PIPE)
+    proc.communicate(R_SCRIPT_PIE.format(
+        data = data,
+        plot_line = 'pie(slices, title, main="Scenario ' + str(scenario) + '", col=gray.colors(6))',
+        outfile = "pie_avg_all_sizes.pdf",
+        filename = "R_avg_all_sdwn_results.txt"
+        )
+    )
