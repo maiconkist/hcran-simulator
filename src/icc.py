@@ -132,7 +132,7 @@ if __name__ == "__main__":
             #print ue
             processInput(rep, ue)
     #Parallel(n_jobs=num_cores)(delayed(soma)(nbs, ues) for nbs in range(0, len(ues)))
-    #print ues
+    #print uess
     #grid = build_fixed_scenario()
     #util.plot_grid(grid)
     
