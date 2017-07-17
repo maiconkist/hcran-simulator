@@ -1,3 +1,6 @@
+import random
+import numpy
+
 def connectability(ue, cur_antenna, next_antenna):
     import math
 
@@ -24,8 +27,11 @@ def connectability(ue, cur_antenna, next_antenna):
 
 class User(object):
 
-    HIGH_RATE_USER    = 0
-    LOW_RATE_USER     = 1
+    APP_WEARABLES       = 0
+    APP_ASSIST_LIVING   = 1
+    APP_DATA_COLLECTED  = 2
+    APP_AUTOMATION      = 3
+
 
     def __init__(self, id, pos, moving_strategy, grid, user_type=1):
         """
@@ -35,17 +41,31 @@ class User(object):
         self._pos = pos
         self._moving_strategy = moving_strategy
         self._grid = grid
-        self.height = 1.5
-
-        self._tx_rate = 0.0
-        self._txs = []
-        self._bad_connection = 0.0
-        self._connected_antenna = None
         self._type = user_type
-        self.antenna_in_range = []  #range of antennas available to serve UE
-        self.power_connected_antenna = 0
-        #self.antenna = None
+        
+        self._txs = []
 
+        self._tx_rate = 0.0 #bytes
+        self._connected_antenna = None
+        self.power_connected_antenna = 0
+        self._msg_per_day = 0
+        self._total_msg = 0
+        self._total_tx = 0
+
+        self.TOTAL_SIMULATION_TIME = 86400
+
+        if self._type == User.APP_WEARABLES:
+            self._tx_rate = 20
+            self._msg_per_day = 10
+        elif self._type == User.APP_ASSIST_LIVING:
+            self._tx_rate = 100
+            self._msg_per_day = 8
+        elif self._type == User.APP_DATA_COLLECTED:
+            self._tx_rate = 200
+            self._msg_per_day = 24
+        else:
+            self._tx_rate = 50
+            self._msg_per_day = 5
 
     @property   
     def x( self ):
@@ -55,13 +75,6 @@ class User(object):
     def y( self ):
         return self.pos[1]
     
-    def add_antenna_in_range( self, antenna ):
-        if not antenna in self.antenna_in_range:
-            self.antenna_in_range.append( antenna )
-            
-    def get_near_antennas( self ):
-        return self.antenna_in_range
-
     @property
     def pos(self):
         """
@@ -74,7 +87,7 @@ class User(object):
         # move User instance according to moving_strategy
         if self._moving_strategy != None:
             self._pos = self._moving_strategy(self._id)
-
+            
 
     @property
     def demand(self):
@@ -100,6 +113,15 @@ class User(object):
         """
         """
         return sum(self._txs)
+
+    def random_schedulling(self):
+        begin = 0
+        end = self.TOTAL_SIMULATION_TIME / self._msg_per_day
+
+        for t in range (0,self._msg_per_day):
+            self._schedulling_time.append(random.randint(begin,end))
+            begin += self.TOTAL_SIMULATION_TIME / self._msg_per_day
+            end += self.TOTAL_SIMULATION_TIME / self._msg_per_day
 
     def stablish_connection(self, new_antenna):
         """
@@ -138,19 +160,6 @@ class User(object):
         """
         """
         self._txs.append(self.tx_rate)
-
-
-        # Check if user is experiencing a bad connections
-        if self._tx_rate < self.demand:
-            # 1 second
-            self._bad_connection += 1
-        else:
-            # insert log if UE had a bad connection for more than 10 seconds
-            if self._bad_connection > 9:
-                self._grid.logger.log("op:bad_connection, user:" + str(self) +
-                                      ", duration: " + str(self._bad_connection) +
-                                      ", avg_rate:" + str(sum(self._txs[-10:])/10.0))
-            self._bad_connection = 0
 
     def update(self):
         """

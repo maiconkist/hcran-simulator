@@ -1,4 +1,4 @@
-import math
+'''import math
 import scipy.spatial
 from antenna import * 
 from user import *
@@ -11,7 +11,7 @@ from antenna_mc import *
 import random
 import numpy
 import scipy
-
+'''
 #VARIABLE CONSTANTS
 SYSTEM_TEMPERATURE = 660.7 #K
 RRH_RADIUS  = 50
@@ -47,7 +47,7 @@ NER         = 1000000/2000 #Low Rate Constraint
 ###############################
 #Grid definitions
 ###############################
-DMACROMACRO             = 500
+'''DMACROMACRO             = 500
 DMACROUE                = 30    #35
 DMACROCLUSTER           = 90    #105
 DSMALLUE                = 5
@@ -376,4 +376,4 @@ def macrocells(grids, radius, n_bs, macrocells_center):
         grids[2].add_antenna(bs3)
 
 ########################################
-
+'''
