@@ -32,6 +32,11 @@ class User(object):
     APP_DATA_COLLECTED  = 2
     APP_AUTOMATION      = 3
 
+    APP_MSG_DAY_WEARABLES      = 10 
+    APP_MSG_DAY_ASSIST_LIVING  = 8
+    APP_MSG_DAY_DATA_COLLECTED = 24
+    APP_MSG_DAY_AUTOMATION     = 5
+
 
     def __init__(self, id, pos, moving_strategy, grid, user_type=1):
         """
@@ -51,6 +56,7 @@ class User(object):
         self._msg_per_day = 0
         self._total_msg = 0
         self._total_tx = 0
+        self._schedulling_time = list()
 
         self.TOTAL_SIMULATION_TIME = 86400
 
