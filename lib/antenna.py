@@ -40,6 +40,8 @@ class Antenna(object):
         # List of connected UEs
         self.connected_ues = []
 
+        self.prev_n_ues = 0
+
         self.resources = []
         # position tupe
         self._pos = pos
@@ -258,6 +260,14 @@ class Antenna(object):
                               ", per_used:" + str(1.0) +
                               ", nconnected_ues:" + str(len(self.connected_ues))
             )
+
+
+        if len(self.connected_ues) != self.prev_n_ues:
+                if self.prev_n_ues == 0:
+                        self._grid.logger.log("op:antenna_wake_up")
+                elif len(self.connected_ues) == 0:
+                        self._grid.logger.log("op:antenna_idle")
+        self.prev_n_ues = len(self.connected_ues)
 
         # Notify BBU that this antenna requires more bandwidth
         self._ch_bw_required = self.rb_demand_to_ch_bw(total_rb_demand)

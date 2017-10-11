@@ -9,17 +9,47 @@ def can_change_antenna(ue, cur_antenna, next_antenna):
         return math.pow(10.0, (1.0/10.0))*math.pow(4*math.pi*d, 2) if d < antenna.radius else 0
 
     if cur_antenna == next_antenna:
-        return False
+        return None
+
+    p1 = power(ue, cur_antenna) if cur_antenna is not None else 0
+    p2 = power(ue, next_antenna) if next_antenna is not None else 0
+
+    if cur_antenna is not None and next_antenna is not None:
+        if len(cur_antenna.connected_ues) == len(next_antenna.connected_ues):
+            if p1 > 0 and p1 > p2 and cur_antenna.can_fit_ue(ue):
+                return  cur_antenna
+            elif p2 > 0 and p2 > p1 and next_antenna.can_fit_ue(ue):
+                return next_antenna
+        elif len(cur_antenna.connected_ues) > len(next_antenna.connected_ues):
+            return cur_antenna
+        else:
+            return next_antenna
+
+    if p1 > 0 and p1 > p2:
+        return cur_antenna
+    elif p2 > 0 and p2 > p1:
+        return next_antenna
+
+def can_change_antenna_nosdwn(ue, cur_antenna, next_antenna):
+    import math
+
+    def dist(p1, p2):
+        return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+    def power(ue, antenna):
+        d = dist(ue.pos, antenna.pos)
+        return math.pow(10.0, (1.0/10.0))*math.pow(4*math.pi*d, 2) if d < antenna.radius else 0
+
+    if cur_antenna == next_antenna:
+        return None
 
     p1 = power(ue, cur_antenna) if cur_antenna is not None else 0
     p2 = power(ue, next_antenna) if next_antenna is not None else 0
 
     if p1 > 0 and p1 > p2:
-        return False
-    elif p2 > 0 and p2 > p1 and next_antenna.can_fit_ue(ue):
-        return True
-    else:
-        return False
+        return cur_antenna
+    elif p2 > 0 and p2 > p1:
+        return next_antenna
 
 
 class User(object):
@@ -101,6 +131,9 @@ class User(object):
     def stablish_connection(self, new_antenna):
         """
         """
+        if new_antenna is None:
+            raise ValueError
+
 
         # Do nothing if trying to connect to same antenna
         if self._connected_antenna == new_antenna:
@@ -125,13 +158,16 @@ class User(object):
         # for each antenna, from the closest to the farthest
         # for d, idx in zip(dist_list[0], idx_list[0]):
         for d, idx in zip(dist_list[0], idx_list[0]):
+            the_antenna = None
+            if self._grid._controllers[0]._control == True:
+                the_antenna = can_change_antenna(self, self._connected_antenna, self._grid._antennas[idx])
+            else:
+                the_antenna = can_change_antenna_nosdwn(self, self._connected_antenna, self._grid._antennas[idx])
             # if antenna in question if better than the current one (and its NOT the current one)
-            if can_change_antenna(self,
-                              self._connected_antenna,
-                              self._grid._antennas[idx]):
+            if the_antenna is not None and the_antenna != self._connected_antenna:
                 # if could stablish connection to antenna in question, break
                 # repeat for the next closer antenna otherwise
-                if self.stablish_connection(self._grid._antennas[idx]):
+                if self.stablish_connection(the_antenna):
                     return True
 
         return False

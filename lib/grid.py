@@ -18,6 +18,8 @@ class Log():
               "op:bbu_change": 0,
               "op:antenna_bw_update": 0,
               "op:antenna_impossible_cap":0,
+              "op:antenna_wake_up":0,
+              "op:antenna_idle":0,
               "good_cap":0,
               "good_cap_sum":0,
               "bad_cap":0,
@@ -33,12 +35,15 @@ class Log():
               "op:bbu_change": 0,
               "op:antenna_bw_update": 0,
               "op:antenna_impossible_cap":0,
+              "op:antenna_wake_up":0,
+              "op:antenna_idle":0,
               "good_cap":0,
               "good_cap_sum":0,
               "bad_cap":0,
               "bad_cap_sum":0,
               "bad_connection":0,
               "bad_connection_sum":0,
+              "idle":0,
         }
         Log.logs = []
 
@@ -70,6 +75,10 @@ class Log():
 
             regex = re.compile("avg_rate:([0-9]*\.[0-9]*)")
             Log.mapper['bad_connection_sum'] += float( regex.findall(m)[0] )
+        elif 'op:antenna_wake_up'  in m:
+            Log.mapper['op:antenna_wake_up'] += 1
+        elif 'op:antenna_idle'  in m:
+            Log.mapper['op:antenna_idle'] += 1
 
         Log.logs.append(m)
 
