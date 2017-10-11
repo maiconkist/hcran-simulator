@@ -170,7 +170,7 @@ if __name__ == '__main__':
     n_rrh = 0
     grid = None
 
-    TEST_DURATION=600
+    TEST_DURATION=10
     control_network = True
 
     try:

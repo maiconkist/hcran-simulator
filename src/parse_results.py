@@ -152,7 +152,17 @@ def summarize(filename):
                 fd.write(str(count) + " " + str(ue) + " " + str(rrh))
                 for col in range(3, LEN):
                          avg, var = mean_confidence_interval(the_sum[ue, rrh][col])
-                         fd.write(" " + str(avg) + " " + str(var))
+                         if col not in [POWER_CONSUMED, NO_UES_TIME, ]:
+                                fd.write(" " + str(avg) + " " + str(var))
+                         elif col == POWER_CONSUMED:
+                                pass
+                                #fd.write(" " + str(avg * 6.0 / rrh) + " " + str(var/10.0))
+                         elif col == NO_UES_TIME:
+                                IDLE_PW = 4.3 / 3600.0 # energy consumed per second
+                                FULL_PW = 6.8 / 3600.0 # energy consumed per second
+
+                                fd.write(" " + str(avg) + " " + str(var))
+                                fd.write(" " + str((avg * IDLE_PW + ((rrh * 600 - avg) * FULL_PW))/rrh*6) + " " + str(0))
                 fd.write("\n")
                 count += 1
 
@@ -282,10 +292,10 @@ if __name__ == '__main__':
             "configs": { 'label_x': "",
                 'label_x': "",
                 'label_y': "Total RRH Idle Time ",
-                'range_y': "set yrange [0:1000]",
+                'range_y': "",
                 'range_x': "",
                 'key_pos': "top right Right",
-                'extra_opts': 'set format y "%.0s %c"; set ytics 1000;',
+                'extra_opts': '',
                 },
           },
         'energy_consumed':{
@@ -302,11 +312,12 @@ if __name__ == '__main__':
             "outfile": "energy_consumed.pdf",
             "configs": { 'label_x': "",
                 'label_x': "",
-                'label_y': "Energy Consumed [W] ",
-                'range_y': "set yrange [0:50]",
+                'label_y': "Avg. Energy Used per RRH [W] ",
+                'range_y': "set yrange[0:10]",
+                'range_y': "",
                 'range_x': "",
                 'key_pos': "top right Right",
-                'extra_opts': 'set format y "%.0s %c"; set ytics 1000;',
+                'extra_opts': '',
                 },
           },
     }

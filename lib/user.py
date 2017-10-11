@@ -15,8 +15,8 @@ def can_change_antenna(ue, cur_antenna, next_antenna):
     p2 = power(ue, next_antenna) if next_antenna is not None else 0
 
     if p1 > 0 and p1 > p2:
-        return True
-    elif p2 > 0 and p2 > p1:
+        return False
+    elif p2 > 0 and p2 > p1 and next_antenna.can_fit_ue(ue):
         return True
     else:
         return False

@@ -8,9 +8,8 @@ git submodule update
 
 - PATH configurations: - 
 
-ROOT=<project directory>
-export PYTHONPATH=$ROOT/lib:$ROOT/submodules/pymobility/src
+Exec in terminal:
 
-
+source setenv.sh
 
 === Submodules == 

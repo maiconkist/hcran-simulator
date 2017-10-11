@@ -29,7 +29,7 @@ class Antenna(object):
         self._id = id
         self.type = type
         #BS or RRH
-        if type == self.BS_ID:
+        if type == Antenna.BS_ID:
             self.power = threeGPP.POWER_BS
             self._radius = threeGPP.BS_RADIUS
         else:
@@ -52,13 +52,13 @@ class Antenna(object):
         self._cur_rb_cap = Antenna.BW_RB_MAP[bw]
         # Channel BW required
         self._ch_bw_required = None
-        
+
         self._rb_map = {}
 
         # Register to the closest BBU
         self._bbu = util.nearest(self, grid.bbus)
         self._bbu.register(self)
-        
+
         self.i                         = None
         self.a                         = None
         self.p                         = None
@@ -165,8 +165,6 @@ class Antenna(object):
             return True
         return False
 
-
-
     def _update_ue_rb(self):
         """ Check the total RBs required to satisfy UEs demands
         """
@@ -176,6 +174,20 @@ class Antenna(object):
             # calculate the total RBs for each UE
             # mult per 84 because: 84 ofdm symbons in a RB
             self._rb_map[ue] = ue.demand / (util.snr_to_bit(util.snr(ue, self, 0)) * 84.0)
+
+    def can_fit_ue(self, ue):
+
+        # BS always can fit an UE
+        if self.type == Antenna.BS_ID:
+                return True
+
+        total_rb_demand = sum(self._rb_map.values())
+        ue_rb_demand = ue.demand / (util.snr_to_bit(util.snr(ue, self, 0)) * 84.0)
+
+        if total_rb_demand + ue_rb_demand < Antenna.BW_RB_MAP[self._cur_ch_bw]:
+                return True
+        else:
+                return False
 
     def rb_demand_to_ch_bw(self, rb_demand):
         """ Minimum channel BW based on RB demand
